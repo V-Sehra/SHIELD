@@ -3,6 +3,7 @@ import pickle
 import torch
 from sklearn.neighbors import NearestNeighbors
 import torch.nn as nn
+import pandas as pd
 
 def calc_edge_mat(mat, dist_bool=True, radius=265):
     neigh = NearestNeighbors(radius=radius).fit(mat)
@@ -49,6 +50,43 @@ def early_stopping(loss_epoch, patience=15):
     else:
         return (False)
 
+# calculate the attention score for each cell phenotype to all other phenotypes
+# to reduce confusion we call the end attention score p2p (phenotype to phenotype)
+# also we are using the word "node" instead of cell
+def get_p2p_att_score(sample,cell_phenotypes_sample,all_phenotypes,
+                      node_attention_scores):
+    raw_att_p2p = []
+    normalisation_factor_edge_number = []
+    normalised_p2p = []
+
+    #find the cell type (phenotype) for each cell/node
+    scr_node = [cell_phenotypes_sample[sample_idx][cell_phenotypes_sample[sample_idx][0]] for sample_idx in range(len(sample))]
+    dst_node = [cell_phenotypes_sample[sample_idx][cell_phenotypes_sample[sample_idx][1]] for sample_idx in range(len(sample))]
+
+    for sample_idx in range(len(scr_node)):
+        df_att = pd.DataFrame(data={'src': scr_node[sample_idx],
+                                    'dst': dst_node[sample_idx],
+                                    'att': node_attention_scores[sample_idx].flatten()})
+        # have the same DF containig all phenotypes
+        # is a connections is not present in the sample we fill it with NaN
+        att_df = data_utils.fill_missing_row_and_col_withNaN(
+            data_frame=df_att.groupby(['src', 'dst'])['att'].sum().reset_index().pivot(index='src', columns='dst',
+                                                                                       values='att'),
+            cell_types_names=all_phenotypes)
+        # unnormalised att score
+        raw_att_p2p.append(att_df)
+
+        edge_df = data_utils.fill_missing_row_and_col_withNaN(
+            data_frame=df_att.groupby(['src', 'dst']).count().reset_index().pivot(index='src', columns='dst',
+                                                                                  values='att'),
+            cell_types_names=all_phenotypes)
+
+        # normalise the p2p based on the raw count of ed between these two pheno types
+        normalisation_factor_edge_number.append(edge_df)
+        normalised_p2p.append(att_df / edge_df)
+    return(raw_att_p2p, normalisation_factor_edge_number, normalised_p2p)
+
+
 # load the loss as weightes loss
 def initiaize_loss(path, device, tissue_dict=None):
     if tissue_dict is None:
@@ -68,6 +106,15 @@ def initiaize_loss(path, device, tissue_dict=None):
 
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device))
     return(criterion)
+
+def turn_data_list_into_batch(data_sample,device):
+    sample_x = [sample.x.to(device) for sample in data_sample]
+    sample_edge = [sample.edge_index_plate.to(device) for sample in data_sample]
+    sample_att = [sample.plate_euc.to(device) for sample in data_sample]
+    ids_list = [sample.ids for sample in data_sample]
+
+    return(sample_x, sample_edge, sample_att, ids_list)
+
 
 def train_loop(data_loader, model, optimizer, loss_fkt, attr_bool=False, loss_batch=[]):
 

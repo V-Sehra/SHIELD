@@ -1,0 +1,43 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <Languages>
+        <language minSize="95" name="Python" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="2">
+            <item index="0" class="java.lang.String" itemvalue="torachaudio" />
+            <item index="1" class="java.lang.String" itemvalue="pickle" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E251" />
+          <option value="E402" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="functions_data_prep_sc" />
+          <option value="functions_data_prep_gnn" />
+          <option value="hyper_search_pp.function_gnn_model" />
+          <option value="function_gnn_model" />
+          <option value="function_encoder_model" />
+          <option value="nk_cells.hyper_search_wandb.data_classes" />
+          <option value="data_classes" />
+          <option value="functions_mate_cells" />
+          <option value="function_eval_Shield" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

@@ -30,22 +30,14 @@ def bool_passer(argument):
 
 
 def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_subsampleing, comment, attr_bool,
-                input_dim, Layer_1, droup_out_rate, final_layer, batch_size, learning_rate, device,path_data,path_save_model):
+                input_dim, Layer_1, droup_out_rate, final_layer, batch_size, learning_rate, device,
+                path_data,path_save_model, path_org_csv_file,path_name_list):
 
-
-    mucro_meter = data_utils.turn_pixel_to_meter(radius_neibourhood)
-
-
-    # define all paths
-    data_path_train = os.path.join(f'{path_data}', f'{comment}', f'min_cells_{minimum_number_cells}', f'r_{mucro_meter}',
-                                   'test_set', 'train', 'graphs')
-    path_name_list = os.path.join(f'{path_data}', f'{comment}', f'min_cells_{minimum_number_cells}'
-                                  , f'r_{mucro_meter}', 'test_set', f'train', 'graph_name_list.pt')
-
+    # load the training data
     data_train = DataListLoader(
-        local_immune_graph_dataset(root=data_path_train,
+        local_immune_graph_dataset(root=path_data,
                                    path_to_name_file=path_name_list,
-                                   path_csv_file=os.path.join(f'{path_data}', 'test_set', 'train_cells.csv'),
+                                   path_csv_file= path_org_csv_file,
                                    radius_neibourhood=radius_neibourhood,
                                    minimum_number_cells=minimum_number_cells,
                                    number_of_samples=number_steps_region_subsampleing,
@@ -58,10 +50,12 @@ def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_su
     else:
         comment_att = '_Noattr'
 
-
-    model_name = f"HL1_{Layer_1}_dp_{droup_out_rate}_r_{radius_neibourhood}_noSelfATT_{comment}_{minimum_number_cells}{comment_att}".replace('.', '_')
+    #define the model name with which it will be safed under
+    model_name = f"HL1_{Layer_1}_dp_{droup_out_rate}_r_{data_utils.turn_pixel_to_meter(radius_neibourhood)}_noSelfATT_{comment}_{minimum_number_cells}{comment_att}".replace('.', '_')
     save_path = os.path.join(f'{path_save_model}', f'{model_name}.pt')
 
+    # initialize the loss function as the weighted cross entropy loss
+    # the weights are calculated based on the number of graphs per tissue type
     loss_fkt = model_utils.initiaize_loss(path=path_name_list, device=device)
 
     train_loss_epoch = []
@@ -106,17 +100,21 @@ if __name__ == '__main__':
     parser.add_argument("-min_cells", "--minimum_number_cells", type=str, default=50)
     parser.add_argument("-comment", "--comment", type=str, default='filtered_immune')
     parser.add_argument("-attr_bool", "--attr_bool", type=str, default='False', choices=['True', 'False'])
+
+    #all paths that need to be provided
     parser.add_argument("-path_to_graps", "--path_to_graps", type=str, default=None)
     parser.add_argument("-path_save_model", "--path_save_model", type=str, default=None)
+    parser.add_argument("-path_org_csv_file", "--path_org_csv_file", type=str, default=None)
+    parser.add_argument("-path_name_list", "--path_name_list", type=str, default=None)
 
+
+    # model spezific
     parser.add_argument("-s_m", "--similarity_measure", type=str, default='euclide')
-    parser.add_argument("-s_l", "--self_loop", type=str, default='False', choices=['True', 'False'])
     parser.add_argument("-l_1", "--layer_one", type=int, default=27)
     parser.add_argument("-dp", "--droup_out_rate", type=int, default=0.4)
 
     # training spezific
     parser.add_argument("-input_dim", "--input_dim", type=int, default=27)
-    parser.add_argument("-epochs", "--epochs", type=int, default=15)
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-2)
     parser.add_argument("-final_layer", "--final_layer", type=int, default=3)
     parser.add_argument("-batch_size", "--batch_size", type=int, default=450)
@@ -130,7 +128,6 @@ if __name__ == '__main__':
     path_to_graps = args.path_to_graps
 
     input_dim = args.input_dim
-    epochs = args.epochs
     final_layer = args.final_layer
     batch_size = args.batch_size
     learning_rate = args.learning_rate
@@ -146,19 +143,15 @@ if __name__ == '__main__':
     else:
         comment_att = '_Noattr'
 
-    if path_to_graps is None:
-        path_to_graps = os.path.join(f'{cwd}', 'graphs')
-    else:
-        path_to_graps = args.path_to_graps
+    path_to_graps, path_save_model, path_org_csv_file, path_name_list = data_utils.path_generator(path_to_graps = args.path_to_graps,
+                                                                                                  path_save_model = args.path_save_model,
+                                                                                                  path_org_csv_file = args.path_org_csv_file,
+                                                                                                  path_name_list = args.path_name_list, cwd = cwd)
 
-    if args.path_save_model is None:
-        path_save_model = os.path.join(f'{cwd}', 'graphs')
-    else:
-        path_save_model = args.path_to_graps
 
     train_model(radius_neibourhood = radius,
                 minimum_number_cells = minimum_number_cells, number_steps_region_subsampleing= number_steps_region_subsampleing,
                 attr_bool = attr_bool,input_dim = input_dim, Layer_1 = Layer_1, droup_out_rate = droup_out_rate, final_layer = final_layer,
-                number_attention_heads = number_attention_heads, concat_attentionheads = concat_attentionheads,
                 batch_size = batch_size, learning_rate = learning_rate,device = device,
-                comment=comment,path_data = path_to_graps, path_save_model = path_save_model)
+                comment=comment,path_data = path_to_graps, path_save_model = path_save_model,
+                path_org_csv_file =path_org_csv_file)

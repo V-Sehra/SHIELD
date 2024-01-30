@@ -155,6 +155,8 @@ class local_immune_graph_dataset(Dataset):
                                         eval_col_names=sub_sample_cells.loc[:, column_indicator_eval_information]
                                         .columns.to_numpy(dtype=np.dtype('str')),
 
+                                        ids = patient_id,
+
                                         y=torch.tensor(self.tissue_dict[origin]).flatten()).cpu()
 
                             torch.save(data, os.path.join(f'{self.root}',
