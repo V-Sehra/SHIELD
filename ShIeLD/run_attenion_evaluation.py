@@ -135,7 +135,6 @@ if __name__ == '__main__':
 
 
     # model spezific
-    parser.add_argument("-s_m", "--similarity_measure", type=str, default='euclide')
     parser.add_argument("-l_1", "--layer_one", type=int, default=27)
     parser.add_argument("-dp", "--droup_out_rate", type=int, default=0.4)
 
@@ -146,20 +145,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    number_steps_region_subsampleing = args.number_steps_region_subsampleing
-    minimum_number_cells = args.minimum_number_cells
-    similarity_measure = args.similarity_measure
-    path_to_graps = args.path_to_graps
-
-    input_dim = args.input_dim
-    final_layer = args.final_layer
-    batch_size = args.batch_size
-    Layer_1 = args.layer_one
-    droup_out_rate = args.droup_out_rate
-    radius = args.radius
-    cell_types = args.cell_types
-
-    comment = args.comment
 
     attr_bool = False
 
@@ -175,11 +160,11 @@ if __name__ == '__main__':
                                                                         path_name_list=args.path_name_list, cwd=cwd)
 
 
-    calcluate_cT_2_cT_att_score(radius_neibourhood = radius, minimum_number_cells = minimum_number_cells,
-                                cell_names = cell_types,number_steps_region_subsampleing = number_steps_region_subsampleing,
-                                comment = comment, attr_bool = comment_att, batch_size = batch_size,
+    calcluate_cT_2_cT_att_score(radius_neibourhood = args.radius, minimum_number_cells = args.minimum_number_cells,
+                                cell_names = args.cell_types,number_steps_region_subsampleing = args.number_steps_region_subsampleing,
+                                comment = args.comment, attr_bool = comment_att, batch_size = args.batch_size,
                                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-                                input_dim = input_dim, Layer_1 = Layer_1, droup_out_rate = droup_out_rate, final_layer = final_layer,
+                                input_dim = args.input_dim, Layer_1 = args.layer_one, droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
                                 path_to_graps = path_to_graps,
                                 path_model = path_save_model, path_org_csv_file = path_org_csv_file,
                                 path_name_list = path_name_list, data_set = args.data_set)
