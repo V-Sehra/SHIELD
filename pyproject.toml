@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "ShIeLD"
+version = "0.1.0"
+description = ""
+authors = ["V-Sehra"]
+
+[tool.poetry.dependencies]
+python = "^3.8"  
+pandas = "^1.2.3"  
+torch = "^1.8.0"  
+torch-geometric = "^1.7.0" 
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
