@@ -17,7 +17,8 @@ from data_class import local_immune_graph_dataset
 from model import ShIeLD
 import argparse
 import torch
-
+idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
+shield_dir = os.path.join(f'{cwd[:idx_folder]}')
 
 def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_subsampleing, comment, attr_bool,
                 input_dim, Layer_1, droup_out_rate, final_layer, batch_size, learning_rate, device,
@@ -111,19 +112,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    number_steps_region_subsampleing = args.number_steps_region_subsampleing
-    minimum_number_cells = args.minimum_number_cells
-    similarity_measure = args.similarity_measure
-    self_loop = data_utils.bool_passer(args.self_loop)
-    path_to_graps = args.path_to_graps
-
-    input_dim = args.input_dim
-    final_layer = args.final_layer
-    batch_size = args.batch_size
-    learning_rate = args.learning_rate
-    Layer_1 = args.layer_one
-    droup_out_rate = args.droup_out_rate
-    radius = args.radius
 
     comment = args.comment
 
@@ -139,9 +127,9 @@ if __name__ == '__main__':
                                                                                                   path_name_list = args.path_name_list, cwd = cwd)
 
 
-    train_model(radius_neibourhood = radius,
-                minimum_number_cells = minimum_number_cells, number_steps_region_subsampleing= number_steps_region_subsampleing,
-                attr_bool = attr_bool,input_dim = input_dim, Layer_1 = Layer_1, droup_out_rate = droup_out_rate, final_layer = final_layer,
-                batch_size = batch_size, learning_rate = learning_rate,device = device,
-                comment=comment,path_data = path_to_graps, path_save_model = path_save_model,
+    train_model(radius_neibourhood = args.radius,
+                minimum_number_cells = args.minimum_number_cells, number_steps_region_subsampleing= args.number_steps_region_subsampleing,
+                attr_bool = attr_bool,input_dim = args.input_dim, Layer_1 = args.Layer_1, droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
+                batch_size = args.batch_size, learning_rate = args.learning_rate,device = device,
+                comment=args.comment,path_data = path_to_graps, path_save_model = path_save_model,
                 path_org_csv_file =path_org_csv_file)

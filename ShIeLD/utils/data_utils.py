@@ -3,6 +3,12 @@ import numpy as np
 import os
 import torch
 from torch_geometric.data import Data
+import random as rnd
+import model_utils
+
+cwd = os.getcwd()
+idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
+shield_dir = os.path.join(f'{cwd[:idx_folder]}')
 
 tissue_type_name = ['normalLiver', 'core', 'rim']
 tissue_dict = {'normalLiver': 0,
@@ -75,7 +81,7 @@ def create_graphs(mat, radius, gene_indicator, eval_indicator, patient_id, origi
     # remove all "overlapping" cells
     plate_edge = model_utils.remove_zero_distances(edge=plate_edge,
                                                    dist=plat_att,
-                                                   dist_return=False)
+                                                   return_dist=False)
 
     # select the desired features for the nodes
     cells = torch.tensor((sub_sample_cells.loc[:, gene_indicator]).to_numpy()).float()
@@ -99,6 +105,52 @@ def create_graphs(mat, radius, gene_indicator, eval_indicator, patient_id, origi
                                   f'graph_pat_{patient_id}_{origin}_{batch_counter}.pt'))
 
     return f'graph_pat_{patient_id}_{origin}_{batch_counter}.pt'
+
+def create_test_train_split(args):
+    """
+    This function creates training and testing sets from a raw CSV file.
+    It first converts the raw CSV file into a graph CSV file.
+    It then gets a list of unique patient IDs from the raw data.
+    If the 'new_test_split_bool' argument is True, it shuffles the patient list and splits it into training and testing sets.
+    Otherwise, it uses a predefined list of patient IDs for the testing set.
+    It then creates directories for saving the training and testing sets and saves the sets as CSV files.
+
+    Parameters:
+    args (Namespace): The command-line arguments. It should include 'path_to_raw_csv', 'new_test_split_bool', and 'path_to_save_data'.
+
+    Returns:
+    None
+    """
+    # Convert the raw CSV file into a graph CSV file
+    raw_data = data_utils.turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
+
+    # Get a list of unique patient IDs from the raw data
+    patent_list = raw_data['Patient'].unique()
+
+    # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
+    # Otherwise, use a predefined list of patient IDs for the testing set
+    if data_utils.bool_passer(args.new_test_split_bool):
+        rnd.shuffle(patent_list)
+        train_patients = patent_list[0:int(len(patent_list) * 0.8)]
+        test_patients = patent_list[int(len(patent_list) * 0.8):]
+
+        train_csv = raw_data[raw_data['Patient'].isin(train_patients)]
+        test_csv = raw_data[raw_data['Patient'].isin(test_patients)]
+    else:
+        test_patient_ids = ['LHCC51', 'LHCC53', 'Pat53', 'LHCC45', 'Pat52']
+        train_csv = raw_data[~raw_data['Patient'].isin(test_patient_ids)]
+        test_csv = raw_data[raw_data['Patient'].isin(test_patient_ids)]
+
+    # Create directories for saving the training and testing sets
+    os.system(f'mkdir -p {args.path_to_save_data}/train_set')
+    os.system(f'mkdir -p {args.path_to_save_data}/test_set')
+
+    # Save the training and testing sets as CSV files
+    train_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv'))
+    test_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))
+
+    return
+
 
 def fill_missing_row_and_col_withNaN(data_frame, cell_types_names):
     """
@@ -183,7 +235,7 @@ def replace_celltype(mat,celltype_list_to_replace):
 
 
 
-def path_generator(path_to_graps, path_save_model, path_org_csv_file, path_name_list, cwd):
+def path_generator(path_to_graps, path_save_model, path_org_csv_file, path_name_list, data_type = 'train'):
     """
     This function generates and returns paths for graphs, model, original CSV file, and name list.
     If a path is not provided, it sets the path to the current working directory.
@@ -201,23 +253,23 @@ def path_generator(path_to_graps, path_save_model, path_org_csv_file, path_name_
 
     # If no path is provided for graphs, set it to the 'graphs' directory in the current working directory
     if path_to_graps is None:
-        path_to_graps = os.path.join(f'{cwd}', 'graphs')
+        path_to_graps = os.path.join(f'{shield_dir}','data',f'{data_type}_set','graphs')
         os.system(f"mkdir -p {path_to_graps}")
 
     # If no path is provided for the model, set it to the 'model' directory in the current working directory
     if path_save_model is None:
-        path_save_model = os.path.join(f'{cwd}', 'model')
+        path_save_model = os.path.join(f'{shield_dir}', 'model')
         os.system(f"mkdir -p {path_save_model}")
     else:
         path_save_model = path_to_graps
 
     # If no path is provided for the original CSV file, set it to 'org_data/org_data.csv' in the current working directory
     if path_org_csv_file is None:
-        path_org_csv_file = os.path.join(f'{cwd}','org_data','org_data.csv')
+        path_org_csv_file = os.path.join(f'{shield_dir}','data',f'{data_type}_set',f'{data_type}_cells.csv')
 
     # If no path is provided for the name list, set it to 'graph_name_list.pt' in the current working directory
     if path_name_list is None:
-        path_name_list = os.path.join(f'{cwd}', 'graph_name_list.pt')
+        path_name_list = os.path.join(f'{shield_dir}','data',f'{data_type}_set', 'graph_name_list.pt')
 
     # Return the paths
     return path_to_graps, path_save_model, path_org_csv_file, path_name_list

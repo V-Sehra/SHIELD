@@ -19,6 +19,9 @@ import argparse
 import torch
 import pickle
 
+idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
+shield_dir = os.path.join(f'{cwd[:idx_folder]}')
+
 # caluclate the cell type (phenotype) attention score for each cell type (phenotype)
 # per tissue type (normalLiver, core, rim)
 def calcluate_cT_2_cT_att_score(radius_neibourhood,minimum_number_cells, cell_names,
@@ -104,8 +107,8 @@ def calcluate_cT_2_cT_att_score(radius_neibourhood,minimum_number_cells, cell_na
     dict_name = f"HL1_{Layer_1}_dp_{droup_out_rate}_r_{radius_neibourhood}_noSelfATT_{comment}_{minimum_number_cells}{comment_att}_eval_{data_set}".replace(
         '.', '_')
 
-    save_path = os.path.join(f'{cwd}', 'eval', f'{dict_name}.pkl')
-    os.system(f'mkdir -p {os.path.join(f"{cwd}", "eval")}')
+    save_path = os.path.join(f'{shield_dir}', 'eval', f'{dict_name}.pkl')
+    os.system(f'mkdir -p {os.path.join(f"{shield_dir}", "eval")}')
     with open(save_path, 'wb') as f:
         pickle.dump(dict_all_info, f)
 

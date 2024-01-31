@@ -8,7 +8,6 @@ Created on Wed Jan 12 14:18:15 2024
 
 import os
 import pandas as pd
-import random as rnd
 import copy
 import argparse
 import sys
@@ -43,33 +42,10 @@ def create_data_set():
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Convert the raw CSV file into a graph CSV file
-    raw_data = data_utils.turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
-
-    # Get a list of unique patient IDs from the raw data
-    patent_list = raw_data['Patient'].unique()
-
-    # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
-    # Otherwise, use a predefined list of patient IDs for the testing set
-    if data_utils.bool_passer(args.new_test_split_bool):
-        rnd.shuffle(patent_list)
-        train_patients = patent_list[0:int(len(patent_list) * 0.8)]
-        test_patients = patent_list[int(len(patent_list) * 0.8):]
-
-        train_csv = raw_data[raw_data['Patient'].isin(train_patients)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patients)]
-    else:
-        test_patient_ids = ['LHCC51', 'LHCC53', 'Pat53', 'LHCC45', 'Pat52']
-        train_csv = raw_data[~raw_data['Patient'].isin(test_patient_ids)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patient_ids)]
-
-    # Create directories for saving the training and testing sets
-    os.system(f'mkdir -p {args.path_to_save_data}/train_set')
-    os.system(f'mkdir -p {args.path_to_save_data}/test_set')
-
-    # Save the training and testing sets as CSV files
-    train_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv'))
-    test_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))
+    if (not os.path.exists(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv')))\
+            or (not os.path.exists(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))):
+        print('initalizing the data set')
+        data_utils.create_test_train_split(args)
 
     for data_type in ['train', 'test']:
         """
@@ -91,6 +67,7 @@ def create_data_set():
 
         folder_dir = os.path.join(f'{args.path_to_save_data}', f'{data_type}_set')
         save_path_graphs = os.path.join(f'{folder_dir}', 'graphs')
+        os.system(f'mkdir -p {save_path_graphs}')
 
         input_data = pd.read_csv(os.path.join(f'{folder_dir}', f'{data_type}_cells.csv'))
 
@@ -118,16 +95,16 @@ def create_data_set():
                 y_max = tissue_segmented_data['Y_value'].max()
 
                 # increase the x baseline range to get a more symetric increase
-                delta_x = ((x_max - x_0) / args.number_of_samples) * 3
+                delta_x = ((x_max - x_0) / args.number_steps_region_subsampleing) * 3
                 padding_x = delta_x * 0.1
 
                 # get the y step distance
-                delta_y = (y_max - y_0) / args.number_of_samples
+                delta_y = (y_max - y_0) / args.number_steps_region_subsampleing
                 padding_y = delta_y * 0.1
 
                 batch_counter = 0
                 # propergate through the image and create the graphs
-                for x_step in range(args.number_of_samples):
+                for x_step in range(args.number_steps_region_subsampleing):
 
                     x_step_0 = x_0 + delta_x * x_step
                     x_step_max = x_0 + delta_x * (1 + x_step)
@@ -169,7 +146,7 @@ def create_data_set():
                             batch_counter += 1
 
         # save the graph names
-        with open(os.path.join(folder_dir), 'wb') as f:
+        with open(os.path.join(folder_dir,'graph_name_list.pt'), 'wb') as f:
             pickle.dump(graph_name_list, f)
 
 if __name__ == '__main__':
