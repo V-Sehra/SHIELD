@@ -17,7 +17,7 @@ cosine = torch.nn.CosineSimilarity(dim=1)
 class local_immune_graph_dataset(Dataset):
     def __init__(self, root, path_to_name_file,
                  path_csv_file,
-                 radius_neibourhood=199,
+                 radius_neighbourhood=199,
                  minimum_number_cells=50,
                  number_of_samples=20):
 
@@ -28,12 +28,12 @@ class local_immune_graph_dataset(Dataset):
         self.path_csv_file = path_csv_file
 
         # the parameters for the graph creation
-        # number of samples per y and x axis
+        # number of samples per y and x-axis
         self.number_of_samples = number_of_samples
         # minimum number of cells per graph
         self.minimum_number_cells = minimum_number_cells
-        # radius of the neibourhood
-        self.radius_neibourhood = radius_neibourhood
+        # radius of the neighbourhood
+        self.radius_neighbourhood = radius_neighbourhood
 
         self.cwd = os.getcwd()
         # load the original data set
@@ -134,7 +134,7 @@ class local_immune_graph_dataset(Dataset):
                             real_cordinates = sub_sample_cells[['Y_value', 'X_value']]
                             plate_edge, plat_att = model_utils.calc_edge_mat(real_cordinates,
                                                                                 dist_bool=True,
-                                                                                radius=self.radius_neibourhood)
+                                                                                radius=self.radius_neighbourhood)
 
                             # remove all "overlapping" cells
                             plate_edge = model_utils.remove_zero_distances(edge = plate_edge,

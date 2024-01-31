@@ -19,16 +19,6 @@ import argparse
 import torch
 
 
-
-
-def bool_passer(argument):
-    if argument == 'True':
-        value = True
-    else:
-        value = False
-    return (value)
-
-
 def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_subsampleing, comment, attr_bool,
                 input_dim, Layer_1, droup_out_rate, final_layer, batch_size, learning_rate, device,
                 path_data,path_save_model, path_org_csv_file,path_name_list):
@@ -38,11 +28,11 @@ def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_su
         local_immune_graph_dataset(root=path_data,
                                    path_to_name_file=path_name_list,
                                    path_csv_file= path_org_csv_file,
-                                   radius_neibourhood=radius_neibourhood,
+                                   radius_neighbourhood=radius_neibourhood,
                                    minimum_number_cells=minimum_number_cells,
                                    number_of_samples=number_steps_region_subsampleing,
-        batch_size=batch_size, shuffle=True, num_workers=8,
-        prefetch_factor=50))
+                                   batch_size=batch_size, shuffle=True, num_workers=8,
+                                   prefetch_factor=50))
 
 
     if attr_bool:
@@ -124,7 +114,7 @@ if __name__ == '__main__':
     number_steps_region_subsampleing = args.number_steps_region_subsampleing
     minimum_number_cells = args.minimum_number_cells
     similarity_measure = args.similarity_measure
-    self_loop = bool_passer(args.self_loop)
+    self_loop = data_utils.bool_passer(args.self_loop)
     path_to_graps = args.path_to_graps
 
     input_dim = args.input_dim
@@ -137,7 +127,7 @@ if __name__ == '__main__':
 
     comment = args.comment
 
-    attr_bool = bool_passer(args.attr_bool)
+    attr_bool = data_utils.bool_passer(args.attr_bool)
     if attr_bool:
         comment_att = '_attr'
     else:

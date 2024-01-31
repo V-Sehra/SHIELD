@@ -30,11 +30,11 @@ def calcluate_cT_2_cT_att_score(radius_neibourhood,minimum_number_cells, cell_na
         local_immune_graph_dataset(root=path_to_graps,
                                    path_to_name_file=path_name_list,
                                    path_csv_file= path_org_csv_file,
-                                   radius_neibourhood=radius_neibourhood,
+                                   radius_neighbourhood=radius_neibourhood,
                                    minimum_number_cells=minimum_number_cells,
                                    number_of_samples=number_steps_region_subsampleing,
-        batch_size=batch_size, shuffle=True, num_workers=8,
-        prefetch_factor=50))
+                                   batch_size=batch_size, shuffle=True, num_workers=8,
+                                   prefetch_factor=50))
 
     model = ShIeLD(num_of_feat=int(input_dim),
                   f_1=Layer_1, dp=droup_out_rate, f_final=final_layer,
