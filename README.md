@@ -1,16 +1,64 @@
-# ShIeLD: Spatially-Enhanced Immune Landscape Decoding in HCC using Graph Attention Networks and CODEX Data
 
+# ShIeLD: Spatially-enhanced Immune Landscape Decoding in Hepatocellular Carcinoma (HCC) using Graph Attention Networks and CODEX Data
 ![GAT.pdf](https://github.com/V-Sehra/ShIeLD/files/14113477/GAT.pdf)
 
-High dimensional spatial molecular imaging data is transforming our understanding of tissue microenvironment, crucial in complex diseases like hepatocellular carcinoma (HCC). However, inferring spatial cell type interaction in disease contexts directly from imaging data remains challenging. Recent advancements in deep learning, specifically graph neural networks, have been employed to integrate spatial and cellular information for immune response analysis in HCC. These networks effectively encode spatial arrangements, enhancing our understanding of cellular interactions and spatial organization of tissue .
-
-Results: We introduce ShIeLD (Spatially-enHnced Immune Landscape Decoding): ShIeLD utilizes Graph Attention Networks (GAT) to provide interpretable predictions. Specifically ShIeLD infers putative disease- associated cell type interactions by means of summarizing the model’s learned attention scores at the cell type level. We report an application of the model to spatial imaging study of liver tissue from hepatocellular liver cancer patients and focus on the differential immune cell interactions across healthy and tumor tissue. We identify a recently discovered subtle interaction between mucosa associated invariant T cells (MAITs) and macrophages without additional supervision.This approach underscores the potential of attention-based graph models in enhancing the understanding of complex diseases like liver cancer.
+ShIeLD employs Graph Attention Networks (GAT) to decode complex immune landscapes in HCC from high-dimensional spatial molecular imaging data, providing insights into tissue microenvironments. This approach enables the interpretation of disease-associated cell type interactions, highlighted by the identification of interactions between MAITs and macrophages, without additional supervision. The project demonstrates the potential of attention-based graph models in advancing our understanding of HCC.
 
 ## Installation
 
-Activate a virtual environment, e.g. using conda. Install dependencies:
+To set up ShIeLD, follow these steps:
 
+1. Clone the repository:
+   ```
+   git clone https://github.com/V-Sehra/ShIeLD.git
+   ```
+2. Navigate to the ShIeLD directory:
+   ```
+   cd ShIeLD
+   ```
+3. Install Poetry if not already installed:
+   ```
+   conda install poetry -c conda-forge
+   ```
+4. Install dependencies using Poetry:
+   ```
+   poetry install
+   ```
+
+## Workflow
+
+### Data Preparation
+
+1. Download the CODEX images dataset as described in the paper (link to dataset publication).
+2. Place the raw CSV file containing CODEX images information under `../data/raw_data.csv` or specify a custom path using `-path_to_raw_csv` flag in `data_preprocessing.py`.
+
+To preprocess the data and generate input graphs, run:
 ```
-git clone git@github.com:V-Sehra/ShIeLD.git
-cd ShIeLD
+python data_preprocessing.py
 ```
+
+### Model Training
+
+To train the ShIeLD model, execute:
+```
+python run_training.py
+```
+The script saves the trained model automatically.
+
+### Extracting Cell Phenotype Attention Scores
+
+After training, evaluate the model's attention on cell phenotypes by running:
+```
+python run_attention_evaluation.py
+```
+This generates a dictionary with phenotype-to-phenotype attention scores accessible via `[normed_p2p]` for each input graph.
+
+
+## Citation
+
+If you use ShIeLD in your research, please cite our paper. (Bibtex TBA)
+
+## License
+
+ShIeLD is open-sourced under the MIT license. See the LICENSE file for more details.
+
