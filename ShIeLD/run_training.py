@@ -31,9 +31,9 @@ def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_su
                                    path_csv_file= path_org_csv_file,
                                    radius_neighbourhood=radius_neibourhood,
                                    minimum_number_cells=minimum_number_cells,
-                                   number_of_samples=number_steps_region_subsampleing,
+                                   number_of_samples=number_steps_region_subsampleing),
                                    batch_size=batch_size, shuffle=True, num_workers=8,
-                                   prefetch_factor=50))
+                                   prefetch_factor=50)
 
 
     if attr_bool:
@@ -52,8 +52,10 @@ def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_su
     train_loss_epoch = []
 
     model = ShIeLD(num_of_feat=int(input_dim),
-                  f_1=Layer_1, dp=droup_out_rate, f_final=final_layer,
+                  layer_1=Layer_1, dp=droup_out_rate, Layer_final=final_layer,
                   self_att=False, attr_bool=attr_bool)
+
+
     model = model.to(device)
     model.train()
 
@@ -101,7 +103,7 @@ if __name__ == '__main__':
 
     # model spezific
     parser.add_argument("-s_m", "--similarity_measure", type=str, default='euclide')
-    parser.add_argument("-l_1", "--layer_one", type=int, default=27)
+    parser.add_argument("-l_1", "--Layer_1", type=int, default=27)
     parser.add_argument("-dp", "--droup_out_rate", type=int, default=0.4)
 
     # training spezific
@@ -124,12 +126,12 @@ if __name__ == '__main__':
     path_to_graps, path_save_model, path_org_csv_file, path_name_list = data_utils.path_generator(path_to_graps = args.path_to_graps,
                                                                                                   path_save_model = args.path_save_model,
                                                                                                   path_org_csv_file = args.path_org_csv_file,
-                                                                                                  path_name_list = args.path_name_list, cwd = cwd)
+                                                                                                  path_name_list = args.path_name_list)
 
 
     train_model(radius_neibourhood = args.radius,
                 minimum_number_cells = args.minimum_number_cells, number_steps_region_subsampleing= args.number_steps_region_subsampleing,
                 attr_bool = attr_bool,input_dim = args.input_dim, Layer_1 = args.Layer_1, droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
                 batch_size = args.batch_size, learning_rate = args.learning_rate,device = device,
-                comment=args.comment,path_data = path_to_graps, path_save_model = path_save_model,
+                comment=args.comment,path_data = path_to_graps, path_save_model = path_save_model,path_name_list = path_name_list,
                 path_org_csv_file =path_org_csv_file)
