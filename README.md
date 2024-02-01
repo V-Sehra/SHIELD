@@ -60,5 +60,5 @@ If you use ShIeLD in your research, please cite our paper. (Bibtex TBA)
 
 ## License
 
-ShIeLD is open-sourced under the MIT license. See the LICENSE file for more details.
+ShIeLD is open-sourced under the AGPL-3.0 license. See the LICENSE file for more details.
 
