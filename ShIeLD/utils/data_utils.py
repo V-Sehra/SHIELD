@@ -122,14 +122,14 @@ def create_test_train_split(args):
     None
     """
     # Convert the raw CSV file into a graph CSV file
-    raw_data = data_utils.turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
+    raw_data = turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
 
     # Get a list of unique patient IDs from the raw data
     patent_list = raw_data['Patient'].unique()
 
     # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
     # Otherwise, use a predefined list of patient IDs for the testing set
-    if data_utils.bool_passer(args.new_test_split_bool):
+    if bool_passer(args.new_test_split_bool):
         rnd.shuffle(patent_list)
         train_patients = patent_list[0:int(len(patent_list) * 0.8)]
         test_patients = patent_list[int(len(patent_list) * 0.8):]
