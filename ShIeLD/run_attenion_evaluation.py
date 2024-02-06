@@ -25,7 +25,7 @@ shield_dir = os.path.join(f'{cwd[:idx_folder]}')
 # caluclate the cell type (phenotype) attention score for each cell type (phenotype)
 # per tissue type (normalLiver, core, rim)
 def calcluate_cT_2_cT_att_score(radius_neibourhood,minimum_number_cells, cell_names,
-                                number_steps_region_subsampleing, comment, attr_bool,batch_size,
+                                number_steps_region_subsampleing, attr_bool,batch_size,
                                 device, input_dim, Layer_1, droup_out_rate, final_layer,
                                 path_to_graps, path_model, path_org_csv_file, path_name_list, data_set):
 
@@ -118,7 +118,6 @@ if __name__ == '__main__':
     parser.add_argument("-r_s", "--number_steps_region_subsampleing", type=int, default=100)
     parser.add_argument("-radius", "--radius", type=int, default=50)
     parser.add_argument("-min_cells", "--minimum_number_cells", type=str, default=50)
-    parser.add_argument("-comment", "--comment", type=str, default='filtered_immune')
     parser.add_argument("-attr_bool", "--attr_bool", type=str, default='False', choices=['True', 'False'])
 
     parser.add_argument("-cell_types", "--cell_types", type=str, default=['B cells CD38+', 'B cells CD45RA', 'B cells PD-L1+',
@@ -164,8 +163,7 @@ if __name__ == '__main__':
 
 
     calcluate_cT_2_cT_att_score(radius_neibourhood = args.radius, minimum_number_cells = args.minimum_number_cells,
-                                cell_names = args.cell_types,number_steps_region_subsampleing = args.number_steps_region_subsampleing,
-                                comment = args.comment, attr_bool = comment_att, batch_size = args.batch_size,
+                                cell_names = args.cell_types,number_steps_region_subsampleing = args.number_steps_region_subsampleing, attr_bool = comment_att, batch_size = args.batch_size,
                                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                                 input_dim = args.input_dim, Layer_1 = args.layer_one, droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
                                 path_to_graps = path_to_graps,

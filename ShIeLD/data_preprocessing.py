@@ -37,7 +37,10 @@ def create_data_set():
     parser.add_argument("-r_s", "--number_steps_region_subsampleing", type=int, default=100)
     parser.add_argument("-radius", "--radius", type=int, default=50)
     parser.add_argument("-min_cells", "--minimum_number_cells", type=str, default=50)
-    parser.add_argument("-comment", "--comment", type=str, default='filtered_immune')
+    parser.add_argument("-marker_list", "--marker_list", type=str, default=['CD56','CD16','CD163','CD68','CD39','CD11c','CD38','CD11b',
+                                                                              'CD15','CD66b','CD40','HLA-DR','CD62L','CD19','CD45RA','CD57',
+                                                                              'PD-L1','CD25','FoxP3','CD45RO','IL18Rα','CD4','CD3','ICOS','PD-1','CD69',
+                                                                              'CD8','CD161','TCRVα 7.2'])
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -48,6 +51,7 @@ def create_data_set():
         data_utils.create_test_train_split(args)
 
     for data_type in ['train', 'test']:
+        print(f'Creating the graphs for  {data_type} set')
         """
         This loop iterates over the data types 'train' and 'test'.
         For each data type, it performs the following steps:
@@ -65,6 +69,7 @@ def create_data_set():
                 - It also appends the name of the graph to the list of graph names and increments the batch counter.
         """
 
+
         folder_dir = os.path.join(f'{args.path_to_save_data}', f'{data_type}_set')
         save_path_graphs = os.path.join(f'{folder_dir}', 'graphs')
         os.system(f'mkdir -p {save_path_graphs}')
@@ -73,7 +78,7 @@ def create_data_set():
 
         input_data = input_data[input_data['CD45.Positive.Classification'] == 1]
 
-        column_indicator_gene = input_data.columns.str.contains('.Intensity')
+        column_indicator_gene = input_data.columns.str.contains('|'.join(args.marker_list))
         column_indicator_eval_information = input_data.columns.isin(['Class', 'Class0', 'Celltype'])
 
         graph_name_list = []

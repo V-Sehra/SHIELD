@@ -20,18 +20,14 @@ import torch
 idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
 shield_dir = os.path.join(f'{cwd[:idx_folder]}')
 
-def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_subsampleing, comment, attr_bool,
+def train_model(radius_neibourhood, minimum_number_cells, attr_bool,
                 input_dim, Layer_1, droup_out_rate, final_layer, batch_size, learning_rate, device,
-                path_data,path_save_model, path_org_csv_file,path_name_list):
+                path_data,path_save_model,path_name_list):
 
     # load the training data
     data_train = DataListLoader(
         local_immune_graph_dataset(root=path_data,
-                                   path_to_name_file=path_name_list,
-                                   path_csv_file= path_org_csv_file,
-                                   radius_neighbourhood=radius_neibourhood,
-                                   minimum_number_cells=minimum_number_cells,
-                                   number_of_samples=number_steps_region_subsampleing),
+                                   path_to_name_file=path_name_list),
                                    batch_size=batch_size, shuffle=True, num_workers=8,
                                    prefetch_factor=50)
 
@@ -42,7 +38,7 @@ def train_model(radius_neibourhood, minimum_number_cells, number_steps_region_su
         comment_att = '_Noattr'
 
     #define the model name with which it will be safed under
-    model_name = f"HL1_{Layer_1}_dp_{droup_out_rate}_r_{data_utils.turn_pixel_to_meter(radius_neibourhood)}_noSelfATT_{comment}_{minimum_number_cells}{comment_att}".replace('.', '_')
+    model_name = f"HL1_{Layer_1}_dp_{droup_out_rate}_r_{data_utils.turn_pixel_to_meter(radius_neibourhood)}_noSelfATT_{minimum_number_cells}{comment_att}".replace('.', '_')
     save_path = os.path.join(f'{path_save_model}', f'{model_name}.pt')
 
     # initialize the loss function as the weighted cross entropy loss
@@ -91,13 +87,11 @@ if __name__ == '__main__':
     parser.add_argument("-r_s", "--number_steps_region_subsampleing", type=int, default=100)
     parser.add_argument("-radius", "--radius", type=int, default=50)
     parser.add_argument("-min_cells", "--minimum_number_cells", type=str, default=50)
-    parser.add_argument("-comment", "--comment", type=str, default='filtered_immune')
     parser.add_argument("-attr_bool", "--attr_bool", type=str, default='False', choices=['True', 'False'])
 
     #all paths that need to be provided
     parser.add_argument("-path_to_graps", "--path_to_graps", type=str, default=None)
     parser.add_argument("-path_save_model", "--path_save_model", type=str, default=None)
-    parser.add_argument("-path_org_csv_file", "--path_org_csv_file", type=str, default=None)
     parser.add_argument("-path_name_list", "--path_name_list", type=str, default=None)
 
 
@@ -130,8 +124,9 @@ if __name__ == '__main__':
 
 
     train_model(radius_neibourhood = args.radius,
-                minimum_number_cells = args.minimum_number_cells, number_steps_region_subsampleing= args.number_steps_region_subsampleing,
-                attr_bool = attr_bool,input_dim = args.input_dim, Layer_1 = args.Layer_1, droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
-                batch_size = args.batch_size, learning_rate = args.learning_rate,device = device,
-                comment=args.comment,path_data = path_to_graps, path_save_model = path_save_model,path_name_list = path_name_list,
-                path_org_csv_file =path_org_csv_file)
+                minimum_number_cells = args.minimum_number_cells,
+                attr_bool = attr_bool,input_dim = args.input_dim, Layer_1 = args.Layer_1,
+                droup_out_rate = args.droup_out_rate, final_layer = args.final_layer,
+                batch_size = args.batch_size, learning_rate = args.learning_rate,
+                device = device, path_data = path_to_graps, path_save_model = path_save_model,
+                path_name_list = path_name_list)
