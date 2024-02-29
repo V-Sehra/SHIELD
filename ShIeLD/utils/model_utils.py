@@ -13,7 +13,7 @@ import torch.nn as nn
 import pandas as pd
 
 
-def calc_edge_mat(mat, dist_bool=True, radius=265):
+def calc_edge_mat(mat, dist_bool=True, radius=50):
     """
     This function calculates the edge matrix for a given matrix of data points.
     It uses the NearestNeighbors algorithm from sklearn to find the nearest neighbors within a given radius.
@@ -107,8 +107,8 @@ def get_p2p_att_score(sample, cell_phenotypes_sample, all_phenotypes, node_atten
     normalised_p2p = []
 
     # Find the cell type (phenotype) for each cell/node
-    scr_node = [cell_phenotypes_sample[sample_idx][cell_phenotypes_sample[sample_idx][0]] for sample_idx in range(len(sample))]
-    dst_node = [cell_phenotypes_sample[sample_idx][cell_phenotypes_sample[sample_idx][1]] for sample_idx in range(len(sample))]
+    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[0]] for sample_idx in range(len(sample))]
+    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[1]] for sample_idx in range(len(sample))]
 
     for sample_idx in range(len(scr_node)):
         df_att = pd.DataFrame(data={'src': scr_node[sample_idx],

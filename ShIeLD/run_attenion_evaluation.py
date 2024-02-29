@@ -23,7 +23,6 @@ import pickle
 idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
 shield_dir = os.path.join(f'{cwd[:idx_folder]}')
 
-
 # caluclate the cell type (phenotype) attention score for each cell type (phenotype)
 # per tissue type (normalLiver, core, rim)
 def calcluate_cT_2_cT_att_score(radius_neibourhood, minimum_number_cells, cell_names,
@@ -37,7 +36,7 @@ def calcluate_cT_2_cT_att_score(radius_neibourhood, minimum_number_cells, cell_n
         prefetch_factor=50)
 
     model = ShIeLD(num_of_feat=int(input_dim),
-                   f_1=Layer_1, dp=droup_out_rate, f_final=final_layer,
+                   layer_1=Layer_1, dp=droup_out_rate, layer_final=final_layer,
                    self_att=False, attr_bool=attr_bool).to(device)
 
     model.load_state_dict(torch.load(path_model))
@@ -78,7 +77,7 @@ def calcluate_cT_2_cT_att_score(radius_neibourhood, minimum_number_cells, cell_n
 
         # orignal att scores on a node level
         nodel_level_attention_scores = [att_val[1].cpu().detach().numpy() for att_val in attenion]
-        cell_type_names = data_utils.sreplace_celltype(np.array([np.array([cell_type[2] for cell_type in sample.eval])
+        cell_type_names = data_utils.replace_celltype(np.array([np.array([cell_type[2] for cell_type in sample.eval])
                                                                  for sample in data_sample]),
                                                        ['B cells', 'Granulocytes'])
 

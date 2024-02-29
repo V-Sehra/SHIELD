@@ -7,14 +7,14 @@ import torch.nn.functional as F
 
 class ShIeLD(nn.Module):
     def __init__(self, num_of_feat, layer_1, dp,
-                 Layer_final=2, edge_dim=1, similarity_typ='euclide',
+                 layer_final=2, edge_dim=1, similarity_typ='euclide',
                  self_att=True, attr_bool=True):
         super(ShIeLD, self).__init__()
 
         self.conv1 = GATv2Conv(num_of_feat, layer_1, edge_dim=edge_dim,
                                add_self_loops=self_att)
 
-        self.lin = Linear(layer_1, Layer_final)
+        self.lin = Linear(layer_1, layer_final)
         self.attr_bool = attr_bool
         self.dp = dp
         self.similarity_typ = similarity_typ
