@@ -9,8 +9,13 @@ import numpy as np
 import pickle
 import torch
 from sklearn.neighbors import NearestNeighbors
-import torch.nn as nn
 import pandas as pd
+from torch_geometric.nn.aggr import MeanAggregation
+from torch_geometric.nn import GATv2Conv,GCNConv
+import torch.nn as nn
+from torch.nn import Linear
+import torch.nn.functional as F
+from torch_geometric.nn.norm import BatchNorm
 
 
 def calc_edge_mat(mat, dist_bool=True, radius=50):
@@ -261,3 +266,142 @@ def train_loop(data_loader, model, optimizer, loss_fkt, attr_bool=False, device=
 
 
 
+
+# Baseline Models
+
+class NeuralNetwork(nn.Module):
+
+    def __init__(self, input_dim, layer1, layer2, layer3, output_dim, dp, Pre_norm):
+        super(NeuralNetwork, self).__init__()
+        self.layer_1 = Linear(input_dim, layer1)
+        self.layer_2 = Linear(layer1, layer2)
+        self.layer_3 = Linear(layer2, layer3)
+        self.outputLayer = Linear(layer3, output_dim)
+        self.BatchNorm = BatchNorm(input_dim)
+        self.Pre_norm = Pre_norm
+        self.dp = dp
+
+    def forward(self, x):
+        if self.Pre_norm:
+            x = self.BatchNorm(x)
+        x = F.relu(self.layer_1(x))
+        x = F.dropout(x, p=self.dp, training=self.training)
+
+        x = F.relu(self.layer_2(x))
+        x = F.dropout(x, p=self.dp, training=self.training)
+
+        x = F.relu(self.layer_3(x))
+        x = F.dropout(x, p=self.dp, training=self.training)
+
+        x = F.softmax(self.outputLayer(x), dim=1)
+
+        return x
+
+
+class simple_GAT(nn.Module):
+    def __init__(self, num_of_feat, f_1, f_2, f_3,
+                 dp, Pre_norm, f_final=2, edge_dim=1,similarity_typ = 'euclide',):
+        super(simple_GAT, self).__init__()
+
+        self.conv1 = GATv2Conv(num_of_feat, f_1, edge_dim=edge_dim)
+        self.conv2 = GATv2Conv(f_1, f_2, edge_dim=edge_dim)
+        self.conv3 = GATv2Conv(f_2, f_3, edge_dim=edge_dim)
+        self.lin = Linear(f_3, f_final)
+        self.similarity_typ = similarity_typ
+
+        self.dp = dp
+        self.Pre_norm = Pre_norm
+        self.BatchNorm = BatchNorm(num_of_feat)
+        self.Mean_agg = MeanAggregation()
+
+
+    def forward(self, node_list, edge_list, edge_att=None):
+        prediction = []
+
+        sample_number = len(node_list)
+
+        for idx in range(sample_number):
+
+            x = node_list[idx].float()
+            edge_attr = edge_att[idx].float()
+            edge_index = edge_list[idx].long()
+
+            if self.Pre_norm:
+                x = self.BatchNorm(x)
+
+            x = self.conv1(x=x,
+                           edge_index=edge_index,
+                           edge_attr=edge_attr)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.conv2(x=x,
+                           edge_index=edge_index,
+                           edge_attr=edge_attr)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.conv3(x=x,
+                           edge_index=edge_index,
+                           edge_attr=edge_attr)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.Mean_agg(x, dim=0)
+            x = self.lin(x)
+            prediction.append(F.softmax(x, dim=1))
+
+        return prediction
+
+class simple_GNN(nn.Module):
+    def __init__(self, num_of_feat, f_1, f_2, f_3,
+                 dp, Pre_norm, f_final=2,similarity_typ = 'euclide',):
+        super(simple_GNN, self).__init__()
+
+        self.conv1 = GCNConv(num_of_feat, f_1)
+        self.conv2 = GCNConv(f_1, f_2)
+        self.conv3 = GCNConv(f_2, f_3)
+
+        self.lin = Linear(f_3, f_final)
+        self.similarity_typ = similarity_typ
+
+        self.dp = dp
+        self.Pre_norm = Pre_norm
+        self.BatchNorm = BatchNorm(num_of_feat)
+        self.Mean_agg = MeanAggregation()
+
+
+    def forward(self, node_list, edge_list):
+        prediction = []
+
+        sample_number = len(node_list)
+
+        for idx in range(sample_number):
+
+            x = node_list[idx].float()
+            edge_index = edge_list[idx].long()
+
+            if self.Pre_norm:
+                x = self.BatchNorm(x)
+
+            x = self.conv1(x=x,
+                           edge_index=edge_index)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.conv2(x=x,
+                           edge_index=edge_index)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.conv3(x=x,
+                           edge_index=edge_index)
+
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dp, training=self.training)
+
+            x = self.Mean_agg(x, dim=0)
+            x = self.lin(x)
+            prediction.append(F.softmax(x, dim=1))
+
+        return prediction
