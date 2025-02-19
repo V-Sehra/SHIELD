@@ -5,7 +5,6 @@ import os
 import torch
 from torch_geometric.data import Data
 import random as rnd
-import model_utils
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
 
