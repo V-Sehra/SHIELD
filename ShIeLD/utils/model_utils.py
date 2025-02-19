@@ -7,18 +7,22 @@ Created on Wed Jan 12 14:18:15 2024
 """
 import numpy as np
 import pickle
-import torch
-from sklearn.neighbors import NearestNeighbors
 import pandas as pd
+from typing import List, Tuple,Optional
+
+from sklearn.neighbors import NearestNeighbors
+
+import torch
 from torch_geometric.nn.aggr import MeanAggregation
 from torch_geometric.nn import GATv2Conv,GCNConv
 import torch.nn as nn
 from torch.nn import Linear
 import torch.nn.functional as F
 from torch_geometric.nn.norm import BatchNorm
+from torch.utils.data import DataLoader
+from torch.optim import Optimizer
 
-
-def calc_edge_mat(mat, dist_bool=True, radius=50):
+def calc_edge_mat(mat: np.array, dist_bool: bool = True, radius: float = 50) -> np.array:
     """
     This function calculates the edge matrix for a given matrix of data points.
     It uses the NearestNeighbors algorithm from sklearn to find the nearest neighbors within a given radius.
@@ -32,6 +36,7 @@ def calc_edge_mat(mat, dist_bool=True, radius=50):
 
     Returns:
     np.array: The edge matrix. If dist_bool is True, it also returns the distances between the nodes.
+
     """
 
     neigh = NearestNeighbors(radius=radius).fit(mat)
@@ -66,7 +71,7 @@ def calc_edge_mat(mat, dist_bool=True, radius=50):
         return edge
 
 
-def early_stopping(loss_epoch, patience=15):
+def early_stopping(loss_epoch: list, patience: int = 15) -> bool:
     """
     This function checks if the training process should be stopped early based on the change in loss over epochs.
     If the change in loss between the last two epochs is less than 0.001 and the number of epochs is greater than the patience threshold, the function returns True, indicating that training should be stopped.
@@ -89,7 +94,7 @@ def early_stopping(loss_epoch, patience=15):
         return False
 
 
-def get_p2p_att_score(sample, cell_phenotypes_sample, all_phenotypes, node_attention_scores):
+def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenotypes: np.array, node_attention_scores: list) -> Tuple[List, List, List]:
     """
     This function calculates the attention score for each cell phenotype to all other phenotypes.
     It uses the end attention score p2p (phenotype to phenotype).
@@ -102,9 +107,10 @@ def get_p2p_att_score(sample, cell_phenotypes_sample, all_phenotypes, node_atten
     node_attention_scores (list): A list of attention scores for each node.
 
     Returns:
-    list: A list of raw attention scores for each phenotype to all other phenotypes.
-    list: A list of normalization factors based on the raw count of edges between two phenotypes.
-    list: A list of normalized attention scores for each phenotype to all other phenotypes.
+    raw_att_p2p (list): A list of raw attention scores for each phenotype to all other phenotypes.
+    normalisation_factor_edge_number(list): A list of normalization factors based on the raw count of edges between two phenotypes.
+    normalised_p2p(list): A list of normalized attention scores for each phenotype to all other phenotypes.
+
     """
 
     raw_att_p2p = []
@@ -138,7 +144,7 @@ def get_p2p_att_score(sample, cell_phenotypes_sample, all_phenotypes, node_atten
     return raw_att_p2p, normalisation_factor_edge_number, normalised_p2p
 
 
-def initiaize_loss(path, device, tissue_dict=None):
+def initiaize_loss(path: str, device: str, tissue_dict: Optional[dict]=None) -> nn.CrossEntropyLoss:
     """
     This function initializes the loss function as weighted loss.
     It calculates the class weights based on the number of graphs for each tissue type in the training data.
@@ -171,7 +177,7 @@ def initiaize_loss(path, device, tissue_dict=None):
     return criterion
 
 
-def remove_zero_distances(edge, dist, limit=0, return_dist=False):
+def remove_zero_distances(edge: np.array, dist=np.array, limit: float = 0, return_dist: bool = False):
     """
     This function removes edges with distances less than or equal to a given limit from a given edge matrix.
     It also optionally removes the corresponding distances from a given distance array.
@@ -200,7 +206,7 @@ def remove_zero_distances(edge, dist, limit=0, return_dist=False):
 
 
 
-def turn_data_list_into_batch(data_sample, device, attr_bool= False, id_bool = False):
+def turn_data_list_into_batch(data_sample: list, device: str, attr_bool: bool = False, id_bool: bool = False):
     """
     This function processes a list of data samples by moving each attribute of the samples to a specified device.
     It returns lists of x attributes, edge indices, Euclidean distances, and IDs of the samples.
@@ -212,7 +218,11 @@ def turn_data_list_into_batch(data_sample, device, attr_bool= False, id_bool = F
     id_bool (bool): If True, the function also processes and returns the IDs of the samples. Default is False.
 
     Returns:
-    tuple: A tuple containing lists of x attributes, edge indices, Euclidean distances (if attr_bool is True), and IDs (if id_bool is True) of the samples.
+    tuple: A tuple containing lists of
+    x attributes,
+    edge indices,
+    Euclidean distances (if attr_bool is True),
+    IDs (if id_bool is True) of the samples.
     """
 
     sample_x = [sample.x.to(device) for sample in data_sample]
@@ -222,7 +232,9 @@ def turn_data_list_into_batch(data_sample, device, attr_bool= False, id_bool = F
 
     return sample_x, sample_edge, sample_att, ids_list
 
-def train_loop(data_loader, model, optimizer, loss_fkt, attr_bool=False, device='cuda', loss_batch=[]):
+def train_loop(data_loader: DataLoader, model: nn.Module, optimizer: Optimizer, loss_fkt: nn.CrossEntropyLoss,
+               attr_bool: bool = False, device: str ='cuda', loss_batch: list=[])-> Tuple[nn.Module, list]:
+
     """
     This function performs a training loop for a given model and data loader.
     It iterates over the data loader, processes each sample, makes predictions using the model, calculates the loss, and updates the model parameters.
@@ -270,37 +282,107 @@ def train_loop(data_loader, model, optimizer, loss_fkt, attr_bool=False, device=
 # Baseline Models
 
 class NeuralNetwork(nn.Module):
+    """
+    A simple feedforward neural network with three hidden layers, optional batch normalization,
+    dropout regularization, and a softmax output activation.
+
+    Attributes:
+        layer_1 (nn.Linear): First fully connected layer.
+        layer_2 (nn.Linear): Second fully connected layer.
+        layer_3 (nn.Linear): Third fully connected layer.
+        outputLayer (nn.Linear): Output layer.
+        BatchNorm (nn.BatchNorm1d): Batch normalization layer applied to the input.
+        Pre_norm (bool): Whether to apply batch normalization before passing through the network.
+        dp (float): Dropout probability for regularization.
+    """
 
     def __init__(self, input_dim, layer1, layer2, layer3, output_dim, dp, Pre_norm):
+        """
+        Initializes the neural network.
+
+        Args:
+            input_dim (int): Number of input features.
+            layer1 (int): Number of neurons in the first hidden layer.
+            layer2 (int): Number of neurons in the second hidden layer.
+            layer3 (int): Number of neurons in the third hidden layer.
+            output_dim (int): Number of output neurons (e.g., number of classes in classification).
+            dp (float): Dropout probability (0-1) for regularization.
+            Pre_norm (bool): If True, applies batch normalization to the input before passing through the layers.
+        """
         super(NeuralNetwork, self).__init__()
-        self.layer_1 = Linear(input_dim, layer1)
-        self.layer_2 = Linear(layer1, layer2)
-        self.layer_3 = Linear(layer2, layer3)
-        self.outputLayer = Linear(layer3, output_dim)
-        self.BatchNorm = BatchNorm(input_dim)
+        self.layer_1 = nn.Linear(input_dim, layer1)
+        self.layer_2 = nn.Linear(layer1, layer2)
+        self.layer_3 = nn.Linear(layer2, layer3)
+        self.outputLayer = nn.Linear(layer3, output_dim)
+        self.BatchNorm = nn.BatchNorm1d(input_dim)  # Normalize input features if Pre_norm is enabled
         self.Pre_norm = Pre_norm
-        self.dp = dp
+        self.dp = dp  # Dropout probability
 
     def forward(self, x):
+        """
+        Defines the forward pass of the neural network.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, input_dim).
+
+        Returns:
+            torch.Tensor: Output tensor after passing through the network, with softmax activation.
+        """
         if self.Pre_norm:
-            x = self.BatchNorm(x)
+            x = self.BatchNorm(x)  # Apply batch normalization to input if enabled
+
+        # First hidden layer with ReLU activation and dropout
         x = F.relu(self.layer_1(x))
         x = F.dropout(x, p=self.dp, training=self.training)
 
+        # Second hidden layer with ReLU activation and dropout
         x = F.relu(self.layer_2(x))
         x = F.dropout(x, p=self.dp, training=self.training)
 
+        # Third hidden layer with ReLU activation and dropout
         x = F.relu(self.layer_3(x))
         x = F.dropout(x, p=self.dp, training=self.training)
 
+        # Output layer with softmax activation (for multi-class classification)
         x = F.softmax(self.outputLayer(x), dim=1)
 
         return x
 
 
+
 class simple_GAT(nn.Module):
+    """
+    A simple Graph Attention Network (GAT) using three GATv2 convolutional layers,
+    batch normalization, dropout, and a final linear layer for classification.
+
+    Attributes:
+        conv1 (GATv2Conv): First graph attention convolutional layer.
+        conv2 (GATv2Conv): Second graph attention convolutional layer.
+        conv3 (GATv2Conv): Third graph attention convolutional layer.
+        lin (nn.Linear): Final linear layer to map to output classes.
+        similarity_typ (str): Type of similarity metric used (default: 'euclide').
+        dp (float): Dropout probability for regularization.
+        Pre_norm (bool): Whether to apply batch normalization before processing.
+        BatchNorm (BatchNorm1d): Batch normalization layer for input features.
+        Mean_agg (MeanAggregation): Aggregation function for node embeddings.
+    """
+
     def __init__(self, num_of_feat, f_1, f_2, f_3,
-                 dp, Pre_norm, f_final=2, edge_dim=1,similarity_typ = 'euclide',):
+                 dp, Pre_norm, f_final=2, edge_dim=1, similarity_typ='euclide'):
+        """
+        Initializes the GAT model.
+
+        Args:
+            num_of_feat (int): Number of input node features.
+            f_1 (int): Number of features in the first GAT layer.
+            f_2 (int): Number of features in the second GAT layer.
+            f_3 (int): Number of features in the third GAT layer.
+            dp (float): Dropout probability for regularization.
+            Pre_norm (bool): Whether to apply batch normalization to input features.
+            f_final (int): Number of output classes (default: 2).
+            edge_dim (int): Dimension of edge attributes.
+            similarity_typ (str): Type of similarity function to use (default: 'euclide').
+        """
         super(simple_GAT, self).__init__()
 
         self.conv1 = GATv2Conv(num_of_feat, f_1, edge_dim=edge_dim)
@@ -311,51 +393,83 @@ class simple_GAT(nn.Module):
 
         self.dp = dp
         self.Pre_norm = Pre_norm
-        self.BatchNorm = BatchNorm(num_of_feat)
-        self.Mean_agg = MeanAggregation()
-
+        self.BatchNorm = BatchNorm(num_of_feat)  # Batch normalization for input features
+        self.Mean_agg = MeanAggregation()  # Aggregates node embeddings into a graph representation
 
     def forward(self, node_list, edge_list, edge_att=None):
-        prediction = []
+        """
+        Forward pass for processing multiple graph samples.
 
-        sample_number = len(node_list)
+        Args:
+            node_list (list[torch.Tensor]): List of node feature tensors, each corresponding to a graph.
+            edge_list (list[torch.Tensor]): List of edge index tensors defining graph connectivity.
+            edge_att (list[torch.Tensor], optional): List of edge attribute tensors.
+
+        Returns:
+            list[torch.Tensor]: List of softmax predictions for each input graph.
+        """
+        prediction = []
+        sample_number = len(node_list)  # Number of graphs in the batch
 
         for idx in range(sample_number):
-
-            x = node_list[idx].float()
-            edge_attr = edge_att[idx].float()
-            edge_index = edge_list[idx].long()
+            x = node_list[idx].float()  # Convert node features to float
+            edge_attr = edge_att[idx].float()  # Convert edge attributes to float
+            edge_index = edge_list[idx].long()  # Convert edge indices to long tensor
 
             if self.Pre_norm:
-                x = self.BatchNorm(x)
+                x = self.BatchNorm(x)  # Apply batch normalization if enabled
 
-            x = self.conv1(x=x,
-                           edge_index=edge_index,
-                           edge_attr=edge_attr)
+            # Pass through the three GAT layers with ReLU activations and dropout
+            x = self.conv1(x, edge_index, edge_attr)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.conv2(x=x,
-                           edge_index=edge_index,
-                           edge_attr=edge_attr)
+            x = self.conv2(x, edge_index, edge_attr)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.conv3(x=x,
-                           edge_index=edge_index,
-                           edge_attr=edge_attr)
+            x = self.conv3(x, edge_index, edge_attr)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.Mean_agg(x, dim=0)
-            x = self.lin(x)
-            prediction.append(F.softmax(x, dim=1))
+            x = self.Mean_agg(x, dim=0)  # Aggregate node embeddings into a graph representation
+            x = self.lin(x)  # Final linear layer
+            prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
 
         return prediction
 
 class simple_GNN(nn.Module):
+    """
+    A simple Graph Neural Network (GNN) using three GCNConv layers, batch normalization,
+    dropout, and a final linear layer for classification.
+
+    Attributes:
+        conv1 (GCNConv): First graph convolutional layer.
+        conv2 (GCNConv): Second graph convolutional layer.
+        conv3 (GCNConv): Third graph convolutional layer.
+        lin (nn.Linear): Final linear layer to map to output classes.
+        similarity_typ (str): Type of similarity metric used (default: 'euclide').
+        dp (float): Dropout probability for regularization.
+        Pre_norm (bool): Whether to apply batch normalization before processing.
+        BatchNorm (BatchNorm1d): Batch normalization layer for input features.
+        Mean_agg (MeanAggregation): Aggregation function for node embeddings.
+    """
+
     def __init__(self, num_of_feat, f_1, f_2, f_3,
-                 dp, Pre_norm, f_final=2,similarity_typ = 'euclide',):
+                 dp, Pre_norm, f_final=2, similarity_typ='euclide'):
+        """
+        Initializes the GNN model.
+
+        Args:
+            num_of_feat (int): Number of input node features.
+            f_1 (int): Number of features in the first GCN layer.
+            f_2 (int): Number of features in the second GCN layer.
+            f_3 (int): Number of features in the third GCN layer.
+            dp (float): Dropout probability for regularization.
+            Pre_norm (bool): Whether to apply batch normalization to input features.
+            f_final (int): Number of output classes (default: 2).
+            similarity_typ (str): Type of similarity function to use (default: 'euclide').
+        """
         super(simple_GNN, self).__init__()
 
         self.conv1 = GCNConv(num_of_feat, f_1)
@@ -367,41 +481,45 @@ class simple_GNN(nn.Module):
 
         self.dp = dp
         self.Pre_norm = Pre_norm
-        self.BatchNorm = BatchNorm(num_of_feat)
-        self.Mean_agg = MeanAggregation()
-
+        self.BatchNorm = BatchNorm(num_of_feat)  # Batch normalization for input features
+        self.Mean_agg = MeanAggregation()  # Aggregates node embeddings into a graph representation
 
     def forward(self, node_list, edge_list):
-        prediction = []
+        """
+        Forward pass for processing multiple graph samples.
 
-        sample_number = len(node_list)
+        Args:
+            node_list (list[torch.Tensor]): List of node feature tensors, each corresponding to a graph.
+            edge_list (list[torch.Tensor]): List of edge index tensors defining graph connectivity.
+
+        Returns:
+            list[torch.Tensor]: List of softmax predictions for each input graph.
+        """
+        prediction = []
+        sample_number = len(node_list)  # Number of graphs in the batch
 
         for idx in range(sample_number):
-
-            x = node_list[idx].float()
-            edge_index = edge_list[idx].long()
+            x = node_list[idx].float()  # Convert node features to float
+            edge_index = edge_list[idx].long()  # Convert edge indices to long tensor
 
             if self.Pre_norm:
-                x = self.BatchNorm(x)
+                x = self.BatchNorm(x)  # Apply batch normalization if enabled
 
-            x = self.conv1(x=x,
-                           edge_index=edge_index)
+            # Pass through the three GCN layers with ReLU activations and dropout
+            x = self.conv1(x, edge_index)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.conv2(x=x,
-                           edge_index=edge_index)
+            x = self.conv2(x, edge_index)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.conv3(x=x,
-                           edge_index=edge_index)
-
+            x = self.conv3(x, edge_index)
             x = F.relu(x)
             x = F.dropout(x, p=self.dp, training=self.training)
 
-            x = self.Mean_agg(x, dim=0)
-            x = self.lin(x)
-            prediction.append(F.softmax(x, dim=1))
+            x = self.Mean_agg(x, dim=0)  # Aggregate node embeddings into a graph representation
+            x = self.lin(x)  # Final linear layer
+            prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
 
         return prediction
