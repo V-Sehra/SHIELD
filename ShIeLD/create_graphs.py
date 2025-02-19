@@ -9,13 +9,14 @@ from pathlib import Path
 import pickle
 
 import utils
+from utils import data_utils
 
 parser = argparse.ArgumentParser()
 
 
 
 # Define command-line arguments for input data paths
-parser.add_argument("-req_path", "--requirements_file_path", default=Path.cwd() / 'diabetes' / 'requirements.pt')
+parser.add_argument("-req_path", "--requirements_file_path", default=Path.cwd()/'examples' / 'diabetes' / 'requirements.pt')
 parser.add_argument("-dat_type", "--data_set_type", default='train')
 
 # Parse command-line arguments
@@ -42,7 +43,7 @@ minimum_number_cells = requirements['minimum_number_cells']
 
 # Determine the correct fold column based on dataset type
 if data_set_type == 'train':
-    fold_column = requirements['validation_split_column']
+    fold_column = requirements['number_validation_splits']
 else:
     fold_column = requirements['test_set_fold_number']
 

@@ -14,7 +14,7 @@ import sys
 import torch
 import pickle
 cwd = os.getcwd()
-sys.path.append(os.path.join(f'{cwd}', 'utils'))
+sys.path.append(os.path.join(f'{cwd}', '../utils'))
 
 idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
 shield_dir = os.path.join(f'{cwd[:idx_folder]}')
