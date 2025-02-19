@@ -5,11 +5,13 @@ import pickle
 from torch_geometric.loader import DataListLoader
 
 from pathlib import Path
+import os
 
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 from utils.data_class import diabetis_dataset
+import utils.train_utils as train_utils
 import argparse
 from sklearn.metrics import balanced_accuracy_score
 
@@ -18,7 +20,7 @@ torch.multiprocessing.set_start_method('fork')
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--fold", type=int, default=1)
+parser.add_argument("-split", "--split_number", type=int, default=1)
 parser.add_argument("-comment", "--comment", type=str, default='random_anker')
 parser.add_argument("-comment_norm", "--comment_norm", type=str, default='noNorm')
 
@@ -52,9 +54,10 @@ else:
 
 # Run one job per validation version
 # Each version will run through all the different hyperparameters
-fold = args.fold
+split_number = args.split_number
 
-
+training_results_csv = train_utils.get_train_results_csv(requirement_dict = requirements,
+                                                         split_number = split_number)
 
 
 for radius_distance in requirements['radius_distance_all']:
