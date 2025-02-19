@@ -57,8 +57,7 @@ def combine_cell_types(original_array, string_list):
 
 
 def create_graph_and_save(vornoi_id, radius_neibourhood,
-                          whole_data, gene_col_name, eval_col_name,
-                          voronoi_list, tissue_dict, sub_sample,
+                          whole_data,voronoi_list, sub_sample,
                           requiremets_dict, save_path_folder, repeat_id):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
@@ -67,10 +66,7 @@ def create_graph_and_save(vornoi_id, radius_neibourhood,
         vornoi_id (int): ID of the Voronoi region.
         radius_neibourhood (float): Radius for neighborhood search.
         whole_data (DataFrame): The entire dataset.
-        gene_col_name (str): Column names for gene expression features.
-        eval_col_name (list): List of evaluation column names.
         voronoi_list (list): List of Voronoi cell indices.
-        tissue_dict (dict): Mapping of tissue labels to numerical values.
         sub_sample (str): Sample identifier.
         requiremets_dict (dict): Dictionary containing dataset requirements.
         save_path_folder (str): Directory path where graphs are saved.
@@ -79,6 +75,11 @@ def create_graph_and_save(vornoi_id, radius_neibourhood,
     Returns:
         None
     """
+    tissue_dict = requiremets_dict['label_dict']
+    #List of evaluation column names.
+    eval_col_name = requiremets_dict['eval_columns']
+    #Column names for gene expression features.
+    gene_col_name = requiremets_dict['markers']
 
     cosine = torch.nn.CosineSimilarity(dim=1)
 
@@ -254,12 +255,17 @@ def get_tissue_type_name(tissue_type_id):
 def get_tissue_type_id(tissue_type_name):
     return tissue_dict[tissue_type_name]
 
-def get_voronoi_id(data_set: DataFrame, anker_cell: DataFrame, boarder_number: int = 50, fussy_limit: Optional[float] = None, centroid_bool: bool = False) -> np.array:
+def get_voronoi_id(data_set: DataFrame,
+                    requiremets_dict : dict,
+                   anker_cell: DataFrame,
+                   fussy_limit: Optional[float] = None,
+                   centroid_bool: bool = False) -> np.array:
     """
     Function to assign each data point to a Voronoi cell.
 
     Parameters:
     data_set (DataFrame): DataFrame containing the data points.
+    requiremets_dict (dict): Dictionary containing dataset requirements.
     anker_cell (DataFrame): DataFrame containing the anchor points for Voronoi cells.
     boarder_number (int): Number of nearest neighbors to consider for each data point.
     fussy_limit (float): Threshold for fuzzy assignment of data points to Voronoi cells.
@@ -268,12 +274,16 @@ def get_voronoi_id(data_set: DataFrame, anker_cell: DataFrame, boarder_number: i
     Returns:
     ndarray: List of Voronoi cells with assigned data points or array of nearest anchor indices.
     """
+    boarder_number = requiremets_dict['voro_neighbours']
+    x_col_name = requiremets_dict['X_col_name']
+    y_col_name = requiremets_dict['Y_col_name']
+
 
     # Create a KDTree for efficient nearest neighbor search
-    tree = cKDTree(anker_cell[['X_value', 'Y_value']])
+    tree = cKDTree(anker_cell[[x_col_name, y_col_name]])
 
     # Find the closest anchor for each point in 'data_set'
-    dist, indices = tree.query(data_set[['X_value', 'Y_value']], k=boarder_number)
+    dist, indices = tree.query(data_set[[x_col_name, y_col_name]], k=boarder_number)
 
     # If 'fussy_limit' is specified, adjust the assignment of data points to Voronoi cells
     if fussy_limit is not None:
@@ -282,9 +292,9 @@ def get_voronoi_id(data_set: DataFrame, anker_cell: DataFrame, boarder_number: i
         if centroid_bool:
             copy_data = data_set.copy()
             copy_data['voronoi_id'] = indices[:, 0]
-            centroid_data = copy_data.groupby('voronoi_id')[['X_value', 'Y_value']].mean().reset_index()
-            tree_centroid = cKDTree(centroid_data[['X_value', 'Y_value']])
-            dist_centroid, _ = tree_centroid.query(data_set[['X_value', 'Y_value']], k=boarder_number)
+            centroid_data = copy_data.groupby('voronoi_id')[[x_col_name, y_col_name]].mean().reset_index()
+            tree_centroid = cKDTree(centroid_data[[x_col_name, y_col_name]])
+            dist_centroid, _ = tree_centroid.query(data_set[[x_col_name, y_col_name]], k=boarder_number)
             proximity_to_border = [dist_centroid[:, 0] / dist_centroid[:, i] for i in range(0, boarder_number)]
         else:
 

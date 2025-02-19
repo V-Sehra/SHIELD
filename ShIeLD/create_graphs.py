@@ -31,9 +31,6 @@ with open(requirements_file_path, 'rb') as file:
     requirements = pickle.load(file)
 
 # Extract key parameters from the requirements file
-eval_columns = requirements['eval_columns']
-label_dict = requirements['label_dict']
-markers = requirements['markers']
 radius_distance_all = requirements['radius_distance_all']
 fussy_limit_all = requirements['fussy_limit_all']
 prozent_of_anker_cells = requirements['prozent_of_anker_cells']
@@ -61,7 +58,7 @@ sample = data_sample[requirements['measument_sample_name']].unique()
 for sub_sample in tqdm(sample):
 
     # Filter data for the current image sample
-    single_image = data_sample[data_sample['image'] == sub_sample]
+    single_sample = data_sample[data_sample['image'] == sub_sample]
 
     # Iterate over different percentages of anchor cells
     for anker_prozent in prozent_of_anker_cells:
@@ -74,13 +71,13 @@ for sub_sample in tqdm(sample):
             for augment_id in range(augmentation_number):
 
                 # Randomly select anchor cells based on the percentage
-                anchors = single_image.sample(n=int(len(single_image) * anker_prozent))
-
+                anchors = single_sample.sample(n=int(len(single_sample) * anker_prozent))
+                print(single_sample.columns)
                 # Compute Voronoi regions with fuzzy boundary constraints
                 voroni_id_fussy = utils.data_utils.get_voronoi_id(
-                    data_set=single_image,
-                    anker_cell=anchors,
-                    boarder_number=number_voronoi_neighbours,
+                    data_set = single_sample,
+                    anker_cell = anchors,
+                    requiremets_dict = requirements,
                     fussy_limit=fussy_limit
                 )
 
@@ -90,9 +87,9 @@ for sub_sample in tqdm(sample):
                 # If any region has too few cells, filter out those regions and recompute Voronoi
                 if any(number_cells < minimum_number_cells):
                     voroni_id_fussy = utils.data_utils.get_voronoi_id(
-                        data_set=single_image,
+                        data_set=single_sample,
                         anker_cell=anchors[number_cells > minimum_number_cells],
-                        boarder_number=number_voronoi_neighbours,
+                        requiremets_dict = requirements,
                         fussy_limit=fussy_limit
                     )
 
@@ -124,12 +121,10 @@ for sub_sample in tqdm(sample):
                     graphs = pool.map(
                         functools.partial(
                             utils.data_utils.create_graph_and_save,
-                            whole_data=single_image,
-                            gene_col_name=markers,
-                            eval_col_name=eval_columns,
+                            whole_data=single_sample,
                             save_path_folder=save_path_folder_graphs,
                             radius_neibourhood=radius_distance,
-                            tissue_dict=label_dict,
+                            requiremets_dict=requirements,
                             voronoi_list=voroni_id_fussy,
                             sub_sample=sub_sample,
                             repeat_id=repeat_counter
