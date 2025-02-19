@@ -13,7 +13,7 @@ cwd = os.getcwd()
 sys.path.append(os.path.join(f'{cwd}', 'utils'))
 import model_utils
 import data_utils
-from data_class import local_immune_graph_dataset
+from ShIeLD.utils.data_class import local_immune_graph_dataset
 from model import ShIeLD
 import argparse
 import torch

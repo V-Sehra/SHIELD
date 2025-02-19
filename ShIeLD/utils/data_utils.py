@@ -1,10 +1,15 @@
 import pandas as pd
+from pandas import DataFrame
 import numpy as np
 import os
 import torch
 from torch_geometric.data import Data
 import random as rnd
 import model_utils
+from scipy.spatial import cKDTree
+from sklearn.neighbors import NearestNeighbors
+
+from typing import List, Tuple,Optional
 
 cwd = os.getcwd()
 idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
@@ -17,7 +22,7 @@ tissue_dict = {'normalLiver': 0,
 
 
 def bool_passer(argument):
-    if argument == 'True':
+    if argument == 'True' or argument == 'true' or argument == '1' or argument == 1 or argument == True:
         value = True
     else:
         value = False
@@ -51,60 +56,71 @@ def combine_cell_types(original_array, string_list):
 
     return original_array
 
-def create_graphs(mat, radius, gene_indicator, eval_indicator, patient_id, origin, batch_counter, save_path_graphs):
-    """
-    This function creates a graph from a sample of cells.
-    It calculates the real coordinates, edge matrix, and attention matrix, and selects the desired features for the nodes.
-    It then creates a Data object and saves it as a graph.
 
-    Parameters:
-    mat (pd.DataFrame): The sample of cells.
-    radius (float): The radius to use for calculating the edge matrix.
-    gene_indicator (list): A list of column names indicating the gene intensities.
-    eval_indicator (list): A list of column names indicating the evaluation information.
-    patient_id (str): The ID of the patient.
-    origin (str): The tissue type.
-    batch_counter (int): The batch counter.
-    save_path_graphs (str): The path to save the graphs.
+def create_graph_and_save(vornoi_id, radius_neibourhood,
+                          whole_data, gene_col_name, eval_col_name,
+                          voronoi_list, tissue_dict, sub_sample,
+                          requiremets_dict, save_path_folder, repeat_id):
+    """
+    Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
+
+    Args:
+        vornoi_id (int): ID of the Voronoi region.
+        radius_neibourhood (float): Radius for neighborhood search.
+        whole_data (DataFrame): The entire dataset.
+        gene_col_name (str): Column names for gene expression features.
+        eval_col_name (list): List of evaluation column names.
+        voronoi_list (list): List of Voronoi cell indices.
+        tissue_dict (dict): Mapping of tissue labels to numerical values.
+        sub_sample (str): Sample identifier.
+        requiremets_dict (dict): Dictionary containing dataset requirements.
+        save_path_folder (str): Directory path where graphs are saved.
+        repeat_id (int): Counter for repeated samples.
 
     Returns:
-    str: The name of the created graph.
+        None
     """
 
-    sub_sample_cells = mat
+    cosine = torch.nn.CosineSimilarity(dim=1)
 
-    real_cordinates = sub_sample_cells[['Y_value', 'X_value']]
-    plate_edge, plat_att = model_utils.calc_edge_mat(real_cordinates,
-                                                     dist_bool=True,
-                                                     radius=radius)
+    # Extract data for the current Voronoi region
+    graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
 
-    # remove all "overlapping" cells
-    plate_edge = model_utils.remove_zero_distances(edge=plate_edge,
-                                                   dist=plat_att,
-                                                   return_dist=False)
+    # Determine the most frequent tissue type in this region
+    dominating_tissue_type = graph_data[requiremets_dict['label_column']].value_counts().idxmax()
 
-    # select the desired features for the nodes
-    cells = torch.tensor((sub_sample_cells.loc[:, gene_indicator]).to_numpy()).float()
+    # Convert gene expression features into a tensor
+    node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
 
-    data = Data(x=cells,
+    # Extract spatial coordinates (X, Y)
+    coord = graph_data[[requiremets_dict['X_col_name'], requiremets_dict['Y_col_name']]]
 
-                edge_index_plate=torch.tensor(plate_edge).long(),
-                orginal_cord=torch.tensor(real_cordinates.to_numpy()),
+    # Compute the edge index using a utility function
+    edge_mat = get_edge_index(mat=coord, dist_bool=True, radius=radius_neibourhood)
 
-                eval=sub_sample_cells.loc[:, eval_indicator]
-                .to_numpy(dtype=np.dtype('str')),
+    # Compute cosine similarity between connected nodes
+    plate_cosine_sim = cosine(node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]).cpu()
 
-                eval_col_names=sub_sample_cells.loc[:, eval_indicator]
-                .columns.to_numpy(dtype=np.dtype('str')),
+    # Create a PyTorch Geometric data object
+    data = Data(
+        x=node_data,
+        edge_index_plate=torch.tensor(edge_mat[0]).long(),
+        plate_euc=torch.tensor(1 / edge_mat[1]),  # Inverse of Euclidean distance
+        plate_cosine_sim=plate_cosine_sim,
+        fold_id=graph_data[requiremets_dict['validation_split_column']].unique(),
+        orginal_cord=torch.tensor(coord.to_numpy()),
+        eval=graph_data[eval_col_name].to_numpy(dtype=np.dtype('str')),
+        eval_col_names=eval_col_name,
+        sub_sample=sub_sample,
+        y=torch.tensor(tissue_dict[dominating_tissue_type]).flatten()
+    ).cpu()
 
-                ids=patient_id,
+    # Save the processed graph data
+    torch.save(data, os.path.join(f'{save_path_folder}',
+                                  f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt'))
 
-                y=torch.tensor(tissue_dict[origin]).flatten()).cpu()
+    return
 
-    torch.save(data, os.path.join(f'{save_path_graphs}',
-                                  f'graph_pat_{patient_id}_{origin}_{batch_counter}.pt'))
-
-    return f'graph_pat_{patient_id}_{origin}_{batch_counter}.pt'
 
 def create_test_train_split(args):
     """
@@ -185,12 +201,113 @@ def fill_missing_row_and_col_withNaN(data_frame, cell_types_names):
     return data_frame
 
 
+def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
+    """
+    Computes the edge index for a graph based on spatial proximity using Nearest Neighbors.
+
+    Args:
+        mat (np.ndarray): A matrix (NxD) where each row represents a point in D-dimensional space.
+        dist_bool (bool, optional): Whether to return edge distances along with edge indices. Default is True.
+        radius (float, optional): The radius within which points are considered neighbors. Default is 265.
+
+    Returns:
+        np.ndarray: An array of shape (2, E) representing source and destination node indices.
+        np.ndarray (optional): An array of distances corresponding to the edges if dist_bool is True.
+    """
+
+    # Fit a NearestNeighbors model to find neighbors within the given radius
+    neigh = NearestNeighbors(radius=radius).fit(mat)
+
+    # Get the distances and indices of neighbors for each point
+    neigh_distance, neighours_per_cell = neigh.radius_neighbors(mat)
+
+    # Compute the number of connections each cell (node) has
+    total_number_connections = [len(connections) for connections in neighours_per_cell]
+
+    # Create the source node indices based on the number of connections each node has
+    edge_src = np.concatenate([
+        np.repeat(idx, total_number_connections[idx]) for idx in range(len(total_number_connections))
+    ])
+
+    # Flatten the neighbor indices to get the destination nodes
+    edge_dest = np.concatenate(neighours_per_cell)
+
+    # Flatten the distances array
+    distances = np.concatenate(neigh_distance)
+
+    # Identify and remove self-loops (where source and destination are the same)
+    remove_self_node = distances == 0
+    edge_src = np.delete(edge_src, remove_self_node)
+    edge_dest = np.delete(edge_dest, remove_self_node)
+
+    # Construct the edge index array
+    edge = np.array([edge_src, edge_dest])
+
+    # Return edge indices with or without distances based on dist_bool
+    if dist_bool:
+        return edge, np.delete(distances, remove_self_node)
+    else:
+        return edge
+
 def get_tissue_type_name(tissue_type_id):
     return tissue_type_name[tissue_type_id]
 
 def get_tissue_type_id(tissue_type_name):
     return tissue_dict[tissue_type_name]
 
+def get_voronoi_id(data_set: DataFrame, anker_cell: DataFrame, boarder_number: int = 50, fussy_limit: Optional[float] = None, centroid_bool: bool = False) -> np.array:
+    """
+    Function to assign each data point to a Voronoi cell.
+
+    Parameters:
+    data_set (DataFrame): DataFrame containing the data points.
+    anker_cell (DataFrame): DataFrame containing the anchor points for Voronoi cells.
+    boarder_number (int): Number of nearest neighbors to consider for each data point.
+    fussy_limit (float): Threshold for fuzzy assignment of data points to Voronoi cells.
+    centroid_bool (bool): If True, use the centroid of Voronoi cells for assignment.
+
+    Returns:
+    ndarray: List of Voronoi cells with assigned data points or array of nearest anchor indices.
+    """
+
+    # Create a KDTree for efficient nearest neighbor search
+    tree = cKDTree(anker_cell[['X_value', 'Y_value']])
+
+    # Find the closest anchor for each point in 'data_set'
+    dist, indices = tree.query(data_set[['X_value', 'Y_value']], k=boarder_number)
+
+    # If 'fussy_limit' is specified, adjust the assignment of data points to Voronoi cells
+    if fussy_limit is not None:
+
+        # If 'centroid_bool' is True, use the centroid of Voronoi cells for assignment
+        if centroid_bool:
+            copy_data = data_set.copy()
+            copy_data['voronoi_id'] = indices[:, 0]
+            centroid_data = copy_data.groupby('voronoi_id')[['X_value', 'Y_value']].mean().reset_index()
+            tree_centroid = cKDTree(centroid_data[['X_value', 'Y_value']])
+            dist_centroid, _ = tree_centroid.query(data_set[['X_value', 'Y_value']], k=boarder_number)
+            proximity_to_border = [dist_centroid[:, 0] / dist_centroid[:, i] for i in range(0, boarder_number)]
+        else:
+
+            proximity_to_border = [dist[:, 0] / dist[:, i] for i in range(0, boarder_number)]
+
+        first_assignment = indices[:, 0].copy()
+        voronoi_collection = []
+
+        # Adjust the assignment of data points to Voronoi cells based on 'fussy_limit'
+        for idx_voro in range(indices[:, 0].max() + 1):
+            voronois_list = np.where(first_assignment == idx_voro)[0]
+            for next_anker in range(1, len(proximity_to_border)):
+                included_cells = proximity_to_border[next_anker] > fussy_limit
+                if any(included_cells):
+                    bordering_cells = (indices[:, next_anker].copy() == idx_voro) & (included_cells)
+                    voronois_list = np.append(voronois_list, np.where(bordering_cells)[0])
+            voronoi_collection.append(np.unique(voronois_list))
+
+        return np.array(voronoi_collection)
+    else:
+        # If 'fussy_limit' is not specified, return the nearest anchor indices
+        return indices
 
 
 def turn_pixel_to_meter(pixel_radius):
