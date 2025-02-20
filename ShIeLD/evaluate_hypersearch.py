@@ -11,7 +11,8 @@ from pathlib import Path
 import torch
 
 import utils.evaluation_utils as evaluation_utils
-
+import utils.data_utils as data_utils
+import utils.train_utils as train_utils
 
 torch.multiprocessing.set_start_method('fork', force=True)
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -24,6 +25,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+    parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
+    parser.add_argument("-config_dict", "--best_config_dict_path",
+                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
 
     args = parser.parse_args()
     print(args)
@@ -33,7 +37,7 @@ def main():
 
     col_of_interest = ['anker_value', 'radius_neibourhood', 'fussy_limit',
                         'dp', 'comment', 'comment_norm', 'model_no','split_number']
-    col_of_variables = ['dropout', 'fussy_limit','anker_value','radius_distance']
+    col_of_variables = ['dp', 'fussy_limit','anker_value','radius_distance']
 
     hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements,
                                                                   col_of_interest = col_of_interest,
@@ -51,6 +55,57 @@ def main():
         evaluation_utils.create_parameter_influence_plots(df = melted_results,
                                                           observed_variable = observable_of_interest,
                                                           save_path=save_path_folder / f'{observable_of_interest}.png')
+
+    if data_utils.bool_passer(args.retain_best_model_config_bool):
+        if args.best_config_dict_path.exists():
+            with open(args.best_config_dict_path, 'rb') as file:
+                best_config_dict = pickle.load(file)
+        else:
+
+            best_config_dict = {'layer_one' : 38,
+                    'input_dim' : 38,
+                    'droup_out_rate' : hyper_search_results['dp'].iloc[0],
+                    'final_layer' : 3,
+                    'attr_bool' : False,
+                    'prozent_anker_cells': hyper_search_results['anker_value'].iloc[0],
+                    'radius_distance': hyper_search_results['radius_neibourhood'].iloc[0],
+                    'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}
+
+            with open(args.best_config_dict_path, 'wb') as file:
+                pickle.dump(best_config_dict, file)
+
+        data_loader_train = DataListLoader(
+            diabetis_dataset(
+                root=train_graph_path,
+                csv_file=requirements['path_to_data_set'] / f'train_set}.csv',
+                graph_file_names_path=requirements[
+                                          'path_to_data_set'] / f'train_set_file_names.pkl'
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+        for num in tqdm(range(5)):
+
+            loss_fkt = train_utils.initiaize_loss(
+                path=os.listdir(train_graph_path),
+                tissue_dict=requirements['label_dict'],
+                device = device)
+
+            model = ShIeLD.model.ShIeLD(
+                num_of_feat=int(requirements['input_layer']),
+                layer_1=requirements['layer_1'], dp=dp, layer_final=requirements['out_put_layer'],
+                self_att=False, attr_bool=requirements['attr_bool']
+            ).to(device)
+            model.train()
+
+            model, train_loss = train_utils.train_loop_shield(
+                optimizer=torch.optim.Adam(model.parameters(), lr=requirements['learning_rate']),
+                model=model,
+                data_loader=data_loader_train,
+                loss_fkt=loss_fkt,
+                attr_bool=requirements['attr_bool'],
+                device=device)
+
+
 
 
 if __name__ == "__main__":
