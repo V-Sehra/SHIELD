@@ -1,5 +1,5 @@
 from tqdm import tqdm
-import numpy as np
+
 import pandas as pd
 import pickle
 from torch_geometric.loader import DataListLoader
@@ -12,8 +12,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 from utils.data_class import diabetis_dataset
 import utils.train_utils as train_utils
+import ShIeLD.model
+
 import argparse
-from sklearn.metrics import balanced_accuracy_score
+
 
 
 torch.multiprocessing.set_start_method('fork')
@@ -56,8 +58,11 @@ else:
 # Each version will run through all the different hyperparameters
 split_number = args.split_number
 
-training_results_csv = train_utils.get_train_results_csv(requirement_dict = requirements,
+training_results_csv,csv_file_path = train_utils.get_train_results_csv(requirement_dict = requirements,
                                                          split_number = split_number)
+
+meta_columns = ['anker_value', 'radius_neibourhood', 'fussy_limit',
+                'dp','comment', 'comment_norm', 'model_no']
 
 
 for radius_distance in requirements['radius_distance_all']:
@@ -65,143 +70,72 @@ for radius_distance in requirements['radius_distance_all']:
 
     for fussy_limit in requirements['fussy_limit_all']:
 
-        for anker_prozent in requirements['prozent_of_anker_cells']:
+        for anker_number in requirements['prozent_of_anker_cells']:
 
 
-            path_to_graphs = Path(requirements['path_graphs'] / \
-                                         f'anker_value_{anker_prozent}'.replace('.', '_') / \
+            path_to_graphs = Path(requirements['path_to_data_set'] / \
+                                         f'anker_value_{anker_number}'.replace('.', '_') / \
                                          f"min_cells_{requirements['minimum_number_cells']}"/ \
                                          f"fussy_limit_{fussy_limit}".replace('.', '_') / \
                                          f'radius_{radius_distance}')
 
             train_graph_path = Path(f'{path_to_graphs}'/ 'train'/'graphs')
 
-        ####### HERE!
 
             torch.cuda.empty_cache()
             data_loader_train = DataListLoader(
                     diabetis_dataset(root = train_graph_path,
-                                   csv_file = os.path.join(f'{path}','voronoi',f'train_set_fold_{fold}.csv'),
-                                   graph_file_names_path = os.path.join(f'{path_to_graphs}',f'train_fold_{fold}_file_names.pkl')),
+                                   csv_file = Path(requirements['path_to_data_set'] / f'train_set_validation_split_{split_number}.csv'),
+                                   graph_file_names_path = Path(requirements['path_to_data_set'] /f'train_set_validation_split_{split_number}_file_names.pkl')),
                     batch_size=batch_size, shuffle=True, num_workers=8,
                     prefetch_factor=50)
 
             data_loader_validation = DataListLoader(
                     diabetis_dataset(root = train_graph_path,
-                                   csv_file = os.path.join(f'{path}','voronoi',f'validation_set_fold_{fold}.csv'),
-                                   graph_file_names_path = os.path.join(f'{path_to_graphs}',f'validation_fold_{fold}_file_names.pkl')),
+                                   csv_file = Path(requirements['path_to_data_set'] /f'validation_set_validation_split_{split_number}.csv'),
+                                   graph_file_names_path = Path(requirements['path_to_data_set'] / f'validation_validation_split_{split_number}_file_names.pkl')),
                     batch_size=batch_size, shuffle=True, num_workers=8,
                     prefetch_factor=50)
 
-            for dp in [0.2]:
+            for dp in requirements['droupout_rate']:
                 for num in tqdm(range(5)):
 
-                    model_csv = pd.DataFrame([[anker_prozent, radius_distance,fussy_limit, dp,
-                                               comment,comment_norm, num]],
-                                             columns=['prozent_of_anker_cells', 'radius_neibourhood', 'fussy_limit',
-                                                      'dp','comment', 'comment_norm', 'model_no'])
+                    if not training_csv[meta_columns].isin([anker_number, radius_distance,fussy_limit, dp,comment,comment_norm, num]).all(axis=1).any():
 
-                    if pd.merge(training_csv, model_csv,
-                                on=['prozent_of_anker_cells', 'radius_neibourhood', 'fussy_limit',
-                                                      'dp','comment', 'comment_norm', 'model_no'],
-                                how='inner').empty:
 
-                        wandb.init(
-                            # set the wandb project where this run will be logged
-                            project=f"hyper_search_diabetis_voronoi_shield",
+                        loss_fkt = train_utils.initiaize_loss(path = os.listdir(train_graph_path),
+                                                              tissue_dict = requirements['label_dict'],
+                                                              device = device)
 
-                            # track hyperparameters and run metadata
-                            config={
-                                "learning_rate": learning_rate,
-                                "architecture": "GNN",
-                                "dropout": dp,
-                                "Layer_1": Layer_1,
-                                "layer_final": f_final,
-                                "prozent_anker_cells": anker_prozent,
-                                "radius_distance": radius_distance,
-                                "fussy_limit": fussy_limit,
-                                "comment": comment,
-                                "comment_norm": comment_norm,
-                                "fold": fold,
-                                "model_no": num
-                            }
-                        )
-                        config = wandb.config
-
-                        loss_fkt = fct_eval.initiaize_loss(path = os.listdir(train_graph_path),device = device)
-
-                        model = fct_eval.ShIeLD(num_of_feat=int(input_dim),
+                        model = ShIeLD.model.ShIeLD(num_of_feat=int(input_dim),
                                        layer_1=Layer_1, dp=dp, layer_final=f_final,
                                        self_att=False, attr_bool=attr_bool)
                         model = model.to(device)
                         model.train()
 
-                        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                        # train loop
 
-                        train_loss = []
-                        epoch = 0
-                        early_stopping = False
-                        print('start training')
-                        while not early_stopping:
-
-                            loss_batch = []
-
-                            for train_sample in tqdm(data_loader_train):
-                                optimizer.zero_grad()
-
-                                prediction, attention, output, y = fct_voronoi.prediction_step(batch_sample = train_sample,
-                                                                                              model = model,
-                                                                                              attr_bool = attr_bool,
-                                                                                              device = device)
-
-                                loss = loss_fkt(output, y)
-
-                                loss.backward()
-                                optimizer.step()
-                                loss_batch.append(loss.item())
-
-                                wandb.log({"train_loss_running": loss})
-
-                            epoch_loss= np.mean(loss_batch)
-                            train_loss.append(epoch_loss)
-                            wandb.log({"train_loss_epoch": epoch_loss})
-                            epoch += 1
-
-                            if epoch > 5:
-                                if ((train_loss[-2] - train_loss[-1]) < 0.001):
-                                    early_stopping = True
-
-                                    wandb.log({"number_epoch": epoch})
+                        model, train_loss = train_utils.train_loop_shield(optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate),
+                                                                          model = model,
+                                                                          data_loader = data_loader_train,
+                                                                          loss_fkt = loss_fkt,
+                                                                          attr_bool = attr_bool,
+                                                                          device = device)
 
 
-
-                        model_prediction_validation = []
-                        true_label_validation = []
-                        torch.cuda.empty_cache()
+                        train_bal_acc = model_utils.get_balance_acc(model = model,
+                                                                    data_loader = data_loader_train,
+                                                                    attr_bool = attr_bool,
+                                                                    device = device)
                         print('start validation')
-                        for validation_sample in data_loader_validation:
+                        val_bal_acc = model_utils.get_balance_acc(model = model,
+                                                                    data_loader = data_loader_validation,
+                                                                    attr_bool = attr_bool,
+                                                                    device = device)
 
-                            prediction, attention, output, y = fct_voronoi.prediction_step(batch_sample=validation_sample,
-                                                                                          model=model,
-                                                                                          attr_bool=attr_bool,
-                                                                                          device=device)
-
-                            _, value_pred = torch.max(output, dim=1)
-
-                            wandb.log(
-                                {"batch_acc_raw": sum(value_pred.cpu() == y.cpu()) / len(y.cpu())})
-                            wandb.log({"batch_acc_balanced": balanced_accuracy_score(y.cpu(),value_pred.cpu())})
-
-                            model_prediction_validation.extend(value_pred.cpu())
-                            true_label_validation.extend(y.cpu())
-
-
-                        wandb.log({"toal_acc_balanced": balanced_accuracy_score(true_label_validation,
-                                                                                model_prediction_validation)})
-                        wandb.finish()
-
+                        model_csv = [anker_number, radius_distance, fussy_limit, dp, comment, comment_norm, num, train_bal_acc, val_bal_acc]
                         training_csv = pd.concat([model_csv, training_csv], ignore_index=True)
-                        training_csv.to_csv(csv_file, index=False)
+                        training_csv.to_csv(csv_file_path, index=False)
 
                         torch.cuda.empty_cache()
 
