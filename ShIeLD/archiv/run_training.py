@@ -10,7 +10,7 @@ from torch_geometric.loader import DataListLoader
 import os
 import sys
 cwd = os.getcwd()
-sys.path.append(os.path.join(f'{cwd}', 'utils'))
+sys.path.append(os.path.join(f'{cwd}', '../utils'))
 import model_utils
 import data_utils
 from ShIeLD.utils.data_class import local_immune_graph_dataset

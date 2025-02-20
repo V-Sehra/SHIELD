@@ -8,132 +8,120 @@ import functools
 from pathlib import Path
 import pickle
 
-import utils
+
 from utils import data_utils
 
-parser = argparse.ArgumentParser()
+
+# Main function to process dataset and generate graphs
+def main():
+    # Define command-line arguments for input data paths
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-req_path", "--requirements_file_path",
+                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+    parser.add_argument("-dat_type", "--data_set_type", default='train')
+
+    # Parse command-line arguments
+    args = parser.parse_args()
+    print(args)
+
+    # Load dataset requirements from a pickle file
+    with open(args.requirements_file_path, 'rb') as file:
+        requirements = pickle.load(file)
 
 
 
-# Define command-line arguments for input data paths
-parser.add_argument("-req_path", "--requirements_file_path", default=Path.cwd()/'examples' / 'diabetes' / 'requirements.pt')
-parser.add_argument("-dat_type", "--data_set_type", default='train')
+    # Determine the correct fold column based on dataset type
+    if args.data_set_type == 'train':
+        fold_column = requirements['number_validation_splits']
+    else:
+        fold_column = requirements['test_set_fold_number']
 
-# Parse command-line arguments
-args = parser.parse_args()
-print(args)
+    # Load the raw dataset from CSV
+    input_data = pd.read_csv(requirements['path_raw_data'])
 
-# Load dataset requirements from a pickle file
-requirements_file_path = args.requirements_file_path
-data_set_type = args.data_set_type
+    # Filter the dataset based on the validation split column
+    data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_column)]
+    data_sample.reset_index(inplace=True, drop=True)
 
-with open(requirements_file_path, 'rb') as file:
-    requirements = pickle.load(file)
+    # Get unique sample names
+    sample = data_sample[requirements['measument_sample_name']].unique()
 
-# Extract key parameters from the requirements file
-radius_distance_all = requirements['radius_distance_all']
-fussy_limit_all = requirements['fussy_limit_all']
-prozent_of_anker_cells = requirements['prozent_of_anker_cells']
-augmentation_number = requirements['augmentation_number']
-number_voronoi_neighbours = requirements['voro_neighbours']
-minimum_number_cells = requirements['minimum_number_cells']
+    # Iterate over each sample in the dataset
+    for sub_sample in tqdm(sample):
+        single_sample = data_sample[data_sample['image'] == sub_sample]
 
-# Determine the correct fold column based on dataset type
-if data_set_type == 'train':
-    fold_column = requirements['number_validation_splits']
-else:
-    fold_column = requirements['test_set_fold_number']
+        for anker_value in requirements['anker_value_all']:
+            for fussy_limit in requirements['fussy_limit_all']:
+                repeat_counter = 0  # Track repeat count for unique graph file naming
 
-# Load the raw dataset from CSV
-input_data = pd.read_csv(requirements['path_raw_data'])
+                for augment_id in range(requirements['augmentation_number']):
+                    # Randomly select anchor cells based on either the percentage or absulut value
+                    if requirements['anker_cell_selction_type'] == '%':
+                        anchors = single_sample.sample(n=int(len(single_sample) * anker_value))
+                    elif requirements['anker_cell_selction_type'] == 'absolut':
+                        anchors = single_sample.sample(n=int(anker_value))
 
-# Filter the dataset based on the validation split column
-data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_column)]
-data_sample.reset_index(inplace=True, drop=True)
-
-# Get unique sample names
-sample = data_sample[requirements['measument_sample_name']].unique()
-
-# Iterate over each sample in the dataset
-for sub_sample in tqdm(sample):
-
-    # Filter data for the current image sample
-    single_sample = data_sample[data_sample['image'] == sub_sample]
-
-    # Iterate over different percentages of anchor cells
-    for anker_prozent in prozent_of_anker_cells:
-
-        # Iterate over different fussy limits
-        for fussy_limit in fussy_limit_all:
-
-            repeat_counter = 0  # Track the repeat count for unique graph file naming
-
-            for augment_id in range(augmentation_number):
-
-                # Randomly select anchor cells based on the percentage
-                anchors = single_sample.sample(n=int(len(single_sample) * anker_prozent))
-                print(single_sample.columns)
-                # Compute Voronoi regions with fuzzy boundary constraints
-                voroni_id_fussy = utils.data_utils.get_voronoi_id(
-                    data_set = single_sample,
-                    anker_cell = anchors,
-                    requiremets_dict = requirements,
-                    fussy_limit=fussy_limit
-                )
-
-                # Count the number of cells in each Voronoi region
-                number_cells = np.array([len(arr) for arr in voroni_id_fussy])
-
-                # If any region has too few cells, filter out those regions and recompute Voronoi
-                if any(number_cells < minimum_number_cells):
-                    voroni_id_fussy = utils.data_utils.get_voronoi_id(
+                    # Compute Voronoi regions with fuzzy boundary constraints
+                    voroni_id_fussy = data_utils.get_voronoi_id(
                         data_set=single_sample,
-                        anker_cell=anchors[number_cells > minimum_number_cells],
-                        requiremets_dict = requirements,
+                        anker_cell=anchors,
+                        requiremets_dict=requirements,
                         fussy_limit=fussy_limit
                     )
 
-                # Create an array of Voronoi region indices
-                vornoi_id = np.arange(0, len(voroni_id_fussy))
+                    # Count number of cells in each Voronoi region
+                    number_cells = np.array([len(arr) for arr in voroni_id_fussy])
 
-                # Iterate over different neighborhood radius values
-                for radius_distance in radius_distance_all:
-
-                    # Define the folder structure for saving graphs
-                    save_path = Path(requirements['path_graphs'] /
-                                     f'anker_value_{anker_prozent}'.replace('.', '_') /
-                                     f'min_cells_{minimum_number_cells}' /
-                                     f'fussy_limit_{fussy_limit}'.replace('.', '_') /
-                                     f'radius_{radius_distance}')
-
-                    save_path_folder_graphs = save_path / f'{data_set_type}' / 'graphs'
-
-                    # Ensure the directory exists
-                    os.system(f'mkdir -p {save_path_folder_graphs}')
-
-                    # Print status updates
-                    print('anker_prozent', 'radius_neibourhood', 'fussy_limit', 'image')
-                    print(anker_prozent, radius_distance, fussy_limit, sub_sample)
-                    print(save_path_folder_graphs)
-
-                    # Use multiprocessing to create and save graphs in parallel
-                    pool = mp.Pool(mp.cpu_count() - 2)
-                    graphs = pool.map(
-                        functools.partial(
-                            utils.data_utils.create_graph_and_save,
-                            whole_data=single_sample,
-                            save_path_folder=save_path_folder_graphs,
-                            radius_neibourhood=radius_distance,
+                    # If any region has too few cells, filter out those regions and recompute Voronoi
+                    if any(number_cells < requirements['minimum_number_cells']):
+                        voroni_id_fussy = data_utils.get_voronoi_id(
+                            data_set=single_sample,
+                            anker_cell=anchors[number_cells > requirements['minimum_number_cells']],
                             requiremets_dict=requirements,
-                            voronoi_list=voroni_id_fussy,
-                            sub_sample=sub_sample,
-                            repeat_id=repeat_counter
-                        ), vornoi_id
-                    )
-                    pool.close()
+                            fussy_limit=fussy_limit
+                        )
 
-                # Update repeat counter for unique graph IDs
-                repeat_counter += len(voroni_id_fussy)
-                print(repeat_counter)
+                    # Create an array of Voronoi region indices
+                    vornoi_id = np.arange(0, len(voroni_id_fussy))
+
+                    for radius_distance in requirements['radius_distance_all']:
+                        save_path = Path(requirements['path_graphs'] /
+                                         f'anker_value_{anker_value}'.replace('.', '_') /
+                                         f"min_cells_{requirements['minimum_number_cells']}" /
+                                         f'fussy_limit_{fussy_limit}'.replace('.', '_') /
+                                         f'radius_{radius_distance}')
+
+                        save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
+
+                        # Ensure the directory exists
+                        os.system(f'mkdir -p {save_path_folder_graphs}')
+
+                        # Print status updates
+                        print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
+                        print(anker_value, radius_distance, fussy_limit, sub_sample)
+                        print(save_path_folder_graphs)
+
+                        # Use multiprocessing to create and save graphs in parallel
+                        pool = mp.Pool(mp.cpu_count() - 2)
+                        graphs = pool.map(
+                            functools.partial(
+                                data_utils.create_graph_and_save,
+                                whole_data=single_sample,
+                                save_path_folder=save_path_folder_graphs,
+                                radius_neibourhood=radius_distance,
+                                requiremets_dict=requirements,
+                                voronoi_list=voroni_id_fussy,
+                                sub_sample=sub_sample,
+                                repeat_id=repeat_counter
+                            ), vornoi_id
+                        )
+                        pool.close()
+
+                    # Update repeat counter for unique graph IDs
+                    repeat_counter += len(voroni_id_fussy)
+                    print(repeat_counter)
 
 
+# Ensure the script runs only when executed directly
+if __name__ == "__main__":
+    main()
