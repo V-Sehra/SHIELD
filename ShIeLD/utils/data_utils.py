@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created Nov 2024
+
+@author: Vivek
+"""
+
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
@@ -8,7 +16,7 @@ import random as rnd
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
 
-from typing import List, Tuple,Optional
+from typing import Optional
 
 cwd = os.getcwd()
 idx_folder = cwd.index('ShIeLD') + len('ShIeLD')

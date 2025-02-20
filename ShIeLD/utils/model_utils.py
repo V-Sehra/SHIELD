@@ -7,7 +7,6 @@ Created on Wed Jan 12 14:18:15 2024
 """
 
 
-
 import torch
 from torch_geometric.nn.aggr import MeanAggregation
 from torch_geometric.nn import GATv2Conv,GCNConv

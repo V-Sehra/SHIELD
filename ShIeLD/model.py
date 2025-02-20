@@ -20,9 +20,9 @@ class ShIeLD(nn.Module):
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
-    def __init__(self, num_of_feat, layer_1, dp,
-                 layer_final=2, edge_dim=1, similarity_typ='euclide',
-                 self_att=True, attr_bool=True):
+    def __init__(self, num_of_feat: int, layer_1:int, dp: float,
+                 layer_final: int =2, edge_dim: int =1, similarity_typ: str ='euclide',
+                 self_att: bool =True, attr_bool:bool = True):
         """
         Initializes the ShIeLD model.
 

@@ -40,7 +40,7 @@ def early_stopping(loss_epoch: List, patience: int = 15) -> bool:
         return False
 
 
-def get_train_results_csv(requirement_dict: dict, split_number: int) -> DataFrame:
+def get_train_results_csv(requirement_dict: dict) -> DataFrame:
     """
     Retrieves or initializes a CSV file containing training results.
 
@@ -59,7 +59,7 @@ def get_train_results_csv(requirement_dict: dict, split_number: int) -> DataFram
     path_save_csv_models.mkdir(parents=True, exist_ok=True)
 
     # Define the expected CSV file path based on the split number
-    csv_file_path = Path(path_save_csv_models / f'validation_split_{split_number}_results_training.csv')
+    csv_file_path = Path(path_save_csv_models / f'validation_split_results_training.csv')
 
     # If the file exists, load it; otherwise, create an empty DataFrame with predefined columns
     if csv_file_path.exists():
@@ -75,6 +75,7 @@ def get_train_results_csv(requirement_dict: dict, split_number: int) -> DataFram
             'model_no'                 # Model number
             'bal_acc_train',           # Balanced accuracy on the training set
             'bal_acc_validation',      # Balanced accuracy on the validation set
+            'split_number',            # Validation split number
         ])
 
     return training_results_csv,csv_file_path  # Return the DataFrame

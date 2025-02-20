@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created Nov 2024
+
+@author: Vivek
+"""
 import os
 import argparse
 import pickle
@@ -31,24 +38,12 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
 
-    # Training-specific information
-    input_dim = requirements['input_layer']
-    batch_size = requirements['batch_size']
-    learning_rate = requirements['learning_rate']
-    f_final = requirements['out_put_layer']
-    Layer_1 = requirements['layer_1']
-    attr_bool = requirements['attr_bool']
-
-    comment = args.comment
-    comment_norm = args.comment_norm
-    comment_att = 'attr' if attr_bool else 'Noattr'
-
     split_number = args.split_number
 
-    training_results_csv, csv_file_path = train_utils.get_train_results_csv(
-        requirement_dict=requirements, split_number=split_number)
+    training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
 
-    meta_columns = ['anker_value', 'radius_neibourhood', 'fussy_limit', 'dp', 'comment', 'comment_norm', 'model_no']
+    meta_columns = ['anker_value', 'radius_neibourhood', 'fussy_limit',
+                    'dp', 'comment', 'comment_norm', 'model_no','split_number']
 
     for radius_distance in requirements['radius_distance_all']:
         for fussy_limit in requirements['fussy_limit_all']:
@@ -70,7 +65,7 @@ def main():
                         graph_file_names_path=requirements[
                                                   'path_to_data_set'] / f'train_set_validation_split_{split_number}_file_names.pkl'
                     ),
-                    batch_size=batch_size, shuffle=True, num_workers=8, prefetch_factor=50
+                    batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )
 
                 data_loader_validation = DataListLoader(
@@ -81,14 +76,14 @@ def main():
                         graph_file_names_path=requirements[
                                                   'path_to_data_set'] / f'validation_validation_split_{split_number}_file_names.pkl'
                     ),
-                    batch_size=batch_size, shuffle=True, num_workers=8, prefetch_factor=50
+                    batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )
 
                 for dp in requirements['droupout_rate']:
                     for num in tqdm(range(5)):
 
                         if not training_results_csv[meta_columns].isin(
-                                [[anker_number, radius_distance, fussy_limit, dp, comment, comment_norm, num]]
+                                [[anker_number, radius_distance, fussy_limit, dp, args.comment, args.comment_norm, num,split_number]]
                         ).all(axis=1).any():
 
                             loss_fkt = train_utils.initiaize_loss(
@@ -98,40 +93,44 @@ def main():
                             )
 
                             model = ShIeLD.model.ShIeLD(
-                                num_of_feat=int(input_dim),
-                                layer_1=Layer_1, dp=dp, layer_final=f_final,
-                                self_att=False, attr_bool=attr_bool
+                                num_of_feat=int(requirements['input_layer']),
+                                layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
+                                self_att=False, attr_bool = requirements['attr_bool']
                             ).to(device)
                             model.train()
 
                             model, train_loss = train_utils.train_loop_shield(
-                                optimizer=torch.optim.Adam(model.parameters(), lr=learning_rate),
+                                optimizer=torch.optim.Adam(model.parameters(), lr=requirements['learning_rate']),
                                 model=model,
                                 data_loader=data_loader_train,
                                 loss_fkt=loss_fkt,
-                                attr_bool=attr_bool,
-                                device=device
+                                attr_bool = requirements['attr_bool'],
+                                device = device
                             )
 
                             train_bal_acc = train_utils.get_balance_acc(
                                 model=model, data_loader=data_loader_train,
-                                attr_bool=attr_bool, device=device
+                                attr_bool = requirements['attr_bool'], device=device
                             )
                             print('start validation')
                             val_bal_acc = train_utils.get_balance_acc(
                                 model=model, data_loader=data_loader_validation,
-                                attr_bool=attr_bool, device=device
+                                attr_bool = requirements['attr_bool'], device=device
                             )
 
-                            model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit, dp, comment,
-                                                       comment_norm, num, train_bal_acc, val_bal_acc]],
-                                                     columns=meta_columns + ['train_acc', 'val_acc'])
+                            model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
+                                                       dp, args.comment,args.comment_norm, num,
+                                                       train_bal_acc, val_bal_acc,split_number]],
+                                                     columns=['anker_value', 'radius_neibourhood', 'fussy_limit',
+                                                              'dp', 'comment', 'comment_norm', 'model_no',
+                                                              'train_acc', 'val_acc', 'split_number'])
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
                             training_results_csv.to_csv(csv_file_path, index=False)
 
                             torch.cuda.empty_cache()
                         else:
-                            print('Model already trained:', anker_number, radius_distance, fussy_limit, dp, comment,
-                                  comment_norm, num)
+                            print('Model already trained:', anker_number, radius_distance, fussy_limit, dp, args.comment,
+                                  args.comment_norm, num)
+
 if __name__ == "__main__":
     main()
