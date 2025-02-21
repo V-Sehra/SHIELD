@@ -33,7 +33,7 @@ def main():
                         default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
     parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'diabetes' / 'best_config.pt')
 
     args = parser.parse_args()
     print(args)
@@ -103,7 +103,9 @@ def main():
 
             model = ShIeLD.model.ShIeLD(
                 num_of_feat=int(requirements['input_layer']),
-                layer_1=requirements['layer_1'], dp=best_config_dict['droup_out_rate'], layer_final=requirements['out_put_layer'],
+                layer_1=requirements['layer_1'],
+                layer_final=requirements['out_put_layer'],
+                dp=best_config_dict['droup_out_rate'],
                 self_att=False, attr_bool=requirements['attr_bool']
             ).to(device)
             model.train()

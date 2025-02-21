@@ -55,12 +55,12 @@ def main():
                                       f"fussy_limit_{fussy_limit}".replace('.', '_') /
                                       f'radius_{radius_distance}')
 
-                train_graph_path = path_to_graphs / 'train' / 'graphs'
+
                 torch.cuda.empty_cache()
 
                 data_loader_train = DataListLoader(
                     diabetis_dataset(
-                        root=train_graph_path,
+                        root = path_to_graphs / 'train' / 'graphs',
                         csv_file=requirements['path_to_data_set'] / f'train_set_validation_split_{split_number}.csv',
                         graph_file_names_path=requirements[
                                                   'path_to_data_set'] / f'train_set_validation_split_{split_number}_file_names.pkl'
@@ -70,7 +70,7 @@ def main():
 
                 data_loader_validation = DataListLoader(
                     diabetis_dataset(
-                        root=train_graph_path,
+                        root= path_to_graphs / 'test'/ 'graphs',
                         csv_file=requirements[
                                      'path_to_data_set'] / f'validation_set_validation_split_{split_number}.csv',
                         graph_file_names_path=requirements[
@@ -87,7 +87,7 @@ def main():
                         ).all(axis=1).any():
 
                             loss_fkt = train_utils.initiaize_loss(
-                                path=os.listdir(train_graph_path),
+                                path=os.listdir(path_to_graphs / 'train' / 'graphs'),
                                 tissue_dict=requirements['label_dict'],
                                 device=device
                             )
