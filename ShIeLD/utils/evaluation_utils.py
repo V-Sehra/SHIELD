@@ -13,14 +13,12 @@ from typing import Optional
 from pathlib import PosixPath
 
 
-def get_hypersear_results(requirements_dict: dict, col_of_interest:list , col_of_variables: list):
+def get_hypersear_results(requirements_dict: dict):
     """
     Runs a hyperparameter search analysis by aggregating model performance metrics.
 
     Parameters:
     - requirements_dict (dict): A dictionary specifying training requirements.
-    - col_of_interest (str): The column used for the first level of grouping (e.g., model type).
-    - col_of_variables (str): The column used for the second level of grouping (e.g., hyperparameters).
 
     Returns:
     - pd.DataFrame: A DataFrame containing the mean balanced accuracy and the count of unique data splits
@@ -31,12 +29,12 @@ def get_hypersear_results(requirements_dict: dict, col_of_interest:list , col_of
     hyper_search_results = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
 
     # First-level grouping: Aggregate mean balanced accuracy per col_of_interest
-    model_grouped = hyper_search_results.groupby(col_of_interest).agg(
+    model_grouped = hyper_search_results.groupby(requirements_dict['col_of_interest']).agg(
         total_acc_balanced_mean=('bal_acc_validation', 'mean')  # Compute mean validation accuracy
     ).reset_index()
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
-    hyper_grouped = model_grouped.groupby(col_of_variables).agg(
+    hyper_grouped = model_grouped.groupby(requirements_dict['col_of_variables']).agg(
         total_acc_balanced_mean=('total_acc_balanced_mean', 'mean'),  # Mean across models in col_of_variables
         count=('split_number', 'nunique')  # Count unique data splits used
     ).reset_index()

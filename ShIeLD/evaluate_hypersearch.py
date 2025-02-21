@@ -8,11 +8,17 @@ Created Nov 2024
 import argparse
 import pickle
 from pathlib import Path
-import torch
+from tqdm import tqdm
+import os
 
+import torch
+from torch_geometric.loader import DataListLoader
+
+import ShIeLD.model
 import utils.evaluation_utils as evaluation_utils
 import utils.data_utils as data_utils
 import utils.train_utils as train_utils
+from utils.data_class import diabetis_dataset
 
 torch.multiprocessing.set_start_method('fork', force=True)
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -35,13 +41,10 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
 
-    col_of_interest = ['anker_value', 'radius_neibourhood', 'fussy_limit',
-                        'dp', 'comment', 'comment_norm', 'model_no','split_number']
-    col_of_variables = ['dp', 'fussy_limit','anker_value','radius_distance']
 
-    hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements,
-                                                                  col_of_interest = col_of_interest,
-                                                                  col_of_variables = col_of_variables)
+
+    hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
+
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
 
     melted_results = hyper_search_results.melt(id_vars=['total_acc_balanced_mean'], var_name='hyperparameter')
@@ -50,10 +53,10 @@ def main():
     save_path_folder = Path(requirements['path_training_results'] / 'hyper_search_plots')
     save_path_folder.mkdir(parents=True, exist_ok=True)
 
-    for observable_of_interest in col_of_variables:
+    for observable_of_interest in requirements['col_of_variables']:
 
         evaluation_utils.create_parameter_influence_plots(df = melted_results,
-                                                          observed_variable = observable_of_interest,
+                                                          observed_variable = requirements['observable_of_interest'],
                                                           save_path=save_path_folder / f'{observable_of_interest}.png')
 
     if data_utils.bool_passer(args.retain_best_model_config_bool):
@@ -67,17 +70,25 @@ def main():
                     'droup_out_rate' : hyper_search_results['dp'].iloc[0],
                     'final_layer' : 3,
                     'attr_bool' : False,
-                    'prozent_anker_cells': hyper_search_results['anker_value'].iloc[0],
+                    'anker_value': hyper_search_results['anker_value'].iloc[0],
                     'radius_distance': hyper_search_results['radius_neibourhood'].iloc[0],
                     'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}
 
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
 
+        path_to_graphs = Path(requirements['path_to_data_set'] /
+                              f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                              f"min_cells_{requirements['minimum_number_cells']}" /
+                              f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
+                              f"radius_{best_config_dict['radius_distance']}")
+
+        train_graph_path = path_to_graphs / 'train' / 'graphs'
+
         data_loader_train = DataListLoader(
             diabetis_dataset(
                 root=train_graph_path,
-                csv_file=requirements['path_to_data_set'] / f'train_set}.csv',
+                csv_file=requirements['path_to_data_set'] / f'train_set.csv',
                 graph_file_names_path=requirements[
                                           'path_to_data_set'] / f'train_set_file_names.pkl'
             ),
@@ -92,7 +103,7 @@ def main():
 
             model = ShIeLD.model.ShIeLD(
                 num_of_feat=int(requirements['input_layer']),
-                layer_1=requirements['layer_1'], dp=dp, layer_final=requirements['out_put_layer'],
+                layer_1=requirements['layer_1'], dp=best_config_dict['droup_out_rate'], layer_final=requirements['out_put_layer'],
                 self_att=False, attr_bool=requirements['attr_bool']
             ).to(device)
             model.train()
@@ -104,6 +115,9 @@ def main():
                 loss_fkt=loss_fkt,
                 attr_bool=requirements['attr_bool'],
                 device=device)
+
+            model_save_path = requirements['path_to_models'] / f'best_model_{num}.pt'
+            torch.save(model.state_dict(), model_save_path)
 
 
 
