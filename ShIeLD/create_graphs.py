@@ -69,6 +69,7 @@ def main():
                         anchors = single_sample.sample(n=int(anker_value))
 
                     # Compute Voronoi regions with fuzzy boundary constraints
+                    print('here')
                     voroni_id_fussy = data_utils.get_voronoi_id(
                         data_set=single_sample,
                         anker_cell=anchors,
@@ -92,7 +93,7 @@ def main():
                     vornoi_id = np.arange(0, len(voroni_id_fussy))
 
                     for radius_distance in requirements['radius_distance_all']:
-                        save_path = Path(requirements['path_graphs'] /
+                        save_path = Path(requirements['path_to_data_set'] /
                                          f'anker_value_{anker_value}'.replace('.', '_') /
                                          f"min_cells_{requirements['minimum_number_cells']}" /
                                          f'fussy_limit_{fussy_limit}'.replace('.', '_') /
@@ -127,6 +128,7 @@ def main():
                     # Update repeat counter for unique graph IDs
                     repeat_counter += len(voroni_id_fussy)
                     print(repeat_counter)
+
 
 
 # Ensure the script runs only when executed directly

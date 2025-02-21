@@ -58,7 +58,6 @@ model = ShIeLD.model.ShIeLD(
 model.load_state_dict(torch.load(requirements['path_to_models'] / f'best_model_{best_config_dict["version"]}.pt'))
 model.eval()
 
-
 cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
         requirements_dict = requirements,
         data_loader = data_loader,

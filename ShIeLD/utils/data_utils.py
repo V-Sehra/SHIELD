@@ -321,7 +321,7 @@ def get_voronoi_id(data_set: DataFrame,
                     voronois_list = np.append(voronois_list, np.where(bordering_cells)[0])
             voronoi_collection.append(np.unique(voronois_list))
 
-        return np.array(voronoi_collection)
+        return np.array(voronoi_collection, dtype=object)
     else:
         # If 'fussy_limit' is not specified, return the nearest anchor indices
         return indices

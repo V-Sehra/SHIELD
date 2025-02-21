@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
+  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="M3" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
     <serverData>
       <paths name="HDD">
         <serverdata>
           <mappings>
             <mapping deploy="PhD/github_public/ShIeLD" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="M3">
+        <serverdata>
+          <mappings>
+            <mapping deploy="ShIeLD_github_test/ShIeLD" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
