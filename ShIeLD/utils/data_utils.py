@@ -16,16 +16,8 @@ import random as rnd
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
 
-from typing import Optional
-
-cwd = os.getcwd()
-idx_folder = cwd.index('ShIeLD') + len('ShIeLD')
-shield_dir = os.path.join(f'{cwd[:idx_folder]}')
-
-tissue_type_name = ['normalLiver', 'core', 'rim']
-tissue_dict = {'normalLiver': 0,
-               'core': 1,
-               'rim': 2}
+from typing import Optional, List, Union
+from pathlib import Path, PosixPath
 
 
 def bool_passer(argument):
@@ -64,9 +56,10 @@ def combine_cell_types(original_array, string_list):
     return original_array
 
 
-def create_graph_and_save(vornoi_id, radius_neibourhood,
-                          whole_data,voronoi_list, sub_sample,
-                          requiremets_dict, save_path_folder, repeat_id):
+def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
+                          whole_data: pd.DataFrame,voronoi_list: List, sub_sample: str,
+                          requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
+                          repeat_id:int, skip_existing: bool =False):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -97,6 +90,11 @@ def create_graph_and_save(vornoi_id, radius_neibourhood,
     # Determine the most frequent tissue type in this region
     dominating_tissue_type = graph_data[requiremets_dict['label_column']].value_counts().idxmax()
 
+    if skip_existing:
+        if Path(f'{save_path_folder}',
+                  f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt').exists():
+            return
+
     # Convert gene expression features into a tensor
     node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
 
@@ -124,8 +122,8 @@ def create_graph_and_save(vornoi_id, radius_neibourhood,
     ).cpu()
 
     # Save the processed graph data
-    torch.save(data, os.path.join(f'{save_path_folder}',
-                                  f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt'))
+    torch.save(data, Path(f'{save_path_folder}',
+                              f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt'))
 
     return
 
