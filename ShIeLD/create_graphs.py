@@ -69,7 +69,7 @@ def main():
                         anchors = single_sample.sample(n=int(anker_value))
 
                     # Compute Voronoi regions with fuzzy boundary constraints
-                    print('here')
+
                     voroni_id_fussy = data_utils.get_voronoi_id(
                         data_set=single_sample,
                         anker_cell=anchors,
@@ -107,7 +107,6 @@ def main():
                         # Print status updates
                         print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
                         print(anker_value, radius_distance, fussy_limit, sub_sample)
-                        print(save_path_folder_graphs)
 
                         # Use multiprocessing to create and save graphs in parallel
                         pool = mp.Pool(mp.cpu_count() - 2)
@@ -127,7 +126,6 @@ def main():
 
                     # Update repeat counter for unique graph IDs
                     repeat_counter += len(voroni_id_fussy)
-                    print(repeat_counter)
 
 
 
