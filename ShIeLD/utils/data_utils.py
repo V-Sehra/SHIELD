@@ -27,33 +27,6 @@ def bool_passer(argument):
         value = False
     return (value)
 
-def combine_cell_types(original_array, string_list):
-    """
-    This function combines cell types in a given array based on a list of substrings.
-    If a substring from the list is found in an element of the array, that element is replaced with the substring.
-    After all replacements, the function removes duplicates from the array.
-
-    Parameters:
-    original_array (np.array): The original array containing cell type names.
-    string_list (list): A list of substrings to search for in the array elements.
-
-    Returns:
-    np.array: The processed array with combined cell types and without duplicates.
-    """
-
-    for substring_to_replace in string_list:
-        # Find indices where the substring occurs
-        indices = np.core.defchararray.find(original_array.astype(str), substring_to_replace)
-
-        # Replace words containing the substring with 'substring_to_replace'
-        original_array[indices != -1] = substring_to_replace
-
-        unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True, return_inverse=True)
-
-        # Create a new array without duplicates
-        original_array = unique_elements
-
-    return original_array
 
 
 def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
@@ -128,53 +101,10 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
     return
 
 
-def create_test_train_split(args):
-    """
-    This function creates training and testing sets from a raw CSV file.
-    It first converts the raw CSV file into a graph CSV file.
-    It then gets a list of unique patient IDs from the raw data.
-    If the 'new_test_split_bool' argument is True, it shuffles the patient list and splits it into training and testing sets.
-    Otherwise, it uses a predefined list of patient IDs for the testing set.
-    It then creates directories for saving the training and testing sets and saves the sets as CSV files.
-
-    Parameters:
-    args (Namespace): The command-line arguments. It should include 'path_to_raw_csv', 'new_test_split_bool', and 'path_to_save_data'.
-
-    Returns:
-    None
-    """
-    # Convert the raw CSV file into a graph CSV file
-    raw_data = turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
-
-    # Get a list of unique patient IDs from the raw data
-    patent_list = raw_data['Patient'].unique()
-
-    # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
-    # Otherwise, use a predefined list of patient IDs for the testing set
-    if bool_passer(args.new_test_split_bool):
-        rnd.shuffle(patent_list)
-        train_patients = patent_list[0:int(len(patent_list) * 0.8)]
-        test_patients = patent_list[int(len(patent_list) * 0.8):]
-
-        train_csv = raw_data[raw_data['Patient'].isin(train_patients)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patients)]
-    else:
-        test_patient_ids = ['LHCC51', 'LHCC53', 'Pat53', 'LHCC45', 'Pat52']
-        train_csv = raw_data[~raw_data['Patient'].isin(test_patient_ids)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patient_ids)]
-
-    # Create directories for saving the training and testing sets
-    os.system(f'mkdir -p {args.path_to_save_data}/train_set')
-    os.system(f'mkdir -p {args.path_to_save_data}/test_set')
-
-    # Save the training and testing sets as CSV files
-    train_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv'))
-    test_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))
-
-    return
 
 
-def fill_missing_row_and_col_withNaN(data_frame, cell_types_names):
+
+def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names:np.array)->pd.DataFrame:
     """
     This function fills missing rows and columns in a given DataFrame with NaN values.
 
@@ -255,11 +185,11 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     else:
         return edge
 
-def get_tissue_type_name(tissue_type_id):
-    return tissue_type_name[tissue_type_id]
-
-def get_tissue_type_id(tissue_type_name):
-    return tissue_dict[tissue_type_name]
+def get_median_with_threshold(series:pd.Series, threshold:float)->Optional[pd.Series]:
+    if series.count() >= threshold:
+        return series.median()
+    else:
+        return np.nan
 
 def get_voronoi_id(data_set: DataFrame,
                     requiremets_dict : dict,
@@ -325,10 +255,72 @@ def get_voronoi_id(data_set: DataFrame,
         return indices
 
 
-def turn_pixel_to_meter(pixel_radius):
-    pixel_to_miliMeter_factor = 2649.291339
-    mycro_meter_radius = pixel_radius * (10**3/pixel_to_miliMeter_factor)
-    return round(mycro_meter_radius)
+
+
+
+
+
+
+
+
+#Old functions
+#_______________________________
+def create_test_train_split(args):
+    """
+    This function creates training and testing sets from a raw CSV file.
+    It first converts the raw CSV file into a graph CSV file.
+    It then gets a list of unique patient IDs from the raw data.
+    If the 'new_test_split_bool' argument is True, it shuffles the patient list and splits it into training and testing sets.
+    Otherwise, it uses a predefined list of patient IDs for the testing set.
+    It then creates directories for saving the training and testing sets and saves the sets as CSV files.
+
+    Parameters:
+    args (Namespace): The command-line arguments. It should include 'path_to_raw_csv', 'new_test_split_bool', and 'path_to_save_data'.
+
+    Returns:
+    None
+    """
+    # Convert the raw CSV file into a graph CSV file
+    raw_data = turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
+
+    # Get a list of unique patient IDs from the raw data
+    patent_list = raw_data['Patient'].unique()
+
+    # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
+    # Otherwise, use a predefined list of patient IDs for the testing set
+    if bool_passer(args.new_test_split_bool):
+        rnd.shuffle(patent_list)
+        train_patients = patent_list[0:int(len(patent_list) * 0.8)]
+        test_patients = patent_list[int(len(patent_list) * 0.8):]
+
+        train_csv = raw_data[raw_data['Patient'].isin(train_patients)]
+        test_csv = raw_data[raw_data['Patient'].isin(test_patients)]
+    else:
+        test_patient_ids = ['LHCC51', 'LHCC53', 'Pat53', 'LHCC45', 'Pat52']
+        train_csv = raw_data[~raw_data['Patient'].isin(test_patient_ids)]
+        test_csv = raw_data[raw_data['Patient'].isin(test_patient_ids)]
+
+    # Create directories for saving the training and testing sets
+    os.system(f'mkdir -p {args.path_to_save_data}/train_set')
+    os.system(f'mkdir -p {args.path_to_save_data}/test_set')
+
+    # Save the training and testing sets as CSV files
+    train_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv'))
+    test_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))
+
+    return
+
+
+def replace_celltype(mat,celltype_list_to_replace):
+    # Substring to find
+    for substring_to_replace in celltype_list_to_replace:
+        # Replace strings containing the substring
+        for i, row in enumerate(mat):
+            for j,word in enumerate(row):
+                if substring_to_replace in word:
+                    mat[i][j] = substring_to_replace
+
+    return mat
 
 
 def turn_raw_csv_to_graph_csv(raw_csv):
@@ -354,54 +346,36 @@ def turn_raw_csv_to_graph_csv(raw_csv):
     return raw_csv
 
 
-def replace_celltype(mat,celltype_list_to_replace):
-    # Substring to find
-    for substring_to_replace in celltype_list_to_replace:
-        # Replace strings containing the substring
-        for i, row in enumerate(mat):
-            for j,word in enumerate(row):
-                if substring_to_replace in word:
-                    mat[i][j] = substring_to_replace
-
-    return mat
+def turn_pixel_to_meter(pixel_radius):
+    pixel_to_miliMeter_factor = 2649.291339
+    mycro_meter_radius = pixel_radius * (10**3/pixel_to_miliMeter_factor)
+    return round(mycro_meter_radius)
 
 
-
-def path_generator(path_to_graps, path_save_model, path_org_csv_file, path_name_list, data_type = 'train'):
+def combine_cell_types(original_array, string_list):
     """
-    This function generates and returns paths for graphs, model, original CSV file, and name list.
-    If a path is not provided, it sets the path to the current working directory.
+    This function combines cell types in a given array based on a list of substrings.
+    If a substring from the list is found in an element of the array, that element is replaced with the substring.
+    After all replacements, the function removes duplicates from the array.
 
     Parameters:
-    path_to_graps (str): The path to the input graphs. If None, it will be set to 'graphs' in the current working directory.
-    path_save_model (str): The path to save the model. If None, it will be set to 'model' in the current working directory.
-    path_org_csv_file (str): The path to the original CSV file. If None, it will be set to 'org_data/org_data.csv' in the current working directory.
-    path_name_list (str): The path to the name list. If None, it will be set to 'graph_name_list.pt' in the current working directory.
-    cwd (str): The current working directory.
+    original_array (np.array): The original array containing cell type names.
+    string_list (list): A list of substrings to search for in the array elements.
 
     Returns:
-    tuple: A tuple containing the paths to the graphs, model, original CSV file, and name list.
+    np.array: The processed array with combined cell types and without duplicates.
     """
 
-    # If no path is provided for graphs, set it to the 'graphs' directory in the current working directory
-    if path_to_graps is None:
-        path_to_graps = os.path.join(f'{shield_dir}','data',f'{data_type}_set','graphs')
-        os.system(f"mkdir -p {path_to_graps}")
+    for substring_to_replace in string_list:
+        # Find indices where the substring occurs
+        indices = np.core.defchararray.find(original_array.astype(str), substring_to_replace)
 
-    # If no path is provided for the model, set it to the 'model' directory in the current working directory
-    if path_save_model is None:
-        path_save_model = os.path.join(f'{shield_dir}', 'model')
-        os.system(f"mkdir -p {path_save_model}")
-    else:
-        path_save_model = path_to_graps
+        # Replace words containing the substring with 'substring_to_replace'
+        original_array[indices != -1] = substring_to_replace
 
-    # If no path is provided for the original CSV file, set it to 'org_data/org_data.csv' in the current working directory
-    if path_org_csv_file is None:
-        path_org_csv_file = os.path.join(f'{shield_dir}','data',f'{data_type}_set',f'{data_type}_cells.csv')
+        unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True, return_inverse=True)
 
-    # If no path is provided for the name list, set it to 'graph_name_list.pt' in the current working directory
-    if path_name_list is None:
-        path_name_list = os.path.join(f'{shield_dir}','data',f'{data_type}_set', 'graph_name_list.pt')
+        # Create a new array without duplicates
+        original_array = unique_elements
 
-    # Return the paths
-    return path_to_graps, path_save_model, path_org_csv_file, path_name_list
+    return original_array

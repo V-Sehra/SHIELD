@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from pathlib import PosixPath
 from tqdm import tqdm
 import pickle
-from typing import Dict, Optional
+from typing import Dict, Optional,Tuple
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -60,7 +60,7 @@ def get_cell_to_cell_interaction_dict(
     # Lists to store collected information
     fals_pred = []
     correct_predicted = []
-    true_labels_train = []
+    true_labels = []
     sub_sample_list = []
 
     raw_att_p2p = []
@@ -94,7 +94,7 @@ def get_cell_to_cell_interaction_dict(
         # Collect performance information
         fals_pred.extend((value_pred != y).flatten().cpu().detach().numpy())
         correct_predicted.extend((value_pred == y).flatten().cpu().detach().numpy())
-        true_labels_train.extend(y.flatten().cpu().detach().numpy())
+        true_labels.extend(y.flatten().cpu().detach().numpy())
         prediction_model.extend(value_pred.flatten().cpu().detach().numpy())
 
         # Collect sample identifiers
@@ -121,11 +121,11 @@ def get_cell_to_cell_interaction_dict(
 
     # Compile all collected information into a dictionary
     dict_all_info = {
-        'fals_pred': np.array(fals_pred),
+        'false_pred': np.array(fals_pred),
         'correct_predicted': np.array(correct_predicted),
         'original_prediction': np.array(prediction_model),
-        'true_labels_train': np.array(true_labels_train),
-        'image_list': np.array(sub_sample_list),
+        'true_labels': np.array(true_labels),
+        'sub_sample_list': np.array(sub_sample_list),
         'normed_p2p': normed_p2p,
         'raw_att_p2p': raw_att_p2p,
         'normalisation_factor_edge_number': normalisation_factor_edge_number,
@@ -168,7 +168,46 @@ def get_hypersear_results(requirements_dict: dict):
     return hyper_grouped
 
 
-def get_p2p_att_score(sample, cell_phenotypes_sample, all_phenotypes, node_attention_scores):
+def get_top_interaction_per_celltype(interaction_limit:int, all_interaction_mean_df:pd.DataFrame, all_interaction_df:pd.DataFrame) -> Dict:
+    """
+    Identifies the top interactions for each cell type based on interaction strength.
+
+    Args:
+        interaction_limit (int): The maximum number of top interactions to retrieve per cell type.
+        all_interaction_mean_df (DataFrame): DataFrame containing the mean interaction strengths between cell types.
+        all_interaction_df (DataFrame): DataFrame containing detailed interaction values between cell types.
+
+    Returns:
+        dict: A dictionary where keys are source cell types, and values are lists of tuples
+              (destination cell type, interaction value) representing the strongest interactions.
+    """
+
+    top_connections = {}
+    cell_types = all_interaction_df.columns
+
+    # Loop over each cell type
+    for src_cell in cell_types:
+        # Get the indices of the top connections for the source cell type
+        top_dst_cells = (
+            all_interaction_mean_df[src_cell]
+            [~np.isnan(all_interaction_mean_df[src_cell])]  # Remove NaN values
+            .sort_values(ascending=False)[:interaction_limit]  # Select top interactions
+            .index
+        )
+
+        values = []
+
+        # Loop over each top connection and store its value
+        for dst_cell in top_dst_cells:
+            values.append((dst_cell, all_interaction_df[src_cell][dst_cell]))
+
+        # Store the strongest connections in the dictionary
+        top_connections[src_cell] = values
+
+    return top_connections
+
+
+def get_p2p_att_score(sample:list, cell_phenotypes_sample: np.array, all_phenotypes: np.array, node_attention_scores:list) -> Tuple[list, list, list]:
     """
     This function calculates the attention score for each cell phenotype to all other phenotypes.
     It uses the end attention score p2p (phenotype to phenotype).

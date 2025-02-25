@@ -7,6 +7,8 @@ from torch_geometric.loader import DataListLoader
 import argparse
 import pickle
 from pathlib import Path
+from itertools import compress
+import pandas as pd
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -64,3 +66,22 @@ cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_di
         model= model,
         device = device,
         save_dict_path = Path(requirements['path_to_model']/'cT_t_cT_interactions_dict.pt'))
+
+
+number_interactions = 4
+observed_tissues = list(requirements['label_dict'].keys())
+
+observed_tissue = observed_tissues[0]
+
+tissue_id = requirements['label_dict'][observed_tissue]
+
+
+sample_id_list = cell_to_cell_interaction_dict['true_labels'] == tissue_id
+
+all_dfs = list(compress(cell_to_cell_interaction_dict['normed_p2p'], sample_id_list))
+print(len(all_dfs))
+threshould = len(all_dfs)*0.01
+mean_cell_att = pd.concat(all_dfs)
+
+df = mean_cell_att.groupby(mean_cell_att.index).agg(lambda x: evaluation_utils.get_median_with_threshold(x, threshould)).sort_index()[sorted(mean_cell_att.columns)]
+
