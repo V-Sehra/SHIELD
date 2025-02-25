@@ -73,27 +73,18 @@ observed_tissues = list(requirements['label_dict'].keys())
 
 observed_tissue = observed_tissues[0]
 
-tissue_id = requirements['label_dict'][observed_tissue]
-
-
-sample_id_list = cell_to_cell_interaction_dict['true_labels'] == tissue_id
-
-all_dfs = list(compress(cell_to_cell_interaction_dict['normed_p2p'], sample_id_list))
-print(len(all_dfs))
-threshould = len(all_dfs)*0.01
-mean_cell_att = pd.concat(all_dfs)
-
-df = mean_cell_att.groupby(mean_cell_att.index).agg(lambda x: evaluation_utils.get_median_with_threshold(x, threshould)).sort_index()[sorted(mean_cell_att.columns)]
+interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_dataFrame(tissue_id= requirements['label_dict'][observed_tissue],
+                                                                                               interaction_dict = cell_to_cell_interaction_dict)
 
 
 top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit = number_interactions,
-                                                 all_interaction_mean_df = mean_cell_att,
-                                                 all_interaction_df = df)
+                                                 all_interaction_mean_df = mean_interaction_dataFrame,
+                                                 all_interaction_df = interaction_dataFrame)
 
 
 evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= 0.005, significance_2= 0.0005,
                                         interaction_limit = number_interactions,
-                                        all_interaction_df = df,
+                                        all_interaction_df = interaction_dataFrame,
                                         top_connections = top_connections,
                                         log_y = True)
 

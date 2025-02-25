@@ -8,6 +8,7 @@ Created Nov 2024
 
 import train_utils
 import model_utils
+import data_utils
 
 import pandas as pd
 import numpy as np
@@ -20,6 +21,7 @@ from pathlib import PosixPath
 from tqdm import tqdm
 import pickle
 from typing import Dict, Optional,Tuple
+from itertools import compress
 from scipy.stats import mannwhitneyu
 
 import seaborn as sns
@@ -169,6 +171,46 @@ def get_hypersear_results(requirements_dict: dict):
     return hyper_grouped
 
 
+def get_interaction_dataframe(
+        tissue_id: str,
+        interaction_dict: Dict[str, any]
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Extracts and processes interaction data for a given tissue.
+
+    Args:
+        tissue_id (str): The tissue identifier for which interaction data is extracted.
+        interaction_dict (dict): Dictionary containing:
+            - 'true_labels': Array indicating tissue IDs.
+            - 'normed_p2p': List of normalized point-to-point interaction DataFrames.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]:
+            - Raw interaction DataFrame for the specified tissue.
+            - Aggregated mean interaction DataFrame with a threshold filter.
+    """
+
+    # Select samples corresponding to the given tissue_id
+    sample_mask = interaction_dict['true_labels'] == tissue_id
+    selected_dfs = list(compress(interaction_dict['normed_p2p'], sample_mask))
+
+    # Define threshold for filtering interactions
+    threshold = len(selected_dfs) * 0.01
+
+    # Combine selected interaction DataFrames
+    interaction_df = pd.concat(selected_dfs)
+
+    # Compute median values with threshold filtering and sort columns
+    mean_interaction_df = (
+        interaction_df
+        .groupby(interaction_df.index)
+        .agg(lambda x: data_utils.get_median_with_threshold(x, threshold))
+        .sort_index()[sorted(interaction_df.columns)]
+    )
+
+    return interaction_df, mean_interaction_df
+
+
 def get_top_interaction_per_celltype(interaction_limit:int,
                                      all_interaction_mean_df:pd.DataFrame,
                                      all_interaction_df:pd.DataFrame) -> Dict:
@@ -186,14 +228,14 @@ def get_top_interaction_per_celltype(interaction_limit:int,
     """
 
     top_connections = {}
-    cell_types = all_interaction_df.columns
+    cell_types = all_interaction_mean_df.columns
 
     # Loop over each cell type
     for src_cell in cell_types:
         # Get the indices of the top connections for the source cell type
         top_dst_cells = (
-            all_interaction_df[src_cell]
-            [~np.isnan(all_interaction_df[src_cell])]  # Remove NaN values
+            all_interaction_mean_df[src_cell]
+            [~np.isnan(all_interaction_mean_df[src_cell])]  # Remove NaN values
             .sort_values(ascending=False)[:interaction_limit]  # Select top interactions
             .index
         )
@@ -202,7 +244,7 @@ def get_top_interaction_per_celltype(interaction_limit:int,
 
         # Loop over each top connection and store its value
         for dst_cell in top_dst_cells:
-            values.append((dst_cell, all_interaction_mean_df[src_cell][dst_cell]))
+            values.append((dst_cell, all_interaction_df[src_cell][dst_cell]))
 
         # Store the strongest connections in the dictionary
         top_connections[src_cell] = values
@@ -310,7 +352,7 @@ def plot_cell_cell_interaction_boxplots(
     significance_1: float,
     significance_2: float,
     interaction_limit: int,
-    all_interaction_df: pd.DataFrame,
+    all_interaction_mean_df: pd.DataFrame,
     top_connections: dict,
     save_path: Optional[PosixPath] = None,
     # plotting parameteres
@@ -338,7 +380,7 @@ def plot_cell_cell_interaction_boxplots(
     # Set plot font size
     plt.rcParams.update({'font.size': 50})
 
-    cell_types = all_interaction_df.columns
+    cell_types = all_interaction_mean_df.columns
     num_cells = len(cell_types)
 
     # Configure figure size and double star shift based on interaction limit
@@ -388,7 +430,7 @@ def plot_cell_cell_interaction_boxplots(
             # Perform Mann-Whitney U tests for each destination cell type
             for dst_cell_idx, dst_name in enumerate(names):
                 # Convert NaN values to zero for statistical testing
-                data_1 = np.nan_to_num(all_interaction_df[src_cell].to_numpy())
+                data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
                 data_2 = np.nan_to_num(values[dst_cell_idx].to_numpy())
 
                 # Conduct Mann-Whitney U test
@@ -412,7 +454,7 @@ def plot_cell_cell_interaction_boxplots(
             axs[row, idx].grid(False)
 
             # Compute statistical summaries (median, quartiles)
-            mat = np.nan_to_num(all_interaction_df[src_cell].to_numpy())
+            mat = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
             median = np.median(mat)
             lower_q, upper_q = np.quantile(mat, [0.25, 0.75])
 
