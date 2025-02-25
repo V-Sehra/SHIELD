@@ -85,3 +85,15 @@ mean_cell_att = pd.concat(all_dfs)
 
 df = mean_cell_att.groupby(mean_cell_att.index).agg(lambda x: evaluation_utils.get_median_with_threshold(x, threshould)).sort_index()[sorted(mean_cell_att.columns)]
 
+
+top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit = number_interactions,
+                                                 all_interaction_mean_df = mean_cell_att,
+                                                 all_interaction_df = df)
+
+
+evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= 0.005, significance_2= 0.0005,
+                                        interaction_limit = number_interactions,
+                                        all_interaction_df = df,
+                                        top_connections = top_connections,
+                                        log_y = True)
+

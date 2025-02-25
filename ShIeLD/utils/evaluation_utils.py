@@ -20,6 +20,7 @@ from pathlib import PosixPath
 from tqdm import tqdm
 import pickle
 from typing import Dict, Optional,Tuple
+from scipy.stats import mannwhitneyu
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -168,7 +169,9 @@ def get_hypersear_results(requirements_dict: dict):
     return hyper_grouped
 
 
-def get_top_interaction_per_celltype(interaction_limit:int, all_interaction_mean_df:pd.DataFrame, all_interaction_df:pd.DataFrame) -> Dict:
+def get_top_interaction_per_celltype(interaction_limit:int,
+                                     all_interaction_mean_df:pd.DataFrame,
+                                     all_interaction_df:pd.DataFrame) -> Dict:
     """
     Identifies the top interactions for each cell type based on interaction strength.
 
@@ -189,8 +192,8 @@ def get_top_interaction_per_celltype(interaction_limit:int, all_interaction_mean
     for src_cell in cell_types:
         # Get the indices of the top connections for the source cell type
         top_dst_cells = (
-            all_interaction_mean_df[src_cell]
-            [~np.isnan(all_interaction_mean_df[src_cell])]  # Remove NaN values
+            all_interaction_df[src_cell]
+            [~np.isnan(all_interaction_df[src_cell])]  # Remove NaN values
             .sort_values(ascending=False)[:interaction_limit]  # Select top interactions
             .index
         )
@@ -199,7 +202,7 @@ def get_top_interaction_per_celltype(interaction_limit:int, all_interaction_mean
 
         # Loop over each top connection and store its value
         for dst_cell in top_dst_cells:
-            values.append((dst_cell, all_interaction_df[src_cell][dst_cell]))
+            values.append((dst_cell, all_interaction_mean_df[src_cell][dst_cell]))
 
         # Store the strongest connections in the dictionary
         top_connections[src_cell] = values
@@ -300,4 +303,126 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable:str, sa
     # Save the plot if a save path is provided
     if save_path is not None:
         plt.savefig(save_path)
+
+
+
+def plot_cell_cell_interaction_boxplots(
+    significance_1: float,
+    significance_2: float,
+    interaction_limit: int,
+    all_interaction_df: pd.DataFrame,
+    top_connections: dict,
+    save_path: Optional[PosixPath] = None,
+    # plotting parameteres
+    log_y:bool = False,
+    star_size:int = 2000,
+    line_width:int = 5,
+    costum_fig_size: Optional[Tuple[int,int]] = None,
+    costum_star_shift: Optional[float] = None
+):
+    """
+    Plots boxplots of cell-cell interactions and performs statistical significance tests.
+
+    Args:
+        significance_1 (float): The p-value threshold for marking significant interactions with one star.
+        significance_2 (float): The p-value threshold for marking highly significant interactions with two stars.
+        interaction_limit (int): The number of top interactions to display per cell type.
+        all_interaction_df (pd.DataFrame): DataFrame containing interaction values between cell types.
+        top_connections (dict): Dictionary with cell types as keys and lists of (destination cell type, interaction values) as values.
+        save_path (Optional[PosixPath]): Path to save the plot. If None, the plot is not saved.
+
+    Returns:
+        None
+    """
+
+    # Set plot font size
+    plt.rcParams.update({'font.size': 50})
+
+    cell_types = all_interaction_df.columns
+    num_cells = len(cell_types)
+
+    # Configure figure size and double star shift based on interaction limit
+    if costum_fig_size is not None:
+        fig_size = costum_fig_size
+    else:
+        fig_size = (170, 60) if interaction_limit == 16 else (130, 60)
+
+    if costum_star_shift is not None:
+        double_star_shift = costum_star_shift
+    else:
+        double_star_shift = 0.16 if interaction_limit == 16 else 0.1
+
+    # Create subplots (2 rows, num_cells/2 columns)
+    fig, axs = plt.subplots(
+        nrows=2,
+        ncols=int(num_cells / 2),
+        figsize=fig_size,
+        sharey=True,
+        layout='constrained'
+    )
+
+
+    # Iterate over subplots
+    for row in range(2):
+        for idx in range(int(num_cells / 2)):
+            # Get the source cell type
+            src_cell = cell_types[idx + int(num_cells / 2) * row]
+
+            # Extract names and values of top interactions
+            names = [dst_cell[0] for dst_cell in top_connections[src_cell]]
+            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_connections[src_cell] if len(dst_cell[1]) > 2]
+
+            # Create boxplot
+            axs[row, idx].set_title(src_cell)
+            axs[row, idx].grid(True, linewidth=line_width)
+            box = axs[row, idx].boxplot(values)
+
+            # Customize plot aesthetics
+            for element in ['boxes', 'whiskers', 'caps', 'medians', 'fliers']:
+                plt.setp(box[element], linewidth=line_width)
+
+            # Thicken subplot axis spines
+            for spine in axs[row, idx].spines.values():
+                spine.set_linewidth(line_width)
+
+            # Perform Mann-Whitney U tests for each destination cell type
+            for dst_cell_idx, dst_name in enumerate(names):
+                # Convert NaN values to zero for statistical testing
+                data_1 = np.nan_to_num(all_interaction_df[src_cell].to_numpy())
+                data_2 = np.nan_to_num(values[dst_cell_idx].to_numpy())
+
+                # Conduct Mann-Whitney U test
+                _, p = mannwhitneyu(data_1, data_2, alternative='less')
+
+                # Mark significance on the plot
+                if significance_2 < p < significance_1:
+                    axs[row, idx].scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
+                elif p < significance_2:
+                    axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black', s=star_size)
+                    axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black', s=star_size)
+
+            if values:
+                # Ensure x-ticks match available names
+                if len(names) < interaction_limit:
+                    missing_names = cell_types[~cell_types.isin(names)].to_list()
+                    names.extend(missing_names)
+
+                axs[row, idx].set_xticks(np.arange(1, len(values) + 1), names[:len(values)], rotation=90)
+
+            axs[row, idx].grid(False)
+
+            # Compute statistical summaries (median, quartiles)
+            mat = np.nan_to_num(all_interaction_df[src_cell].to_numpy())
+            median = np.median(mat)
+            lower_q, upper_q = np.quantile(mat, [0.25, 0.75])
+
+            # Highlight interquartile range and median line
+            axs[row, idx].axhspan(lower_q, upper_q, facecolor='green', alpha=0.2)
+            axs[row, idx].axhline(y=median, color='red', linestyle='--', linewidth=line_width)
+            if log_y:
+                axs[row, idx].set_yscale('log')
+
+    # Save figure if a path is provided
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150)
 
