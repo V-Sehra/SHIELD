@@ -1,18 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created Nov 2024
 
+@author: Vivek
+"""
 import torch
 from torch_geometric.loader import DataListLoader
-
-
 
 import argparse
 import pickle
 from pathlib import Path
-from itertools import compress
-import pandas as pd
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-import matplotlib.pyplot as plt
 from utils.data_class import diabetis_dataset
 import ShIeLD.model
 import utils.evaluation_utils as evaluation_utils
@@ -68,23 +69,25 @@ cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_di
         save_dict_path = Path(requirements['path_to_model']/'cT_t_cT_interactions_dict.pt'))
 
 
-number_interactions = 4
 observed_tissues = list(requirements['label_dict'].keys())
+for number_interactions in [4, len(requirements['cell_type_names'])]:
 
-observed_tissue = observed_tissues[0]
+    for observed_tissue in observed_tissue:
 
-interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_dataFrame(tissue_id= requirements['label_dict'][observed_tissue],
-                                                                                               interaction_dict = cell_to_cell_interaction_dict)
-
-
-top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit = number_interactions,
-                                                 all_interaction_mean_df = mean_interaction_dataFrame,
-                                                 all_interaction_df = interaction_dataFrame)
+        interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_dataFrame(tissue_id= requirements['label_dict'][observed_tissue],
+                                                                                                       interaction_dict = cell_to_cell_interaction_dict)
 
 
-evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= 0.005, significance_2= 0.0005,
-                                        interaction_limit = number_interactions,
-                                        all_interaction_df = interaction_dataFrame,
-                                        top_connections = top_connections,
-                                        log_y = True)
+        top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit = number_interactions,
+                                                         all_interaction_mean_df = mean_interaction_dataFrame,
+                                                         all_interaction_df = interaction_dataFrame)
+
+
+        save_path_boxplots = Path(requirements['path_to_model'] / 'boxplots'/ f'{observed_tissue}_topInteractions_{number_interactions}.png').mkdir(parents=True, exist_ok=True)
+
+        evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= 0.0005, significance_2= 0.00005,
+                                                interaction_limit = number_interactions,
+                                                all_interaction_df = interaction_dataFrame,
+                                                top_connections = top_connections,
+                                                save_path=save_path_boxplots)
 
