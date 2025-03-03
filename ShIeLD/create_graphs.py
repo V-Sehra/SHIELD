@@ -119,7 +119,8 @@ def main():
                                 requiremets_dict=requirements,
                                 voronoi_list=voroni_id_fussy,
                                 sub_sample=sub_sample,
-                                repeat_id=repeat_counter
+                                repeat_id=repeat_counter,
+                                skip_existing = True,
                             ), vornoi_id
                         )
                         pool.close()
