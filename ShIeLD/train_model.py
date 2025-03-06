@@ -58,23 +58,25 @@ def main():
 
                 torch.cuda.empty_cache()
 
+                train_folds = requirements['number_validation_splits'].copy()
+                train_folds.remove(split_number)
+
                 data_loader_train = DataListLoader(
                     diabetis_dataset(
                         root = path_to_graphs / 'train' / 'graphs',
-                        csv_file=requirements['path_to_data_set'] / f'train_set_validation_split_{split_number}.csv',
-                        graph_file_names_path=requirements[
-                                                  'path_to_data_set'] / f'train_set_validation_split_{split_number}_file_names.pkl'
+                        fold_ids = train_folds,
+                        requirements_dict = requirements,
+                        graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl'
                     ),
                     batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )
 
                 data_loader_validation = DataListLoader(
                     diabetis_dataset(
-                        root= path_to_graphs / 'test'/ 'graphs',
-                        csv_file=requirements[
-                                     'path_to_data_set'] / f'validation_set_validation_split_{split_number}.csv',
-                        graph_file_names_path=requirements[
-                                                  'path_to_data_set'] / f'validation_validation_split_{split_number}_file_names.pkl'
+                        root = path_to_graphs / 'train' / 'graphs',
+                        fold_ids = split_number,
+                        requirements_dict=requirements,
+                        graph_file_names_path= f'validation_validation_split_{split_number}_file_names.pkl'
                     ),
                     batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )

@@ -7,6 +7,7 @@ Created Nov 2024
 """
 import torch
 from torch_geometric.data import Dataset
+from pathlib import Path
 import os
 import sys
 import pickle
@@ -30,41 +31,43 @@ class diabetis_dataset(Dataset):
         root (str): Root directory containing graph files.
     """
 
-    def __init__(self, root, csv_file, graph_file_names_path):
+
+    def __init__(self, root, fold_ids,requirements_dict, graph_file_names):
         """
         Initializes the diabetis_dataset.
 
         Args:
             root (str): Path to the directory containing the graph files.
             csv_file (str): Path to the CSV file containing image names.
-            graph_file_names_path (str): Path to store/retrieve the list of graph filenames.
+            graph_file_names (str): Path to store/retrieve the list of graph filenames.
         """
 
         # If the file storing graph filenames does not exist, create it
-        if not os.path.exists(graph_file_names_path):
+        if not Path.exists(requirements_dict['path_to_data_set']/graph_file_names):
             print('Creating file name list:')
 
-            self.csv_file = pd.read_csv(csv_file)  # Load CSV file containing image names
-
+            csv_file = pd.read_csv(requirements_dict['path_raw_data'])  # Load CSV file containing image names
+            csv_file = csv_file[requirements_dict['measument_sample_name']][
+                csv_file[requirements_dict['validation_split_column']].isin(fold_ids)]
             # List all files in the root directory
             df = pd.DataFrame(os.listdir(root), columns=['file_name'])
 
             # Create a regex pattern from the image names in the CSV file
-            regex_pattern = '|'.join(self.csv_file['image'])
+            regex_pattern = '|'.join(csv_file.unique())
 
             # Filter filenames in the root directory that match the CSV images
             filtered_df = df[df['file_name'].str.contains(regex_pattern)]
             self.graph_file_names = filtered_df['file_name'].tolist()
 
             # Save the filtered filenames to avoid redundant processing in future runs
-            with open(graph_file_names_path, 'wb') as f:
+            with open(requirements_dict['path_to_data_set']/graph_file_names, 'wb') as f:
                 pickle.dump(self.graph_file_names, f)
 
         else:
-            print('Loading file names from cache')
+            print('Load the previously stored list of graph filenames')
 
             # Load the previously stored list of graph filenames
-            with open(graph_file_names_path, 'rb') as f:
+            with open(requirements_dict['path_to_data_set']/graph_file_names, 'rb') as f:
                 self.graph_file_names = pickle.load(f)
 
         super().__init__(root)
