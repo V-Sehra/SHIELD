@@ -72,7 +72,7 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
             'dp',                      # Dropout rate
             'comment',                 # General comments
             'comment_norm',            # Normalized comments
-            'model_no'                 # Model number
+            'model_no',                # Model number
             'bal_acc_train',           # Balanced accuracy on the training set
             'bal_acc_validation',      # Balanced accuracy on the validation set
             'split_number',            # Validation split number
@@ -113,8 +113,6 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropy
 
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device))
     return criterion
-
-
 
 
 

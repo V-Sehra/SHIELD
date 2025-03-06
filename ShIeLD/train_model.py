@@ -16,7 +16,9 @@ from torch_geometric.loader import DataListLoader
 
 from utils.data_class import diabetis_dataset
 import utils.train_utils as train_utils
-import ShIeLD.model
+import utils.model_utils as model_utils
+
+from model import ShIeLD
 
 torch.multiprocessing.set_start_method('fork', force=True)
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -27,6 +29,7 @@ print(device)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-split", "--split_number", type=int, default=1)
+    parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
     parser.add_argument("-comment", "--comment", type=str, default='random_anker')
     parser.add_argument("-comment_norm", "--comment_norm", type=str, default='noNorm')
     parser.add_argument("-req_path", "--requirements_file_path",
@@ -38,16 +41,15 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
 
-    split_number = args.split_number
+    split_number = int(args.split_number)
 
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
-
     meta_columns = ['anker_value', 'radius_neibourhood', 'fussy_limit',
                     'dp', 'comment', 'comment_norm', 'model_no','split_number']
 
     for radius_distance in requirements['radius_distance_all']:
         for fussy_limit in requirements['fussy_limit_all']:
-            for anker_number in requirements['prozent_of_anker_cells']:
+            for anker_number in requirements['anker_value_all']:
 
                 path_to_graphs = Path(requirements['path_to_data_set'] /
                                       f'anker_value_{anker_number}'.replace('.', '_') /
@@ -74,15 +76,15 @@ def main():
                 data_loader_validation = DataListLoader(
                     diabetis_dataset(
                         root = path_to_graphs / 'train' / 'graphs',
-                        fold_ids = split_number,
+                        fold_ids = [split_number],
                         requirements_dict=requirements,
-                        graph_file_names_path= f'validation_validation_split_{split_number}_file_names.pkl'
+                        graph_file_names= f'validation_validation_split_{split_number}_file_names.pkl'
                     ),
                     batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )
 
                 for dp in requirements['droupout_rate']:
-                    for num in tqdm(range(5)):
+                    for num in tqdm(range(int(args.number_of_training_repeats))):
 
                         if not training_results_csv[meta_columns].isin(
                                 [[anker_number, radius_distance, fussy_limit, dp, args.comment, args.comment_norm, num,split_number]]
@@ -94,7 +96,7 @@ def main():
                                 device=device
                             )
 
-                            model = ShIeLD.model.ShIeLD(
+                            model = ShIeLD(
                                 num_of_feat=int(requirements['input_layer']),
                                 layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
                                 self_att=False, attr_bool = requirements['attr_bool']
@@ -110,12 +112,12 @@ def main():
                                 device = device
                             )
 
-                            train_bal_acc = train_utils.get_balance_acc(
+                            train_bal_acc = model_utils.get_balance_acc(
                                 model=model, data_loader=data_loader_train,
                                 attr_bool = requirements['attr_bool'], device=device
                             )
                             print('start validation')
-                            val_bal_acc = train_utils.get_balance_acc(
+                            val_bal_acc = model_utils.get_balance_acc(
                                 model=model, data_loader=data_loader_validation,
                                 attr_bool = requirements['attr_bool'], device=device
                             )

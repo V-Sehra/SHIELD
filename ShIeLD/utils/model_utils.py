@@ -26,7 +26,7 @@ def get_balance_acc(model, data_loader,attr_bool,device):
     true_label = []
 
     for sample in data_loader:
-        prediction, attention, output, y, sample_ids = model_utils.prediction_step(
+        prediction, attention, output, y, sample_ids = prediction_step(
             batch_sample=sample,
             model=model,
             attr_bool=attr_bool,
