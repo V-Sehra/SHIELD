@@ -34,6 +34,7 @@ def main():
     parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
                         default=Path.cwd() / 'examples' / 'diabetes' / 'best_config.pt')
+    parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
 
     args = parser.parse_args()
     print(args)
@@ -87,17 +88,18 @@ def main():
 
         data_loader_train = DataListLoader(
             diabetis_dataset(
-                root=train_graph_path,
-                csv_file=requirements['path_to_data_set'] / f'train_set.csv',
-                graph_file_names_path=requirements[
-                                          'path_to_data_set'] / f'train_set_file_names.pkl'
+                root=str(train_graph_path),
+                path_to_graphs=path_to_graphs,
+                fold_ids=requirements['number_validation_splits'],
+                requirements_dict=requirements,
+                graph_file_names=f'train_set_file_names.pkl'
             ),
             batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
         )
-        for num in tqdm(range(5)):
+        for num in tqdm(range(args.number_of_training_repeats)):
 
             loss_fkt = train_utils.initiaize_loss(
-                path=os.listdir(train_graph_path),
+                path=Path(path_to_graphs /f'train_set_file_names.pkl'),
                 tissue_dict=requirements['label_dict'],
                 device = device)
 

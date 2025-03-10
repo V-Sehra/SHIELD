@@ -94,7 +94,7 @@ def main():
                         ).all(axis=1).any():
 
                             loss_fkt = train_utils.initiaize_loss(
-                                path=os.listdir(path_to_graphs / 'train' / 'graphs'),
+                                path=Path(Path(path_to_graphs /f'train_set_validation_split_{split_number}_file_names.pkl')),
                                 tissue_dict=requirements['label_dict'],
                                 device=device
                             )
