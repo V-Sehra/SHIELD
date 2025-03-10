@@ -74,7 +74,9 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
             'comment_norm',            # Normalized comments
             'model_no',                # Model number
             'bal_acc_train',           # Balanced accuracy on the training set
+            'train_f1_score',
             'bal_acc_validation',      # Balanced accuracy on the validation set
+            'val_f1_score',
             'split_number',            # Validation split number
         ])
 

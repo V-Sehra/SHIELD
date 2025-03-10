@@ -32,7 +32,7 @@ class diabetis_dataset(Dataset):
     """
 
 
-    def __init__(self, root, fold_ids,requirements_dict, graph_file_names):
+    def __init__(self, root, fold_ids,requirements_dict, graph_file_names,path_to_graphs):
         """
         Initializes the diabetis_dataset.
 
@@ -43,7 +43,7 @@ class diabetis_dataset(Dataset):
         """
 
         # If the file storing graph filenames does not exist, create it
-        if not Path.exists(requirements_dict['path_to_data_set']/graph_file_names):
+        if not Path.exists(path_to_graphs/graph_file_names):
             print('Creating file name list:')
 
             csv_file = pd.read_csv(requirements_dict['path_raw_data'])  # Load CSV file containing image names
@@ -60,14 +60,14 @@ class diabetis_dataset(Dataset):
             self.graph_file_names = filtered_df['file_name'].tolist()
 
             # Save the filtered filenames to avoid redundant processing in future runs
-            with open(requirements_dict['path_to_data_set']/graph_file_names, 'wb') as f:
+            with open(path_to_graphs/graph_file_names, 'wb') as f:
                 pickle.dump(self.graph_file_names, f)
 
         else:
             print('Load the previously stored list of graph filenames')
 
             # Load the previously stored list of graph filenames
-            with open(requirements_dict['path_to_data_set']/graph_file_names, 'rb') as f:
+            with open(Path(path_to_graphs/graph_file_names), 'rb') as f:
                 self.graph_file_names = pickle.load(f)
 
         super().__init__(root)

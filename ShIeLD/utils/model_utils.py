@@ -17,10 +17,10 @@ from torch_geometric.nn.norm import BatchNorm
 
 from typing import List, Tuple, Optional
 
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score,f1_score
 
 
-def get_balance_acc(model, data_loader,attr_bool,device):
+def get_acc_metrics(model, data_loader,attr_bool,device):
 
     model_prediction = []
     true_label = []
@@ -40,7 +40,7 @@ def get_balance_acc(model, data_loader,attr_bool,device):
         model_prediction.extend(value_pred.cpu())
         true_label.extend(y.cpu())
 
-    return balanced_accuracy_score(true_label,model_prediction)
+    return balanced_accuracy_score(true_label,model_prediction),f1_score(true_label, model_prediction, average='weighted')
 
 
 

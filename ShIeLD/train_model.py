@@ -63,9 +63,11 @@ def main():
                 train_folds = requirements['number_validation_splits'].copy()
                 train_folds.remove(split_number)
 
+
                 data_loader_train = DataListLoader(
                     diabetis_dataset(
-                        root = path_to_graphs / 'train' / 'graphs',
+                        root = str(path_to_graphs / 'train' / 'graphs'),
+                        path_to_graphs = path_to_graphs,
                         fold_ids = train_folds,
                         requirements_dict = requirements,
                         graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl'
@@ -75,7 +77,8 @@ def main():
 
                 data_loader_validation = DataListLoader(
                     diabetis_dataset(
-                        root = path_to_graphs / 'train' / 'graphs',
+                        root = str(path_to_graphs / 'train' / 'graphs'),
+                        path_to_graphs = path_to_graphs,
                         fold_ids = [split_number],
                         requirements_dict=requirements,
                         graph_file_names= f'validation_validation_split_{split_number}_file_names.pkl'
@@ -112,22 +115,23 @@ def main():
                                 device = device
                             )
 
-                            train_bal_acc = model_utils.get_balance_acc(
+                            train_bal_acc,train_f1_score = model_utils.get_acc_metrics(
                                 model=model, data_loader=data_loader_train,
                                 attr_bool = requirements['attr_bool'], device=device
                             )
                             print('start validation')
-                            val_bal_acc = model_utils.get_balance_acc(
+                            val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
                                 model=model, data_loader=data_loader_validation,
                                 attr_bool = requirements['attr_bool'], device=device
                             )
 
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
                                                        dp, args.comment,args.comment_norm, num,
-                                                       train_bal_acc, val_bal_acc,split_number]],
+                                                       train_bal_acc,train_f1_score, val_bal_acc,val_f1_score,split_number]],
                                                      columns=['anker_value', 'radius_neibourhood', 'fussy_limit',
                                                               'dp', 'comment', 'comment_norm', 'model_no',
-                                                              'train_acc', 'val_acc', 'split_number'])
+                                                              'bal_train_acc','train_f1_score',
+                                                              'bal_val_acc','val_f1_score','split_number'])
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
                             training_results_csv.to_csv(csv_file_path, index=False)
 
