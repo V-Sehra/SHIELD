@@ -5,7 +5,6 @@ Created Nov 2024
 
 @author: Vivek
 """
-import os
 import argparse
 import pickle
 from pathlib import Path

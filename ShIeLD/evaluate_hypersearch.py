@@ -9,12 +9,11 @@ import argparse
 import pickle
 from pathlib import Path
 from tqdm import tqdm
-import os
 
 import torch
 from torch_geometric.loader import DataListLoader
 
-import ShIeLD.model
+from model import ShIeLD
 import utils.evaluation_utils as evaluation_utils
 import utils.data_utils as data_utils
 import utils.train_utils as train_utils
@@ -103,7 +102,7 @@ def main():
                 tissue_dict=requirements['label_dict'],
                 device = device)
 
-            model = ShIeLD.model.ShIeLD(
+            model = ShIeLD(
                 num_of_feat=int(requirements['input_layer']),
                 layer_1=requirements['layer_1'],
                 layer_final=requirements['out_put_layer'],

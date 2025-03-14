@@ -2,24 +2,10 @@
 <project version="4">
   <component name="PublishConfigData" autoUpload="On explicit save action" serverName="M3" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
     <serverData>
-      <paths name="HDD">
-        <serverdata>
-          <mappings>
-            <mapping deploy="PhD/github_public/ShIeLD" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
       <paths name="M3">
         <serverdata>
           <mappings>
-            <mapping deploy="ShIeLD_github_test/ShIeLD" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="denbi">
-        <serverdata>
-          <mappings>
-            <mapping deploy="PhD/github_public/ShIeLD" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="ShIeLD_github_test/ShIeLD/" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

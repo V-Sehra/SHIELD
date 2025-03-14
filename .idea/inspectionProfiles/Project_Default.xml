@@ -36,6 +36,12 @@
           <option value="data_classes" />
           <option value="functions_mate_cells" />
           <option value="function_eval_Shield" />
+          <option value="model_utils" />
+          <option value="data_utils" />
+          <option value="bool.flatten" />
+          <option value="functions_voronoi" />
+          <option value="train_models.data_loader_class" />
+          <option value="baseline_model_dia.*" />
         </list>
       </option>
     </inspection_tool>

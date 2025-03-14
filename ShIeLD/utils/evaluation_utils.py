@@ -6,9 +6,9 @@ Created Nov 2024
 @author: Vivek
 """
 
-import train_utils
-import model_utils
-import data_utils
+from utils import train_utils
+from utils import model_utils
+from utils import data_utils
 
 import pandas as pd
 import numpy as np
@@ -26,8 +26,6 @@ from scipy.stats import mannwhitneyu
 
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-
 
 
 def get_cell_to_cell_interaction_dict(
