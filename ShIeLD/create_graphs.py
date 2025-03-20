@@ -5,7 +5,6 @@ Created Nov 2024
 
 @author: Vivek
 """
-import os
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -24,7 +23,7 @@ def main():
     # Define command-line arguments for input data paths
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='train')
 
     # Parse command-line arguments
@@ -34,7 +33,6 @@ def main():
     # Load dataset requirements from a pickle file
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
-
 
 
     # Determine the correct fold column based on dataset type
@@ -55,7 +53,7 @@ def main():
 
     # Iterate over each sample in the dataset
     for sub_sample in tqdm(sample):
-        single_sample = data_sample[data_sample['image'] == sub_sample]
+        single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
 
         for anker_value in requirements['anker_value_all']:
             for fussy_limit in requirements['fussy_limit_all']:
@@ -102,7 +100,7 @@ def main():
                         save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
 
                         # Ensure the directory exists
-                        os.system(f'mkdir -p {save_path_folder_graphs}')
+                        save_path_folder_graphs.mkdir(parents = True, exist_ok=True)
 
                         # Print status updates
                         print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
