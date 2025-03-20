@@ -7,6 +7,9 @@
           <mappings>
             <mapping deploy="ShIeLD_github_test/ShIeLD/" local="$PROJECT_DIR$" web="/" />
           </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="/usr/libexec/sftp-server" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

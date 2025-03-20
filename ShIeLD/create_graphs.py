@@ -44,6 +44,9 @@ def main():
     # Load the raw dataset from CSV
     input_data = pd.read_csv(requirements['path_raw_data'])
 
+    if requirements['filter_column'] is not None:
+        input_data = input_data[input_data[requirements['filter_column']] == requirements['filter_value']]
+
     # Filter the dataset based on the validation split column
     data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_column)]
     data_sample.reset_index(inplace=True, drop=True)
