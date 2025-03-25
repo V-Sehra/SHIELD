@@ -153,7 +153,7 @@ def get_hypersear_results(requirements_dict: dict):
     """
 
     # Retrieve hyperparameter search results from training utilities.
-    hyper_search_results = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
+    hyper_search_results,csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
 
     # First-level grouping: Aggregate mean balanced accuracy per col_of_interest
     model_grouped = hyper_search_results.groupby(requirements_dict['col_of_interest']).agg(
@@ -324,6 +324,7 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable:str, sa
     data_filtered = df[df['hyperparameter'] == observed_variable]
 
     # Create a boxplot showing the distribution of accuracy scores for different hyperparameter values
+    data_filtered = data_filtered.fillna(0)
     sns.boxplot(x='value', y='total_acc_balanced_mean', data=data_filtered)
 
     # Set plot title and axis labels

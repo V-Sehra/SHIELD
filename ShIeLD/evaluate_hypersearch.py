@@ -56,7 +56,7 @@ def main():
     for observable_of_interest in requirements['col_of_variables']:
 
         evaluation_utils.create_parameter_influence_plots(df = melted_results,
-                                                          observed_variable = requirements['observable_of_interest'],
+                                                          observed_variable = observable_of_interest,
                                                           save_path=save_path_folder / f'{observable_of_interest}.png')
 
     if data_utils.bool_passer(args.retain_best_model_config_bool):
@@ -71,7 +71,7 @@ def main():
                     'final_layer' : 3,
                     'attr_bool' : False,
                     'anker_value': hyper_search_results['anker_value'].iloc[0],
-                    'radius_distance': hyper_search_results['radius_neibourhood'].iloc[0],
+                    'radius_distance': hyper_search_results['radius_distance'].iloc[0],
                     'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}
 
             with open(args.best_config_dict_path, 'wb') as file:

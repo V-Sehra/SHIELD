@@ -64,10 +64,11 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
     # If the file exists, load it; otherwise, create an empty DataFrame with predefined columns
     if csv_file_path.exists():
         training_results_csv = pd.read_csv(csv_file_path)
+
     else:
         training_results_csv = pd.DataFrame(columns=[
             'anker_value',  # Percentage of anchor cells used
-            'radius_neibourhood',      # Radius defining the neighborhood
+            'radius_distance',      # Radius defining the neighborhood
             'fussy_limit',             # Threshold for fuzzy logic application
             'dp',                      # Dropout rate
             'comment',                 # General comments
