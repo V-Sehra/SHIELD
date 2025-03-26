@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PosixPath
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
@@ -102,7 +102,7 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropy
     class_weights = []
     # Collect all file names and prevent non-graphs to count
 
-    if type(path) == str:
+    if type(path) == str or type(path) == PosixPath:
         with open(path, 'rb') as f:
             all_train_file_names = pickle.load(f)
     elif type(path) == list:

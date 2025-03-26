@@ -42,7 +42,7 @@ def main():
         requirements = pickle.load(file)
 
 
-
+    print('evaluating the training results')
     hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
 
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
@@ -53,6 +53,7 @@ def main():
     save_path_folder = Path(requirements['path_training_results'] / 'hyper_search_plots')
     save_path_folder.mkdir(parents=True, exist_ok=True)
 
+    print('creating hyperparameter search plots')
     for observable_of_interest in requirements['col_of_variables']:
 
         evaluation_utils.create_parameter_influence_plots(df = melted_results,
@@ -119,7 +120,8 @@ def main():
                 attr_bool=requirements['attr_bool'],
                 device=device)
 
-            model_save_path = requirements['path_to_models'] / f'best_model_{num}.pt'
+            requirements['path_to_model'].mkdir(parents=True, exist_ok=True)
+            model_save_path = requirements['path_to_model'] / f'best_model_{num}.pt'
             torch.save(model.state_dict(), model_save_path)
 
 

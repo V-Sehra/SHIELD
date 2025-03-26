@@ -23,8 +23,8 @@ def main():
     # Define command-line arguments for input data paths
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
-    parser.add_argument("-dat_type", "--data_set_type", default='train')
+                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+    parser.add_argument("-dat_type", "--data_set_type", default='test')
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -36,10 +36,7 @@ def main():
 
 
     # Determine the correct fold column based on dataset type
-    if args.data_set_type == 'train':
-        fold_column = requirements['number_validation_splits']
-    else:
-        fold_column = requirements['test_set_fold_number']
+    fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements['test_set_fold_number']][0]
 
     # Load the raw dataset from CSV
     input_data = pd.read_csv(requirements['path_raw_data'])
@@ -48,7 +45,7 @@ def main():
         input_data = input_data[input_data[requirements['filter_column']] == requirements['filter_value']]
 
     # Filter the dataset based on the validation split column
-    data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_column)]
+    data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_ids)]
     data_sample.reset_index(inplace=True, drop=True)
 
     # Get unique sample names
