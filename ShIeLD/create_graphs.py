@@ -23,8 +23,8 @@ def main():
     # Define command-line arguments for input data paths
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
-    parser.add_argument("-dat_type", "--data_set_type", default='test')
+                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
+    parser.add_argument("-dat_type", "--data_set_type", default='train')
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -42,7 +42,7 @@ def main():
     input_data = pd.read_csv(requirements['path_raw_data'])
 
     if requirements['filter_column'] is not None:
-        input_data = input_data[input_data[requirements['filter_column']] == requirements['filter_value']]
+        input_data = input_data[input_data[requirements['filter_column'][0]] == requirements['filter_value']]
 
     # Filter the dataset based on the validation split column
     data_sample = input_data.loc[input_data[requirements['validation_split_column']].isin(fold_ids)]
@@ -63,8 +63,16 @@ def main():
                     # Randomly select anchor cells based on either the percentage or absulut value
                     if requirements['anker_cell_selction_type'] == '%':
                         anchors = single_sample.sample(n=int(len(single_sample) * anker_value))
+
                     elif requirements['anker_cell_selction_type'] == 'absolut':
-                        anchors = single_sample.sample(n=int(anker_value))
+                        if requirements['multiple_labels_per_subSample']:
+                            samples_per_tissue = anker_value // 3
+                            anchors = pd.DataFrame()
+                            for label_dict_key in requirements['label_dict'].keys():
+                                anchors = pd.concat([anchors, single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
+                                    n=samples_per_tissue)])
+                        else:
+                            anchors = single_sample.sample(n=int(anker_value))
 
                     # Compute Voronoi regions with fuzzy boundary constraints
 

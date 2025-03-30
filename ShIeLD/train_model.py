@@ -27,12 +27,12 @@ print(device)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-split", "--split_number", type=int, default=1)
+    parser.add_argument("-split", "--split_number", type=int, default=2)
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
     parser.add_argument("-comment", "--comment", type=str, default='random_anker')
     parser.add_argument("-comment_norm", "--comment_norm", type=str, default='noNorm')
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
 
     args = parser.parse_args()
     print(args)
@@ -43,7 +43,7 @@ def main():
     split_number = int(args.split_number)
 
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
-    meta_columns = ['anker_value', 'radius_neibourhood', 'fussy_limit',
+    meta_columns = ['anker_value', 'radius_distance', 'fussy_limit',
                     'dp', 'comment', 'comment_norm', 'model_no','split_number']
 
     for radius_distance in requirements['radius_distance_all']:

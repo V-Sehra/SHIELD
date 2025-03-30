@@ -63,9 +63,10 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
     # Determine the most frequent tissue type in this region
     dominating_tissue_type = graph_data[requiremets_dict['label_column']].value_counts().idxmax()
 
+    file_name = f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{(len(voronoi_list) * repeat_id)+vornoi_id}.pt'
+
     if skip_existing:
-        if Path(f'{save_path_folder}',
-                  f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt').exists():
+        if Path(f'{save_path_folder}',file_name).exists():
             return
 
     # Convert gene expression features into a tensor
@@ -95,8 +96,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
     ).cpu()
 
     # Save the processed graph data
-    torch.save(data, Path(f'{save_path_folder}',
-                              f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{vornoi_id + repeat_id}.pt'))
+    torch.save(data, Path(f'{save_path_folder}',file_name))
 
     return
 

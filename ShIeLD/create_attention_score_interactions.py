@@ -77,10 +77,10 @@ cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_di
 
 observed_tissues = list(requirements['label_dict'].keys())
 for number_interactions in [4, len(requirements['cell_type_names'])]:
+    print(f'creating the interactions for top {number_interactions}:')
+    for observed_tissue in observed_tissues:
 
-    for observed_tissue in observed_tissue:
-
-        interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_dataFrame(tissue_id= requirements['label_dict'][observed_tissue],
+        interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_DataFrame(tissue_id= requirements['label_dict'][observed_tissue],
                                                                                                        interaction_dict = cell_to_cell_interaction_dict)
 
 
@@ -88,12 +88,12 @@ for number_interactions in [4, len(requirements['cell_type_names'])]:
                                                          all_interaction_mean_df = mean_interaction_dataFrame,
                                                          all_interaction_df = interaction_dataFrame)
 
-        Path(requirements['path_to_model'] / 'boxplots').mkdir(parents=True, exist_ok=True)
-        save_path_boxplots = Path(requirements['path_to_model'] / 'boxplots'/ f'{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png')
+        Path(requirements['path_to_interaction_plots'] / 'boxplots').mkdir(parents=True, exist_ok=True)
+        save_path_boxplots = Path(requirements['path_to_interaction_plots'] / 'boxplots'/ f'{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png')
 
         evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= 0.0005, significance_2= 0.00005,
                                                 interaction_limit = number_interactions,
-                                                all_interaction_df = interaction_dataFrame,
+                                                all_interaction_mean_df = interaction_dataFrame,
                                                 top_connections = top_connections,
                                                 save_path=save_path_boxplots)
 

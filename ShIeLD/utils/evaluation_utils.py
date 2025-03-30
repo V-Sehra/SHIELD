@@ -169,7 +169,8 @@ def get_hypersear_results(requirements_dict: dict):
     return hyper_grouped
 
 
-def get_interaction_dataframe(
+
+def get_interaction_DataFrame(
         tissue_id: str,
         interaction_dict: Dict[str, any]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
