@@ -17,7 +17,7 @@ from model import ShIeLD
 import utils.evaluation_utils as evaluation_utils
 import utils.data_utils as data_utils
 import utils.train_utils as train_utils
-from utils.data_class import diabetis_dataset
+from utils.data_class import graph_dataset
 
 torch.multiprocessing.set_start_method('fork', force=True)
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -29,10 +29,10 @@ print(device)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
     parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
-                        default=Path.cwd() / 'examples' / 'diabetes' / 'best_config.pt')
+                        default=Path.cwd() / 'examples' / 'HCC' / 'best_config.pt')
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
 
     args = parser.parse_args()
@@ -54,6 +54,7 @@ def main():
     save_path_folder.mkdir(parents=True, exist_ok=True)
 
     print('creating hyperparameter search plots')
+
     for observable_of_interest in requirements['col_of_variables']:
 
         evaluation_utils.create_parameter_influence_plots(df = melted_results,
@@ -78,6 +79,9 @@ def main():
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
 
+
+        print('best configuration:')
+        print(best_config_dict)
         path_to_graphs = Path(requirements['path_to_data_set'] /
                               f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
                               f"min_cells_{requirements['minimum_number_cells']}" /
@@ -87,7 +91,7 @@ def main():
         train_graph_path = path_to_graphs / 'train' / 'graphs'
 
         data_loader_train = DataListLoader(
-            diabetis_dataset(
+            graph_dataset(
                 root=str(train_graph_path),
                 path_to_graphs=path_to_graphs,
                 fold_ids=requirements['number_validation_splits'],

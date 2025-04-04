@@ -23,10 +23,10 @@ import utils.evaluation_utils as evaluation_utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-req_path", "--requirements_file_path",
-                    default=Path.cwd() / 'examples' / 'diabetes' / 'requirements.pt')
+                    default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
 parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
 parser.add_argument("-config_dict", "--best_config_dict_path",
-                    default=Path.cwd() / 'examples' / 'diabetes' / 'best_config.pt')
+                    default=Path.cwd() / 'examples' / 'HCC' / 'best_config.pt')
 parser.add_argument("-dat_type", "--data_set_type", default='test')
 
 args = parser.parse_args()

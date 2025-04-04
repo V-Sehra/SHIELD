@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 from torch_geometric.loader import DataListLoader
 
-from utils.data_class import diabetis_dataset
+from utils.data_class import graph_dataset
 import utils.train_utils as train_utils
 import utils.model_utils as model_utils
 
@@ -64,7 +64,7 @@ def main():
 
 
                 data_loader_train = DataListLoader(
-                    diabetis_dataset(
+                    graph_dataset(
                         root = str(path_to_graphs / 'train' / 'graphs'),
                         path_to_graphs = path_to_graphs,
                         fold_ids = train_folds,
@@ -75,7 +75,7 @@ def main():
                 )
 
                 data_loader_validation = DataListLoader(
-                    diabetis_dataset(
+                    graph_dataset(
                         root = str(path_to_graphs / 'train' / 'graphs'),
                         path_to_graphs = path_to_graphs,
                         fold_ids = [split_number],
@@ -124,6 +124,7 @@ def main():
                                 attr_bool = requirements['attr_bool'], device=device
                             )
 
+
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
                                                        dp, args.comment,args.comment_norm, num,
                                                        train_bal_acc,train_f1_score, val_bal_acc,val_f1_score,split_number]],
@@ -132,6 +133,7 @@ def main():
                                                               'bal_train_acc','train_f1_score',
                                                               'bal_val_acc','val_f1_score','split_number'])
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
+                            print(training_results_csv)
                             training_results_csv.to_csv(csv_file_path, index=False)
 
                             torch.cuda.empty_cache()
