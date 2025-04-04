@@ -1,64 +1,106 @@
+# SHIELD: **S**patially-en**H**anced Immun**E** **L**andscape **D**ecoding  
+*Weakly supervised graph attention networks for interpretable cell-cell interaction analysis*
 
-# ShIeLD: Spatially-enhanced Immune Landscape Decoding in Hepatocellular Carcinoma (HCC) using Graph Attention Networks and CODEX Data
-![GAT.pdf](https://github.com/V-Sehra/ShIeLD/files/14113477/GAT.pdf)
+![SHIELD_interaction_scoring](https://github.com/user-attachments/assets/6ad6c094-8484-4e97-914a-79ebea34566d)
 
-ShIeLD employs Graph Attention Networks (GAT) to decode complex immune landscapes in HCC from high-dimensional spatial molecular imaging data, providing insights into tissue microenvironments. This approach enables the interpretation of disease-associated cell type interactions, highlighted by the identification of interactions between MAITs and macrophages, without additional supervision. The project demonstrates the potential of attention-based graph models in advancing our understanding of HCC.
 
-## Installation
+**SHIELD** is a framework that leverages *Graph Attention Networks (GATs)* to infer and interpret disease-associated cell-cell interactions from spatial omics data. It highlights which immune interactions are most predictive of disease outcomes, by summarizing attention scores at the cell-phenotype level — enabling biologically meaningful insights.
 
-To set up ShIeLD, follow these steps:
+We applied SHIELD to multiplexed tissue imaging data in two key disease contexts:
+
+- **Hepatocellular carcinoma (HCC)**: SHIELD identified differential immune interactions between tumor and adjacent healthy tissue, including a subtle but significant interaction between **MAIT cells** and **macrophages**, supporting previous findings on tumor progression.
+- **Diabetes**: Using imaging mass cytometry from diabetic pancreas tissue, SHIELD revealed dynamic immune-β cell interactions, uncovering stage-specific communication patterns between **helper T cells**, **cytotoxic T cells**, and **β cells**.
+
+In both cases, SHIELD recovered experimentally validated interactions and demonstrated its strength in extracting interpretable and spatially-aware immune landscape features.
+
+---
+
+## 🔧 Installation
+
+To set up SHIELD locally, follow these steps:
 
 1. Clone the repository:
+   
    ```
    git clone https://github.com/V-Sehra/ShIeLD.git
    ```
-2. Navigate to the ShIeLD directory:
+3.	Navigate to the project directory:
+   
    ```
    cd ShIeLD
    ```
-3. Install Poetry if not already installed:
+3.	Install Poetry if not already installed:
+   
    ```
    conda install poetry -c conda-forge
    ```
-4. Install dependencies using Poetry:
+
+5.	Install project dependencies:
+
    ```
    poetry install
    ```
 
-## Workflow
+## 🧭 Workflow Overview
 
-### Data Preparation
+SHIELD is built to process immune spatial data in a reproducible and modular way. Example inputs are provided in the example/ folder, including dictionary-based data specs that describe paths, phenotypes, and output locations.
 
-1. Download the CODEX images dataset as described in the paper (link to dataset publication).
-2. Place the raw CSV file containing CODEX images information under `../data/raw_data.csv` or specify a custom path using `-path_to_raw_csv` flag in `data_preprocessing.py`.
+⸻
 
-To preprocess the data and generate input graphs, run:
-```
-python data_preprocessing.py
-```
+## 📂 Data Preparation
 
-### Model Training
+To construct spatial graphs from your input data:
+   ```
+   python create_graphs.py
+   ```
 
-To train the ShIeLD model, execute:
-```
-python run_training.py
-```
-The script saves the trained model automatically.
+## 🧪 Model Training
 
-### Extracting Cell Phenotype Attention Scores
+To perform a hyperparameter search:
+   ```
+   python train_model.py
+   ```
 
-After training, evaluate the model's attention on cell phenotypes by running:
-```
-python run_attention_evaluation.py
-```
-This generates a dictionary with phenotype-to-phenotype attention scores accessible via `[normed_p2p]` for each input graph.
+•	Runs a search using your specified config.
+•	Saves training and validation metrics in CSV format for all models.
+
+To analyze the hyperparameter search and retrain the best model:
+   ```
+   python evaluate_hyperearch.py
+   ```
+
+•	Generates plots to evaluate the search results.
+
+•	Saves the best configuration as best_config_dict.
+
+•	Retrains the best model on the full training set.
+
+•	Saves final train/test performance.
 
 
-## Citation
+## 🔍 Interaction Scoring
 
-If you use ShIeLD in your research, please cite our paper. (Bibtex TBA)
+To calculate cell-to-cell interaction scores using the trained model:
+   ```
+   python create_attention_score_interaction.py
+   ```
 
-## License
+•	Loads the trained model.
 
-ShIeLD is open-sourced under the AGPL-3.0 license. See the LICENSE file for more details.
+•	Computes phenotype-to-phenotype attention scores.
 
+•	Saves both plots and raw scores for downstream interpretation.
+
+
+
+ ## 📖 Citation
+
+If you use SHIELD in your research, please cite our paper:
+
+Citation TBA
+(BibTeX entry will be added here once the paper is published.)
+
+
+## 🪪 License
+
+SHIELD is released under the AGPL-3.0 License. See the LICENSE file for more details.
