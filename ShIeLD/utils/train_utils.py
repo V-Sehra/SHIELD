@@ -82,8 +82,6 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
         ])
 
     return training_results_csv,csv_file_path  # Return the DataFram
-    # e
-
 
 def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropyLoss:
     """

@@ -128,12 +128,11 @@ def main():
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
                                                        dp, args.comment,args.comment_norm, num,
                                                        train_bal_acc,train_f1_score, val_bal_acc,val_f1_score,split_number]],
-                                                     columns=['anker_value', 'radius_neibourhood', 'fussy_limit',
+                                                     columns=['anker_value', 'radius_distance', 'fussy_limit',
                                                               'dp', 'comment', 'comment_norm', 'model_no',
-                                                              'bal_train_acc','train_f1_score',
-                                                              'bal_val_acc','val_f1_score','split_number'])
+                                                              'bal_acc_train','train_f1_score',
+                                                              'bal_acc_validation','val_f1_score','split_number'])
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
-                            print(training_results_csv)
                             training_results_csv.to_csv(csv_file_path, index=False)
 
                             torch.cuda.empty_cache()
