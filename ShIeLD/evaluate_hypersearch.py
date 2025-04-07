@@ -19,6 +19,8 @@ import utils.data_utils as data_utils
 import utils.train_utils as train_utils
 from utils.data_class import graph_dataset
 
+import tests
+
 torch.multiprocessing.set_start_method('fork', force=True)
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -40,7 +42,7 @@ def main():
 
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
-
+    tests.input_test.test_all_keys_in_req(req_file=requirements)
 
     print('evaluating the training results')
     hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
@@ -79,6 +81,7 @@ def main():
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
 
+        tests.input_test.test_best_config(best_config_dict)
 
         print('best configuration:')
         print(best_config_dict)

@@ -17,6 +17,8 @@ from utils.data_class import graph_dataset
 import utils.train_utils as train_utils
 import utils.model_utils as model_utils
 
+from tests import input_test
+
 from model import ShIeLD
 
 torch.multiprocessing.set_start_method('fork', force=True)
@@ -39,6 +41,7 @@ def main():
 
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
+    input_test.test_all_keys_in_req(req_file=requirements)
 
     split_number = int(args.split_number)
 

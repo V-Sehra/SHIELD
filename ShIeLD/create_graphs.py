@@ -16,7 +16,7 @@ import pickle
 
 
 from utils import data_utils
-
+from tests import input_test
 
 # Main function to process dataset and generate graphs
 def main():
@@ -34,6 +34,7 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
 
+    input_test.test_all_keys_in_req(req_file = requirements)
 
     # Determine the correct fold column based on dataset type
     fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements['test_set_fold_number']][0]
