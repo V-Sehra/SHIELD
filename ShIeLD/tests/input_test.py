@@ -136,7 +136,7 @@ def test_best_config(config_file):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
-    all_floats = ['droup_out_rate', 'radius_distance', 'fussy_limit']
+    all_floats = ['droup_out_rate', 'fussy_limit']
     for item in all_floats:
         if not isinstance(best_config_dict[item], float):
             raise AssertionError(f"Item {item} is not a float.")
@@ -148,7 +148,7 @@ def test_best_config(config_file):
             raise AssertionError(f"Item {item} is not a bool.")
 
     # float or int:
-    all_numbers = ['anker_value']
+    all_numbers = ['anker_value','radius_distance']
     for item in all_numbers:
         if not isinstance(best_config_dict[item], (float,int)):
             raise AssertionError(f"Item {item} is not a float or int.")

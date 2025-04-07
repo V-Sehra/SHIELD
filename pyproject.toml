@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ShIeLD"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = "SHIELD is a single-layer Graph Attention Network for systematic and interpretable inference of disease-associated cell-cell interactions from multiplexed tissue imaging data.Designed for weakly supervised classification tasks, SHIELD quantifies interaction relevance via attention scoresenabling post hoc biologically meaningful interpretation without predefined cell-type assumptions. Validated in HCC and T1D datasets, it offers robust, scalable insights into immune spatial dynamics."
 authors = ["V-Sehra"]
 
 [tool.poetry.dependencies]

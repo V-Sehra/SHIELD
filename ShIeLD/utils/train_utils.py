@@ -12,7 +12,7 @@ import torch
 from torch.utils.data import DataLoader
 
 
-from utils import model_utils
+import model_utils
 
 from typing import List, Tuple
 
