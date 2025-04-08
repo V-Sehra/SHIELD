@@ -21,9 +21,9 @@ To set up SHIELD locally, follow these steps:
 
 1. Clone the repository:
    
-   ```
-   git clone https://github.com/V-Sehra/ShIeLD.git
-   ```
+```
+git clone https://github.com/V-Sehra/ShIeLD.git
+```
 3.	Navigate to the project directory:
    
    ```
