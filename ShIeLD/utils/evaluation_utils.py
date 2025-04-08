@@ -6,16 +6,15 @@ Created Nov 2024
 @author: Vivek
 """
 
-from utils import train_utils
-from utils import model_utils
-from utils import data_utils
+import train_utils
+import model_utils
+import data_utils
 
 import pandas as pd
 import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
-
 
 from pathlib import PosixPath
 from tqdm import tqdm
