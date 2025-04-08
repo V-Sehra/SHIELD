@@ -87,6 +87,12 @@ def test_all_keys_in_req(req_file):
 
             raise AssertionError(f"Item {list_float} is not a list of floats.")
 
+    # boolians:
+    all_bools = ['filter_cells', 'multiple_labels_per_subSample', 'attr_bool']
+    for item in all_bools:
+        if not isinstance(requirements[item], bool):
+            raise AssertionError(f"Item {item} is not a bool.")
+
     # optional keys:
     if requirements['filter_cells']:
         if not {'filter_column', 'filter_value'}.issubset(key_set):

@@ -42,7 +42,8 @@ def main():
     # Load the raw dataset from CSV
     input_data = pd.read_csv(requirements['path_raw_data'])
 
-    if requirements['filter_column'] is not None:
+
+    if requirements['filter_cells']:
         input_data = input_data[input_data[requirements['filter_column'][0]] == requirements['filter_value']]
 
     # Filter the dataset based on the validation split column
