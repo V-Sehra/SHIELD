@@ -6,9 +6,9 @@ Created Nov 2024
 @author: Vivek
 """
 
-import train_utils
-import model_utils
-import data_utils
+from . import train_utils
+from . import model_utils
+from . import data_utils
 
 import pandas as pd
 import numpy as np
@@ -25,7 +25,6 @@ from scipy.stats import mannwhitneyu
 
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 
 def get_cell_to_cell_interaction_dict(
         requirements_dict: Dict,
@@ -75,7 +74,7 @@ def get_cell_to_cell_interaction_dict(
     try:
         cell_type_eval_index = np.where(np.array(requirements_dict['eval_columns']) == 'CellType')[0][0]
     except IndexError:
-        raise ValueError("Column 'CellType' not found in requirements_dict['eval_columns'].")
+        raise ValueError(f"Column 'CellType' not found in {requirements_dict['eval_columns']}.")
 
     # Iterate over all samples in the data loader
     for data_sample in tqdm(data_loader, desc="Processing samples"):
