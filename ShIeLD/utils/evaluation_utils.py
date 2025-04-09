@@ -72,7 +72,9 @@ def get_cell_to_cell_interaction_dict(
 
     # Find the index of the 'CellType' column in the evaluation data
     try:
-        cell_type_eval_index = np.where(np.array(requirements_dict['eval_columns']) == 'CellType')[0][0]
+        cell_type_eval_index = np.where(
+            np.char.lower(np.array(requirements_dict['eval_columns'])) == 'celltype'.lower()
+        )[0][0]
     except IndexError:
         raise ValueError(f"Column 'CellType' not found in {requirements_dict['eval_columns']}.")
 

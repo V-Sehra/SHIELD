@@ -20,7 +20,7 @@ def test_all_keys_in_req(req_file):
         raise TypeError("req_file should be a string, Path object or dict.")
 
     # Define the required keys
-    required_keys = set(['path_raw_data', 'path_training_results',
+    required_keys = set(['path_raw_data', 'path_training_results','path_to_interaction_plots',
                         'path_to_model', 'label_column',
                         'cell_type_names', 'label_dict',
                         'eval_columns', 'col_of_interest',
