@@ -23,7 +23,7 @@ def main():
     # Define command-line arguments for input data paths
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='train')
 
     # Parse command-line arguments
