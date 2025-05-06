@@ -32,9 +32,8 @@ def main():
     parser.add_argument("-split", "--split_number", type=int, default=2)
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
     parser.add_argument("-comment", "--comment", type=str, default='random_anker')
-    parser.add_argument("-comment_norm", "--comment_norm", type=str, default='noNorm')
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
 
     args = parser.parse_args()
     print(args)
@@ -104,7 +103,7 @@ def main():
                             model = ShIeLD(
                                 num_of_feat=int(requirements['input_layer']),
                                 layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
-                                self_att=False, attr_bool = requirements['attr_bool']
+                                self_att=False, attr_bool = requirements['attr_bool'], batch_norm=requirements['comment_norm']
                             ).to(device)
                             model.train()
 
@@ -138,7 +137,7 @@ def main():
                             torch.cuda.empty_cache()
                         else:
                             print('Model already trained:', anker_number, radius_distance, fussy_limit, dp, args.comment,
-                                  args.comment_norm, num)
+                                  requirements['comment_norm'], num)
 
 if __name__ == "__main__":
     main()

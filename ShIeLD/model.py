@@ -1,7 +1,7 @@
 from torch_geometric.nn.aggr import MeanAggregation
 from torch_geometric.nn import GATv2Conv
 import torch.nn as nn
-from torch.nn import Linear
+from torch.nn import Linear,BatchNorm1d
 import torch.nn.functional as F
 
 
@@ -22,7 +22,7 @@ class ShIeLD(nn.Module):
 
     def __init__(self, num_of_feat: int, layer_1:int, dp: float,
                  layer_final: int =2, edge_dim: int =1, similarity_typ: str ='euclide',
-                 self_att: bool =True, attr_bool:bool = True):
+                 self_att: bool =True, attr_bool:bool = True, batch_norm: str = 'No_norm'):
         """
         Initializes the ShIeLD model.
 
@@ -35,6 +35,7 @@ class ShIeLD(nn.Module):
             similarity_typ (str): Type of similarity function to use (default: 'euclide').
             self_att (bool): Whether to add self-loops in the GAT layer.
             attr_bool (bool): Whether edge attributes are included in the attention mechanism.
+            batch_norm (str): Type of normalization to apply after the GAT layer (default: 'No_norm').
         """
         super(ShIeLD, self).__init__()
 
@@ -47,6 +48,13 @@ class ShIeLD(nn.Module):
         self.dp = dp  # Dropout probability
         self.similarity_typ = similarity_typ  # Similarity metric
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings
+        if batch_norm == 'batch_norm':
+            # Batch normalization layer for the output of the GAT layer
+            self.bn1 = BatchNorm1d(layer_1)
+        else:
+            # If batch normalization is not used, set it to None
+            self.bn1 = None
+
 
     def forward(self, node_list, edge_list, edge_att=None):
         """
@@ -79,6 +87,9 @@ class ShIeLD(nn.Module):
             else:
                 x, att = self.conv1(x=x, edge_index=edge_index,
                                     return_attention_weights=True)
+
+            if self.bn1 is not None:
+                x = self.bn1(x)
 
             x = F.relu(x)  # Apply ReLU activation
             x = F.dropout(x, p=self.dp, training=self.training)  # Apply dropout
