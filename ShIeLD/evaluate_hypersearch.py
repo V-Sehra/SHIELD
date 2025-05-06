@@ -115,7 +115,8 @@ def main():
                 layer_1=requirements['layer_1'],
                 layer_final=requirements['out_put_layer'],
                 dp=best_config_dict['droup_out_rate'],
-                self_att=False, attr_bool=requirements['attr_bool']
+                self_att=False, attr_bool=requirements['attr_bool'],
+                batch_norm=requirements['comment_norm']
             ).to(device)
             model.train()
 
