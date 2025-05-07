@@ -138,6 +138,8 @@ def main():
 
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
                             training_results_csv.to_csv(csv_file_path, index=False)
+                            # reload to avoid overwriting issues when running the code in paralell
+                            training_results_csv = pd.read_csv(csv_file_path)
 
                             torch.cuda.empty_cache()
                         else:

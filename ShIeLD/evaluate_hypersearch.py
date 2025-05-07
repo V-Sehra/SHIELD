@@ -50,7 +50,8 @@ def main():
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
 
     melted_results = hyper_search_results.melt(id_vars=['total_acc_balanced_mean'], var_name='hyperparameter')
-
+    print(melted_results)
+    print(hyper_search_results)
 
     save_path_folder = Path(requirements['path_training_results'] / 'hyper_search_plots')
     save_path_folder.mkdir(parents=True, exist_ok=True)
@@ -69,14 +70,14 @@ def main():
                 best_config_dict = pickle.load(file)
         else:
 
-            best_config_dict = {'layer_one' : requirements['layer_one'],
-                    'input_dim' : requirements['input_dim'],
-                    'droup_out_rate' : hyper_search_results['dp'].iloc[0],
+            best_config_dict = {'layer_one' : requirements['layer_1'],
+                    'input_dim' : requirements['input_layer'],
+                    'droup_out_rate' : melted_results['dp'].iloc[0],
                     'final_layer' : requirements['out_put_layer'],
                     'attr_bool' : requirements['attr_bool'],
-                    'anker_value': hyper_search_results['anker_value'].iloc[0],
-                    'radius_distance': hyper_search_results['radius_distance'].iloc[0],
-                    'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}
+                    'anker_value': melted_results['anker_value'].iloc[0],
+                    'radius_distance': melted_results['radius_distance'].iloc[0],
+                    'fussy_limit': melted_results['fussy_limit'].iloc[0]}
 
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
