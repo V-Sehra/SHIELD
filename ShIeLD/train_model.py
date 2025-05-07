@@ -97,7 +97,8 @@ def main():
                     for num in tqdm(range(int(args.number_of_training_repeats))):
 
                         if not training_results_csv[meta_columns].isin(
-                                [[anker_number, radius_distance, fussy_limit, dp, args.comment, requirements['comment_norm'], num,split_number]]
+                                [[anker_number, radius_distance, fussy_limit, dp, args.comment,
+                                  requirements['comment_norm'], num,split_number]]
                         ).all(axis=1).any():
 
                             loss_fkt = train_utils.initiaize_loss(
@@ -147,7 +148,7 @@ def main():
                                 training_results_csv.to_csv(csv_file_path, index=False)
 
                             # reload to avoid overwriting issues when running the code in paralell
-                            training_results_csv = pd.read_csv(csv_file_path)
+                            training_results_csv = pd.read_csv(csv_file_path, ignore_index=True)
 
                             torch.cuda.empty_cache()
                         else:
