@@ -29,6 +29,7 @@ print(device)
 
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
@@ -50,8 +51,7 @@ def main():
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
 
     melted_results = hyper_search_results.melt(id_vars=['total_acc_balanced_mean'], var_name='hyperparameter')
-    print(melted_results)
-    print(hyper_search_results)
+
 
     save_path_folder = Path(requirements['path_training_results'] / 'hyper_search_plots')
     save_path_folder.mkdir(parents=True, exist_ok=True)

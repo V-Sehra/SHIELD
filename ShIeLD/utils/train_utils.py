@@ -30,6 +30,7 @@ def early_stopping(loss_epoch: List, patience: int = 15) -> bool:
     Returns:
     bool: True if training should be stopped, False otherwise.
     """
+
     if len(loss_epoch) > patience:
         if (loss_epoch[-2] - loss_epoch[-1]) < 0.001:
             return True

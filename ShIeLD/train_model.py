@@ -46,9 +46,6 @@ def main():
     split_number = int(args.split_number)
 
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
-    # Create a lock file to prevent concurrent writes
-    lock_file_path = csv_file_path.with_suffix(csv_file_path.suffix + ".lock")
-    lock = FileLock(lock_file_path, timeout=60)
 
     meta_columns = ['anker_value', 'radius_distance', 'fussy_limit',
                     'dp', 'comment', 'comment_norm', 'model_no','split_number']
@@ -142,9 +139,9 @@ def main():
                             print('val_bal_acc', 'val_f1_score')
                             print(val_bal_acc,val_f1_score)
 
-                            with lock:
-                                training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
-                                training_results_csv.to_csv(csv_file_path, index=False)
+
+                            training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
+                            training_results_csv.to_csv(csv_file_path, index=False)
 
                             # reload to avoid overwriting issues when running the code in paralell
                             training_results_csv = pd.read_csv(csv_file_path)
