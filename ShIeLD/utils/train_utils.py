@@ -30,7 +30,6 @@ def early_stopping(loss_epoch: List, patience: int = 15) -> bool:
     Returns:
     bool: True if training should be stopped, False otherwise.
     """
-    print(loss_epoch[-1])
     if len(loss_epoch) > patience:
         if (loss_epoch[-2] - loss_epoch[-1]) < 0.001:
             return True
@@ -113,7 +112,6 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropy
                                                             if origin in file_name])
         class_weights.append(1 - (number_tissue_graphs / len(all_train_file_names)))
 
-    print(class_weights)
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device))
     return criterion
 

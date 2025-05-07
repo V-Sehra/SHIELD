@@ -31,10 +31,10 @@ print(device)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
     parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'best_config.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
 
     args = parser.parse_args()
@@ -69,11 +69,11 @@ def main():
                 best_config_dict = pickle.load(file)
         else:
 
-            best_config_dict = {'layer_one' : 38,
-                    'input_dim' : 38,
+            best_config_dict = {'layer_one' : requirements['layer_one'],
+                    'input_dim' : requirements['input_dim'],
                     'droup_out_rate' : hyper_search_results['dp'].iloc[0],
-                    'final_layer' : 3,
-                    'attr_bool' : False,
+                    'final_layer' : requirements['out_put_layer'],
+                    'attr_bool' : requirements['attr_bool'],
                     'anker_value': hyper_search_results['anker_value'].iloc[0],
                     'radius_distance': hyper_search_results['radius_distance'].iloc[0],
                     'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}

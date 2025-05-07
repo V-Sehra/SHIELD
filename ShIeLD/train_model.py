@@ -91,7 +91,7 @@ def main():
                     for num in tqdm(range(int(args.number_of_training_repeats))):
 
                         if not training_results_csv[meta_columns].isin(
-                                [[anker_number, radius_distance, fussy_limit, dp, args.comment, args.comment_norm, num,split_number]]
+                                [[anker_number, radius_distance, fussy_limit, dp, args.comment, requirements['comment_norm'], num,split_number]]
                         ).all(axis=1).any():
 
                             loss_fkt = train_utils.initiaize_loss(
@@ -127,9 +127,14 @@ def main():
                             )
 
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
-                                                       dp, args.comment,args.comment_norm, num,
+                                                       dp, args.comment,requirements['comment_norm'], num,
                                                        train_bal_acc,train_f1_score, val_bal_acc,val_f1_score,split_number]],
                                                      columns=training_results_csv.columns)
+
+                            print('train_bal_acc', 'train_f1_score')
+                            print(train_bal_acc,train_f1_score)
+                            print('val_bal_acc', 'val_f1_score')
+                            print(val_bal_acc,val_f1_score)
 
                             training_results_csv = pd.concat([model_csv, training_results_csv], ignore_index=True)
                             training_results_csv.to_csv(csv_file_path, index=False)
