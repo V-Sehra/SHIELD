@@ -11,7 +11,6 @@ from pathlib import Path
 import torch
 import pandas as pd
 from filelock import FileLock
-import time
 from tqdm import tqdm
 from torch_geometric.loader import DataListLoader
 
@@ -148,7 +147,7 @@ def main():
                                 training_results_csv.to_csv(csv_file_path, index=False)
 
                             # reload to avoid overwriting issues when running the code in paralell
-                            training_results_csv = pd.read_csv(csv_file_path, ignore_index=True)
+                            training_results_csv = pd.read_csv(csv_file_path)
 
                             torch.cuda.empty_cache()
                         else:
