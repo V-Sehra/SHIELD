@@ -1,7 +1,7 @@
 import pytest
 import pickle
 from pathlib import Path
-
+import numpy as np
 
 def test_all_keys_in_req(req_file):
     """
@@ -58,7 +58,7 @@ def test_all_keys_in_req(req_file):
     all_ints = ['minimum_number_cells', 'batch_size', 'input_layer', 'layer_1',
                 'out_put_layer', 'augmentation_number', 'voro_neighbours']
     for item in all_ints:
-        if not isinstance(requirements[item], int):
+        if not isinstance(requirements[item], (int,np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # string:
@@ -83,7 +83,7 @@ def test_all_keys_in_req(req_file):
 
     for list_float in all_lists_numbers:
         if not isinstance(requirements[list_float], list) or not all(
-                isinstance(i, (float,int)) for i in requirements[list_float]):
+                isinstance(i, (float,int,np.integer, np.floating)) for i in requirements[list_float]):
 
             raise AssertionError(f"Item {list_float} is not a list of floats.")
 
@@ -100,7 +100,7 @@ def test_all_keys_in_req(req_file):
 
         if not isinstance(requirements['filter_column'], list):
             raise AssertionError("filter_column should be a list containing the column to filter by.")
-        if not isinstance(requirements['filter_value'], (int, float,bool)):
+        if not isinstance(requirements['filter_value'], (int, float,bool,np.integer, np.floating)):
             raise AssertionError("filter_value should be an int, float or bool.")
 
 
@@ -138,13 +138,13 @@ def test_best_config(config_file):
     # int:
     all_ints = ['layer_one', 'input_dim', 'final_layer','version']
     for item in all_ints:
-        if not isinstance(best_config_dict[item], int):
+        if not isinstance(best_config_dict[item], (int,np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
     all_floats = ['droup_out_rate', 'fussy_limit']
     for item in all_floats:
-        if not isinstance(best_config_dict[item], float):
+        if not isinstance(best_config_dict[item], (float,np.floating)):
             raise AssertionError(f"Item {item} is not a float.")
 
     # bool:
@@ -156,5 +156,5 @@ def test_best_config(config_file):
     # float or int:
     all_numbers = ['anker_value','radius_distance']
     for item in all_numbers:
-        if not isinstance(best_config_dict[item], (float,int)):
+        if not isinstance(best_config_dict[item], (float,int,np.integer, np.floating)):
             raise AssertionError(f"Item {item} is not a float or int.")

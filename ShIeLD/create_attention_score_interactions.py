@@ -23,10 +23,10 @@ import tests.input_test as input_test
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'requirements.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
     parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
-                        default=Path.cwd() / 'examples' / 'HCC' / 'best_config.pt')
+                        default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='test')
     parser.add_argument("-sig1", "--significance_threshold_1", default=0.0001)
     parser.add_argument("-sig2", "--significance_threshold_2", default=0.00001)
