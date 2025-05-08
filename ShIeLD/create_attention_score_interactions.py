@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
-    parser.add_argument("-retrain", "--retain_best_model_config_bool", default=True)
+    parser.add_argument("-recalc", "--recalculate_cTc_Scroes", default=True)
     parser.add_argument("-config_dict", "--best_config_dict_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='test')
@@ -74,12 +74,16 @@ def main():
     model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model.pt'))
     model.eval()
 
-    cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
-            requirements_dict = requirements,
-            data_loader = data_loader,
-            model= model,
-            device = device,
-            save_dict_path = Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'))
+    if args.recalculate_cTc_Scroes or (not Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
+        cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
+                requirements_dict = requirements,
+                data_loader = data_loader,
+                model= model,
+                device = device,
+                save_dict_path = Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'))
+    else:
+        with open(Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'), 'rb') as f:
+            cell_to_cell_interaction_dict = pickle.load(f)
 
 
     observed_tissues = list(requirements['label_dict'].keys())
