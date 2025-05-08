@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
-    parser.add_argument("-dat_type", "--data_set_type", default='train')
+    parser.add_argument("-dat_type", "--data_set_type", default='test')
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -35,6 +35,8 @@ def main():
         requirements = pickle.load(file)
 
     input_test.test_all_keys_in_req(req_file = requirements)
+
+    #TODO: need to implement a dynamic way to get to only create the test set which comed from the hypersearch
 
     # Determine the correct fold column based on dataset type
     fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements['test_set_fold_number']][0]

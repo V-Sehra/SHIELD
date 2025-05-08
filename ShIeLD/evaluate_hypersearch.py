@@ -41,9 +41,11 @@ def main():
     args = parser.parse_args()
     print(args)
 
+
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
     input_test.test_all_keys_in_req(req_file=requirements)
+    requirements['path_to_model'].mkdir(parents=True, exist_ok=True)
 
     print('evaluating the training results')
     hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
@@ -82,7 +84,6 @@ def main():
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
 
-        input_test.test_best_config(best_config_dict)
 
         print('best configuration:')
         print(best_config_dict)
@@ -92,11 +93,9 @@ def main():
                               f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
                               f"radius_{best_config_dict['radius_distance']}")
 
-        train_graph_path = path_to_graphs / 'train' / 'graphs'
-
         data_loader_train = DataListLoader(
             graph_dataset(
-                root=str(train_graph_path),
+                root=str(path_to_graphs / 'train' / 'graphs'),
                 path_to_graphs=path_to_graphs,
                 fold_ids=requirements['number_validation_splits'],
                 requirements_dict=requirements,
@@ -104,6 +103,20 @@ def main():
             ),
             batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
         )
+
+        data_loader_validation = DataListLoader(
+            graph_dataset(
+                root=str(path_to_graphs / 'test' / 'graphs'),
+                path_to_graphs=path_to_graphs,
+                fold_ids=requirements['test_set_fold_number'],
+                requirements_dict=requirements,
+                graph_file_names=f'test_set_file_names.pkl'
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+
+        #which of the 5 models has the best predictive power
+        best_model_f1score = 0
         for num in tqdm(range(args.number_of_training_repeats)):
 
             loss_fkt = train_utils.initiaize_loss(
@@ -129,8 +142,22 @@ def main():
                 attr_bool=requirements['attr_bool'],
                 device=device)
 
-            requirements['path_to_model'].mkdir(parents=True, exist_ok=True)
-            model_save_path = requirements['path_to_model'] / f'best_model_{num}.pt'
+            print('start validation')
+            val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
+                model=model, data_loader=data_loader_validation,
+                attr_bool=requirements['attr_bool'], device=device
+            )
+
+            if val_f1_score > best_model_f1score:
+                best_model_f1score = val_f1_score
+                print(f'best model so far: {num} with val f1 score of {val_f1_score}')
+                # Save the best model
+
+                model_save_path = Path(requirements['path_training_results'] / f'best_model_{num}.pt')
+                torch.save(model.state_dict(), model_save_path)
+
+
+            model_save_path = requirements['path_to_model'] / f'model_{num}.pt'
             torch.save(model.state_dict(), model_save_path)
 
 
