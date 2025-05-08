@@ -46,17 +46,20 @@ class graph_dataset(Dataset):
         if not Path.exists(path_to_graphs/graph_file_names):
             print('Creating file name list:')
 
-            csv_file = pd.read_csv(requirements_dict['path_raw_data'])  # Load CSV file containing image names
-            csv_file = csv_file[requirements_dict['measument_sample_name']][
-                csv_file[requirements_dict['validation_split_column']].isin(fold_ids)]
-            # List all files in the root directory
+            csv_file = pd.read_csv(requirements_dict['path_raw_data'])
+            image_ids = csv_file[requirements_dict['measument_sample_name']][
+                csv_file[requirements_dict['validation_split_column']].isin(fold_ids)
+            ].unique()
+
+            # List files in root
             df = pd.DataFrame(os.listdir(root), columns=['file_name'])
 
-            # Create a regex pattern from the image names in the CSV file
-            regex_pattern = '|'.join(csv_file.unique())
+            # Extract the "XX_B" or "XX_A" pattern from each filename using regex
+            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_(\d+_[AB])_')[0]
 
-            # Filter filenames in the root directory that match the CSV images
-            filtered_df = df[df['file_name'].str.contains(regex_pattern)]
+            # Filter exact matches
+            filtered_df = df[df['identifier'].isin(image_ids)]
+
             self.graph_file_names = filtered_df['file_name'].tolist()
 
             # Save the filtered filenames to avoid redundant processing in future runs
