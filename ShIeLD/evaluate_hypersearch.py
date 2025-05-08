@@ -72,12 +72,12 @@ def main():
 
             best_config_dict = {'layer_one' : requirements['layer_1'],
                     'input_dim' : requirements['input_layer'],
-                    'droup_out_rate' : melted_results['dp'].iloc[0],
+                    'droup_out_rate' : hyper_search_results['dp'].iloc[0],
                     'final_layer' : requirements['out_put_layer'],
                     'attr_bool' : requirements['attr_bool'],
-                    'anker_value': melted_results['anker_value'].iloc[0],
-                    'radius_distance': melted_results['radius_distance'].iloc[0],
-                    'fussy_limit': melted_results['fussy_limit'].iloc[0]}
+                    'anker_value': hyper_search_results['anker_value'].iloc[0],
+                    'radius_distance': hyper_search_results['radius_distance'].iloc[0],
+                    'fussy_limit': hyper_search_results['fussy_limit'].iloc[0]}
 
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
