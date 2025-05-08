@@ -158,11 +158,11 @@ def main():
             if val_f1_score > best_model_f1score:
                 best_model_f1score = val_f1_score
 
-                print(f'best model so far: {num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}')
+                print(f'best model so far: VersioNo.{num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}')
                 print(f'train scores: bal= {train_bal_acc} f1= {train_f1_score}')
                 # Save the best model
 
-                model_save_path = Path(requirements['path_training_results'] / f'best_model_{num}.pt')
+                model_save_path = Path(requirements['path_to_model'] / f'best_model.pt')
                 torch.save(model.state_dict(), model_save_path)
 
                 best_config_dict['version'] = num
