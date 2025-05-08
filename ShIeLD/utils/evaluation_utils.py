@@ -26,6 +26,20 @@ from scipy.stats import mannwhitneyu
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
+def break_title(title, max_len=10):
+    if len(title) <= max_len:
+        return title
+    # Find the last space before the max_len limit
+    break_idx = title.rfind(' ', 0, max_len)
+    if break_idx == -1:
+        # No space found before max_len, try finding the next one
+        break_idx = title.find(' ', max_len)
+    if break_idx != -1:
+        return title[:break_idx] + '\n' + title[break_idx + 1:]
+    return title  # No space found, return as is
+
+
 def get_cell_to_cell_interaction_dict(
         requirements_dict: Dict,
         data_loader: DataLoader,
@@ -404,6 +418,7 @@ def plot_cell_cell_interaction_boxplots(
     )
 
 
+
     # Iterate over subplots
     for row in range(2):
         for idx in range(int(num_cells / 2)):
@@ -415,7 +430,7 @@ def plot_cell_cell_interaction_boxplots(
             values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_connections[src_cell] if len(dst_cell[1]) > 2]
 
             # Create boxplot
-            axs[row, idx].set_title(src_cell)
+            axs[row, idx].set_title(break_title(src_cell))
             axs[row, idx].grid(True, linewidth=line_width)
             box = axs[row, idx].boxplot(values)
 
