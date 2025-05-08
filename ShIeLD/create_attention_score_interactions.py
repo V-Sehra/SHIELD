@@ -28,8 +28,8 @@ def main():
     parser.add_argument("-config_dict", "--best_config_dict_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='test')
-    parser.add_argument("-sig1", "--significance_threshold_1", default=0.0001)
-    parser.add_argument("-sig2", "--significance_threshold_2", default=0.00001)
+    parser.add_argument("-sig1", "--significance_threshold_1", type=float, default=0.0001)
+    parser.add_argument("-sig2", "--significance_threshold_2", type=float, default=0.00001)
 
     args = parser.parse_args()
     print(args)
@@ -71,7 +71,7 @@ def main():
                     batch_norm = requirements['comment_norm']
                 ).to(device)
 
-    model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model_{best_config_dict["version"]}.pt'))
+    model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model.pt'))
     model.eval()
 
     cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
