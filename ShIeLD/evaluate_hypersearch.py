@@ -105,7 +105,7 @@ def main():
             batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
         )
 
-        data_loader_validation = DataListLoader(
+        data_loader_test = DataListLoader(
             graph_dataset(
                 root=str(path_to_graphs / 'test' / 'graphs'),
                 path_to_graphs=path_to_graphs,
@@ -145,14 +145,21 @@ def main():
 
             model.eval()
             print('start validation')
+            train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
+                model=model, data_loader=data_loader_train,
+                attr_bool=requirements['attr_bool'], device=device
+            )
+
             val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
-                model=model, data_loader=data_loader_validation,
+                model=model, data_loader=data_loader_test,
                 attr_bool=requirements['attr_bool'], device=device
             )
 
             if val_f1_score > best_model_f1score:
                 best_model_f1score = val_f1_score
-                print(f'best model so far: {num} with val f1 score of {val_f1_score}')
+
+                print(f'best model so far: {num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}')
+                print(f'train scores: bal= {train_bal_acc} f1= {train_f1_score}')
                 # Save the best model
 
                 model_save_path = Path(requirements['path_training_results'] / f'best_model_{num}.pt')
