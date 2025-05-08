@@ -17,6 +17,7 @@ from model import ShIeLD
 import utils.evaluation_utils as evaluation_utils
 import utils.data_utils as data_utils
 import utils.train_utils as train_utils
+import utils.model_utils as model_utils
 from utils.data_class import graph_dataset
 
 from tests import input_test
@@ -155,6 +156,11 @@ def main():
 
                 model_save_path = Path(requirements['path_training_results'] / f'best_model_{num}.pt')
                 torch.save(model.state_dict(), model_save_path)
+
+                best_config_dict['version'] = num
+
+                with open(args.best_config_dict_path, 'wb') as file:
+                    pickle.dump(best_config_dict, file)
 
 
             model_save_path = requirements['path_to_model'] / f'model_{num}.pt'

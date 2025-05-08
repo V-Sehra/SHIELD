@@ -10,7 +10,7 @@ import pickle
 from pathlib import Path
 import torch
 import pandas as pd
-from filelock import FileLock
+
 from tqdm import tqdm
 from torch_geometric.loader import DataListLoader
 
