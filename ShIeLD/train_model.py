@@ -119,6 +119,7 @@ def main():
                                 device = device
                             )
 
+                            model.eval()
                             train_bal_acc,train_f1_score = model_utils.get_acc_metrics(
                                 model=model, data_loader=data_loader_train,
                                 attr_bool = requirements['attr_bool'], device=device
