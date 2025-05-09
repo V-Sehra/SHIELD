@@ -50,10 +50,13 @@ class ShIeLD(nn.Module):
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings
         if batch_norm == 'batch_norm':
             # Batch normalization layer for the output of the GAT layer
-            self.bn1 = BatchNorm1d(layer_1)
+            self.norm = BatchNorm1d(layer_1)
+        elif batch_norm == 'layer_norm':
+            # Layer normalization layer for the output of the GAT layer
+            self.norm = nn.LayerNorm(layer_1)
         else:
             # If batch normalization is not used, set it to None
-            self.bn1 = None
+            self.norm = None
 
 
     def forward(self, node_list, edge_list, edge_att=None):
@@ -88,8 +91,8 @@ class ShIeLD(nn.Module):
                 x, att = self.conv1(x=x, edge_index=edge_index,
                                     return_attention_weights=True)
 
-            if self.bn1 is not None:
-                x = self.bn1(x)
+            if self.norm is not None:
+                x = self.norm(x)
 
             x = F.relu(x)  # Apply ReLU activation
             x = F.dropout(x, p=self.dp, training=self.training)  # Apply dropout

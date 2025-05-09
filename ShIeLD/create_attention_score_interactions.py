@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
-    parser.add_argument("-recalc", "--recalculate_cTc_Scroes", default=True)
+    parser.add_argument("-recalc", "--recalculate_cTc_Scroes", default=False)
     parser.add_argument("-config_dict", "--best_config_dict_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
     parser.add_argument("-dat_type", "--data_set_type", default='test')
