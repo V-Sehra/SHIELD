@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-split", "--split_number", type=int, default=2)
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
-    parser.add_argument("-comment", "--comment", type=str, default='random_anker')
+    parser.add_argument("-c", "--comment", type=str, default='random_anker')
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
 
@@ -42,6 +42,12 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
     input_test.test_all_keys_in_req(req_file=requirements)
+
+    #extract training patience if defined:
+    if 'patience' in requirements.keys():
+        patience = requirements['patience']
+    else:
+        patience = None
 
     split_number = int(args.split_number)
 
@@ -117,7 +123,8 @@ def main():
                                 data_loader=data_loader_train,
                                 loss_fkt=loss_fkt,
                                 attr_bool = requirements['attr_bool'],
-                                device = device
+                                device = device,
+                                patience = patience
                             )
 
                             model.eval()

@@ -14,10 +14,10 @@ from torch.utils.data import DataLoader
 
 from . import model_utils
 
-from typing import List, Tuple
+from typing import List, Tuple,Optional
 
 
-def early_stopping(loss_epoch: List, patience: int = 15) -> bool:
+def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
     """
     This function checks if the training process should be stopped early based on the change in loss over epochs.
     If the change in loss between the last two epochs is less than 0.001 and the number of epochs is greater than the patience threshold, the function returns True, indicating that training should be stopped.
@@ -31,7 +31,14 @@ def early_stopping(loss_epoch: List, patience: int = 15) -> bool:
     bool: True if training should be stopped, False otherwise.
     """
 
-    if len(loss_epoch) > patience:
+    if patience < 2:
+        raise ValueError("Patience should be greater than 1.")
+
+    if patience is None:
+        patience = 5
+
+    if len(loss_epoch) >= patience:
+
         if (loss_epoch[-2] - loss_epoch[-1]) < 0.001:
             return True
         else:
@@ -124,7 +131,8 @@ def train_loop_shield(
     data_loader: DataLoader,
     loss_fkt: nn.CrossEntropyLoss,
     attr_bool: bool,
-    device: str
+    device: str,
+    patience: Optional[int] = 5
 ) -> Tuple[torch.nn.Module, List[float]]:
     """
     Trains the ShIeLD model using the provided optimizer, data loader, and loss function.
@@ -136,6 +144,7 @@ def train_loop_shield(
         loss_fkt (Callable[[torch.Tensor, torch.Tensor], torch.Tensor]): The loss function used for training.
         attr_bool (bool): Boolean flag indicating whether edge attributes should be used.
         device (str): The device ('cuda' or 'cpu') where computations are performed.
+        patience (int): Number of epochs to wait before stopping training if no improvement is observed.
 
     Returns:
         Tuple[torch.nn.Module, List[float]]: The trained model and a list of training loss values per epoch.
@@ -186,7 +195,7 @@ def train_loop_shield(
         train_loss.append(np.mean(loss_batch))
 
         # Check if early stopping should be triggered based on loss history
-        early_stopping_bool = early_stopping(loss_epoch=train_loss, patience=5)
+        early_stopping_bool = early_stopping(loss_epoch=train_loss, patience=patience)
 
     # Return the trained model and recorded loss values
     return model, train_loss
