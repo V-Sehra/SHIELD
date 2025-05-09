@@ -108,6 +108,7 @@ def main():
                                 layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
                                 self_att=False, attr_bool = requirements['attr_bool'], batch_norm=requirements['comment_norm']
                             ).to(device)
+
                             model.train()
 
                             model, train_loss = train_utils.train_loop_shield(
