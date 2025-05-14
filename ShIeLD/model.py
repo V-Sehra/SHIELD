@@ -100,7 +100,7 @@ class ShIeLD(nn.Module):
                 x, att = self.conv1(x=x, edge_index=edge_index,
                                     return_attention_weights=True)
 
-            if self.norm is not None:
+            if self.norm == 'layer_norm':
                 x = self.norm(x)
 
             x = F.relu(x)  # Apply ReLU activation
