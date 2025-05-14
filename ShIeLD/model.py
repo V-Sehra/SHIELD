@@ -50,17 +50,17 @@ class ShIeLD(nn.Module):
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings
 
         self.norm_type = norm_type  # Type of normalization to apply
-        if self.norm_type == 'batch_norm':
+        if 'batch_norm' in self.norm_type.lower():
             # Batch normalization layer for the output of the GAT layer
             self.norm = BatchNorm1d(layer_1)
-        elif self.norm_type == 'layer_norm':
+        elif 'layer_norm' in self.norm_type.lower():
             # Layer normalization layer for the output of the GAT layer
             self.norm = nn.LayerNorm(layer_1)
         else:
             # If batch normalization is not used, set it to None
             self.norm = None
 
-        if 'forceTrain'.lower() in norm_type.lower():
+        if 'forceTrain'.lower() in self.norm_type.lower():
             self.force_norm_train = True
         else:
             self.force_norm_train = False
