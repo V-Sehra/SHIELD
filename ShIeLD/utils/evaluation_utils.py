@@ -173,8 +173,16 @@ def get_hypersear_results(requirements_dict: dict):
         total_acc_balanced_mean=('bal_acc_validation', 'mean')  # Compute mean validation accuracy
     ).reset_index()
 
+    col_of_variables = []
+    for column in requirements_dict['col_of_variables']:
+        if len(model_grouped[column].unique()) > 1:
+            col_of_variables.append(col_of_variables)
+        else:
+            print(
+                f'will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}')
+
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
-    hyper_grouped = model_grouped.groupby(requirements_dict['col_of_variables']).agg(
+    hyper_grouped = model_grouped.groupby(col_of_variables).agg(
         total_acc_balanced_mean=('total_acc_balanced_mean', 'mean'),  # Mean across models in col_of_variables
         count=('split_number', 'nunique')  # Count unique data splits used
     ).reset_index()
