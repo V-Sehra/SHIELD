@@ -96,10 +96,12 @@ class ShIeLD(nn.Module):
         sample_number = len(data_list)  # Number of graphs in the batch
 
         for idx in range(sample_number):
-            if self.norm_type == 'batch_norm':
+
+            if 'batch_norm' in self.norm_type.lower():
                 x = x_normed[whole_batch.ptr[idx]:whole_batch.ptr[idx + 1]]
             else:
                 x = data_list[idx].x.float()  # Convert node features to float
+
             edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
 
             # Apply GAT convolution, with or without edge attributes
