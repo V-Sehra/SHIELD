@@ -146,13 +146,11 @@ def main():
             model.eval()
             print('start validation')
             train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
-                model=model, data_loader=data_loader_train,
-                attr_bool=requirements['attr_bool'], device=device
+                model=model, data_loader=data_loader_train,device=device
             )
 
             val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
-                model=model, data_loader=data_loader_test,
-                attr_bool=requirements['attr_bool'], device=device
+                model=model, data_loader=data_loader_test, device=device
             )
 
             if val_f1_score > best_model_f1score:

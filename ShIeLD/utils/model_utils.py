@@ -20,7 +20,7 @@ from typing import List, Tuple, Optional
 from sklearn.metrics import balanced_accuracy_score,f1_score
 
 
-def get_acc_metrics(model, data_loader,attr_bool,device):
+def get_acc_metrics(model, data_loader,device):
 
     model_prediction = []
     true_label = []

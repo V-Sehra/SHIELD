@@ -129,13 +129,11 @@ def main():
 
                             model.eval()
                             train_bal_acc,train_f1_score = model_utils.get_acc_metrics(
-                                model=model, data_loader=data_loader_train,
-                                attr_bool = requirements['attr_bool'], device=device
+                                model=model, data_loader=data_loader_train, device=device
                             )
                             print('start validation')
                             val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
-                                model=model, data_loader=data_loader_validation,
-                                attr_bool = requirements['attr_bool'], device=device
+                                model=model, data_loader=data_loader_validation, device=device
                             )
 
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
