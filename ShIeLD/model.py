@@ -74,7 +74,7 @@ class ShIeLD(nn.Module):
             data_list (list[torch.Tensor]): List of the Dataobjects i.e:
                                             -node feature tensors, each corresponding to a graph.
                                             -edge index tensors defining graph connectivity.
-                                            -edge attribute tensors.
+                                            -edge attribute tensors [optional].
 
         Returns:
             tuple:
@@ -89,7 +89,7 @@ class ShIeLD(nn.Module):
         prediction = []  # List to store predictions for each graph
         attention = []  # List to store attention weights
 
-        if self.norm_type == 'batch_norm':
+        if 'batch_norm' in self.norm_type.lower():
             whole_batch = Batch.from_data_list(data_list)
             x_normed = self.norm(whole_batch.x.float())
 
@@ -111,7 +111,7 @@ class ShIeLD(nn.Module):
                 x, att = self.conv1(x=x, edge_index=edge_index,
                                     return_attention_weights=True)
 
-            if self.norm == 'layer_norm':
+            if 'layer_norm' in self.norm_type.lower():
                 x = self.norm(x)
 
             x = F.relu(x)  # Apply ReLU activation
