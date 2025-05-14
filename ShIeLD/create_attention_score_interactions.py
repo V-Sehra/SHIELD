@@ -68,7 +68,7 @@ def main():
                     layer_final=requirements['out_put_layer'],
                     dp=best_config_dict['droup_out_rate'],
                     self_att=False, attr_bool=requirements['attr_bool'],
-                    batch_norm = requirements['comment_norm']
+                    norm_type = requirements['comment_norm']
                 ).to(device)
 
     model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model.pt'))

@@ -112,7 +112,7 @@ def main():
                             model = ShIeLD(
                                 num_of_feat=int(requirements['input_layer']),
                                 layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
-                                self_att=False, attr_bool = requirements['attr_bool'], batch_norm=requirements['comment_norm']
+                                self_att=False, attr_bool = requirements['attr_bool'], norm_type=requirements['comment_norm']
                             ).to(device)
 
                             model.train()
