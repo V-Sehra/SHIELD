@@ -3,7 +3,7 @@ from torch_geometric.nn import GATv2Conv
 import torch.nn as nn
 from torch.nn import Linear,BatchNorm1d
 import torch.nn.functional as F
-
+from torch_geometric.data import Batch
 
 class ShIeLD(nn.Module):
     """
@@ -78,10 +78,17 @@ class ShIeLD(nn.Module):
         prediction = []  # List to store predictions for each graph
         attention = []  # List to store attention weights
 
+        if self.norm_type == 'batch_norm':
+            whole_batch = Batch.from_data_list(node_list)
+            x_normed = self.norm(whole_batch.x.float())
+
         sample_number = len(node_list)  # Number of graphs in the batch
 
         for idx in range(sample_number):
-            x = node_list[idx].float()  # Convert node features to float
+            if self.norm_type == 'batch_norm':
+                x = x_normed[whole_batch.ptr[idx]:whole_batch.ptr[idx + 1]]
+            else:
+                x = node_list[idx].float()  # Convert node features to float
             edge_index = edge_list[idx].long()  # Convert edge indices to long tensor
 
             # Apply GAT convolution, with or without edge attributes
