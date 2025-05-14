@@ -22,7 +22,7 @@ class ShIeLD(nn.Module):
 
     def __init__(self, num_of_feat: int, layer_1:int, dp: float,
                  layer_final: int =2, edge_dim: int =1, similarity_typ: str ='euclide',
-                 self_att: bool =True, attr_bool:bool = True, batch_norm: str = 'No_norm'):
+                 self_att: bool =True, attr_bool:bool = True, norm_type: str = 'No_norm'):
         """
         Initializes the ShIeLD model.
 
@@ -35,7 +35,7 @@ class ShIeLD(nn.Module):
             similarity_typ (str): Type of similarity function to use (default: 'euclide').
             self_att (bool): Whether to add self-loops in the GAT layer.
             attr_bool (bool): Whether edge attributes are included in the attention mechanism.
-            batch_norm (str): Type of normalization to apply after the GAT layer (default: 'No_norm').
+            norm_type (str): Type of normalization to apply after the GAT layer (default: 'No_norm').
         """
         super(ShIeLD, self).__init__()
 
@@ -48,10 +48,12 @@ class ShIeLD(nn.Module):
         self.dp = dp  # Dropout probability
         self.similarity_typ = similarity_typ  # Similarity metric
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings
-        if batch_norm == 'batch_norm':
+
+        self.norm_type = norm_type  # Type of normalization to apply
+        if self.norm_type == 'batch_norm':
             # Batch normalization layer for the output of the GAT layer
             self.norm = BatchNorm1d(layer_1)
-        elif batch_norm == 'layer_norm':
+        elif self.norm_type == 'layer_norm':
             # Layer normalization layer for the output of the GAT layer
             self.norm = nn.LayerNorm(layer_1)
         else:

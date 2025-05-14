@@ -69,11 +69,12 @@ def prediction_step(batch_sample: List, model: torch.nn.Module, attr_bool: bool,
     sample_edge = [sample.edge_index_plate.to(device) for sample in batch_sample]
 
     # If edge attributes are used, extract and pass them to the model
+
     if attr_bool:
         sample_att = [sample.plate_euc.to(device) for sample in batch_sample]
-        prediction, attention = model(sample_x, sample_edge, sample_att)
+        prediction, attention = model(node_list = sample_x, edge_list = sample_edge, edge_att = sample_att)
     else:
-        prediction, attention = model(sample_x, sample_edge)
+        prediction, attention = model(node_list = sample_x, edge_list = sample_edge)
 
     # Stack predictions into a single tensor
     output = torch.vstack(prediction)
