@@ -61,7 +61,7 @@ class ShIeLD(nn.Module):
             self.norm = None
 
 
-    def forward(self, data_list, edge_att=None):
+    def forward(self, data_list):
         """
         Forward pass for processing multiple graph samples.
 
@@ -69,7 +69,7 @@ class ShIeLD(nn.Module):
             data_list (list[torch.Tensor]): List of the Dataobjects i.e:
                                             -node feature tensors, each corresponding to a graph.
                                             -edge index tensors defining graph connectivity.
-            edge_att (list[torch.Tensor], optional): List of edge attribute tensors.
+                                            -edge attribute tensors.
 
         Returns:
             tuple:

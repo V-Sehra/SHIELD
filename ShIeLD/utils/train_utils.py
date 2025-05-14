@@ -174,7 +174,6 @@ def train_loop_shield(
             prediction, attention, output, y, sample_ids = model_utils.prediction_step(
                 batch_sample=train_sample,
                 model=model,
-                attr_bool=attr_bool,
                 device=device,
                 per_patient=False  # Whether to track patient-level predictions
             )
