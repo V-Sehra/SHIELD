@@ -22,7 +22,7 @@ class ShIeLD(nn.Module):
 
     def __init__(self, num_of_feat: int, layer_1:int, dp: float,
                  layer_final: int =2, edge_dim: int =1, similarity_typ: str ='euclide',
-                 self_att: bool =True, attr_bool:bool = True, norm_type: str = 'No_norm',force_bn_train = False):
+                 self_att: bool =True, attr_bool:bool = True, norm_type: str = 'No_norm'):
         """
         Initializes the ShIeLD model.
 
@@ -60,7 +60,10 @@ class ShIeLD(nn.Module):
             # If batch normalization is not used, set it to None
             self.norm = None
 
-        self.force_bn_train = force_bn_train
+        if 'forceTrain'.lower() in norm_type.lower():
+            self.force_norm_train = True
+        else:
+            self.force_norm_train = False
 
 
     def forward(self, data_list):
@@ -78,7 +81,7 @@ class ShIeLD(nn.Module):
                 - list[torch.Tensor]: List of softmax predictions for each input graph.
                 - list[torch.Tensor]: List of attention scores from the GAT layer.
         """
-        if self.force_bn_train:
+        if self.force_norm_train:
             # Force batch normalization to be in training mode
             self.norm.train()
 

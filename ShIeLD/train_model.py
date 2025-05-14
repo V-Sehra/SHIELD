@@ -37,11 +37,13 @@ def main():
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
 
     args = parser.parse_args()
-    print(args)
+
 
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
     input_test.test_all_keys_in_req(req_file=requirements)
+
+    print(args, requirements['comment_norm'])
 
     #extract training patience if defined:
     if 'patience' in requirements.keys():
