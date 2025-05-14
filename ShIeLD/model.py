@@ -94,7 +94,7 @@ class ShIeLD(nn.Module):
 
             # Apply GAT convolution, with or without edge attributes
             if self.attr_bool:
-                edge_attr = edge_att[idx].float()
+                edge_attr = data_list[idx].edge_att.float()
                 x, att = self.conv1(x=x, edge_index=edge_index,
                                     edge_attr=edge_attr, return_attention_weights=True)
             else:

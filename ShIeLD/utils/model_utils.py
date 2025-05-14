@@ -43,9 +43,25 @@ def get_acc_metrics(model, data_loader,attr_bool,device):
     return balanced_accuracy_score(true_label,model_prediction),f1_score(true_label, model_prediction, average='weighted')
 
 
+def move_to_device(data, device):
+    """
+    Moves the input data to the specified device (CPU or GPU).
 
+    Parameters:
+    - data (torch.Tensor or list): The data to be moved.
+    - device (torch.device): The device to which the data should be moved.
 
-def prediction_step(batch_sample: List, model: torch.nn.Module, attr_bool: bool, device: str, per_patient: bool=False)  -> Tuple[List, List, torch.Tensor, torch.Tensor, Optional[List]]:
+    Returns:
+    - torch.Tensor or list: The data moved to the specified device.
+    """
+    if isinstance(data, torch.Tensor):
+        return data.to(device)
+    elif isinstance(data, list):
+        return [item.to(device) for item in data]
+    else:
+        raise TypeError("Unsupported data type for moving to device.")
+
+def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per_patient: bool=False)  -> Tuple[List, List, torch.Tensor, torch.Tensor, Optional[List]]:
     """
     Performs a prediction step using a given model on a batch of samples.
 
@@ -63,18 +79,10 @@ def prediction_step(batch_sample: List, model: torch.nn.Module, attr_bool: bool,
     - y (torch.Tensor): Ground truth labels.
     - sample_ids (list or None): List of patient/sample IDs if `per_patient` is True, otherwise None.
     """
+    batch_sample = move_to_device(data = batch_sample, device = device)
 
-    # Move node features (x) and edge indices to the specified device
-    sample_x = [sample.x.to(device) for sample in batch_sample]
-    sample_edge = [sample.edge_index_plate.to(device) for sample in batch_sample]
+    prediction, attention = model(data_list=batch_sample)
 
-    # If edge attributes are used, extract and pass them to the model
-
-    if attr_bool:
-        sample_att = [sample.plate_euc.to(device) for sample in batch_sample]
-        prediction, attention = model(node_list = sample_x, edge_list = sample_edge, edge_att = sample_att)
-    else:
-        prediction, attention = model(node_list = sample_x, edge_list = sample_edge)
 
     # Stack predictions into a single tensor
     output = torch.vstack(prediction)
