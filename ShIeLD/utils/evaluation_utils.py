@@ -176,7 +176,7 @@ def get_hypersear_results(requirements_dict: dict):
     col_of_variables = []
     for column in requirements_dict['col_of_variables']:
         if len(model_grouped[column].unique()) > 1:
-            col_of_variables.append(col_of_variables)
+            col_of_variables.append(column)
         else:
             print(
                 f'will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}')
