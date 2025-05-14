@@ -29,7 +29,6 @@ def get_acc_metrics(model, data_loader,attr_bool,device):
         prediction, attention, output, y, sample_ids = prediction_step(
             batch_sample=sample,
             model=model,
-            attr_bool=attr_bool,
             device=device,
             per_patient=False  # Whether to track patient-level predictions
         )
