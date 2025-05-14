@@ -98,7 +98,6 @@ def get_cell_to_cell_interaction_dict(
         prediction, attention, output, y, sample_ids = model_utils.prediction_step(
             batch_sample=data_sample,
             model=model,
-            attr_bool=requirements_dict['attr_bool'],
             device=device,
             per_patient=False
         )
