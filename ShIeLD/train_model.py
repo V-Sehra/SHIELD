@@ -56,7 +56,7 @@ def main():
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
 
     meta_columns = ['anker_value', 'radius_distance', 'fussy_limit',
-                    'droup_out_rate', 'comment', 'comment_norm', 'model_no','split_number']
+                    'droupout_rate', 'comment', 'comment_norm', 'model_no','split_number']
 
     for radius_distance in requirements['radius_distance_all']:
         for fussy_limit in requirements['fussy_limit_all']:
@@ -124,7 +124,7 @@ def main():
 
                             model = ShIeLD(
                                 num_of_feat=int(requirements['input_layer']),
-                                layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['out_put_layer'],
+                                layer_1 = requirements['layer_1'], dp=dp, layer_final = requirements['output_layer'],
                                 self_att=False, attr_bool = requirements['attr_bool'], norm_type=requirements['comment_norm']
                             ).to(device)
 
