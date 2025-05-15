@@ -12,7 +12,7 @@ import os
 import sys
 import pickle
 import pandas as pd
-
+from tqdm import tqdm
 cwd = os.getcwd()
 sys.path.append(cwd + "/utils/")
 
@@ -32,7 +32,8 @@ class graph_dataset(Dataset):
     """
 
 
-    def __init__(self, root, fold_ids,requirements_dict, graph_file_names,path_to_graphs):
+    def __init__(self, root, fold_ids,requirements_dict, graph_file_names,path_to_graphs,
+                 normalize=None,normalizer_filename=None) :
         """
         Initializes the diabetis_dataset.
 
@@ -40,7 +41,9 @@ class graph_dataset(Dataset):
             root (str): Path to the directory containing the graph files.
             csv_file (str): Path to the CSV file containing image names.
             graph_file_names (str): Path to store/retrieve the list of graph filenames.
+            normalize (bool): If True, normalize the graph data.
         """
+
 
         # If the file storing graph filenames does not exist, create it
         if not Path.exists(path_to_graphs/graph_file_names):
@@ -72,6 +75,35 @@ class graph_dataset(Dataset):
             # Load the previously stored list of graph filenames
             with open(Path(path_to_graphs/graph_file_names), 'rb') as f:
                 self.graph_file_names = pickle.load(f)
+
+        self.normalize = normalize
+        if 'global_std' in self.normalize:
+            if not Path.exists(path_to_graphs / normalizer_filename):
+                print('need to create the standardizer values')
+                sum_all = 0
+                total_number = 0
+                for file in tqdm(self.graph_file_names):
+                    data = torch.load(f'{root}/{file}')
+                    sum_all += torch.sum(data.x, dim=0)
+                    total_number += data.x.shape[0]
+
+                self.total_mean = sum_all / total_number
+
+                sig2 = 0
+                for file in tqdm(self.graph_file_names):
+                    data = torch.load(f'{root}/{file}')
+                    sig2 += torch.sum(((data.x - self.total_mean) ** 2), dim=0)
+
+                self.sig = torch.sqrt(sig2 / total_number)
+
+                normalising_factors = [self.total_mean, self.sig]
+
+                with open(path_to_graphs / normalizer_filename, 'wb') as f:
+                    pickle.dump(normalising_factors, f)
+            else:
+                print('load the standardizer values')
+                with open(path_to_graphs / normalizer_filename, 'rb') as f:
+                    self.total_mean, self.sig = pickle.load(f)
 
         super().__init__(root)
 
@@ -115,5 +147,7 @@ class graph_dataset(Dataset):
             torch_geometric.data.Data: The loaded graph data.
         """
         data = torch.load(f'{self.processed_dir}/{self.processed_file_names[idx]}')
+        if 'global_std' in self.normalize:
+            data.x = (data.x - self.total_mean) / self.sig
         return data
 

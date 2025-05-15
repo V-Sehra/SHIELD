@@ -75,13 +75,22 @@ def main():
                 train_folds.remove(split_number)
 
 
+                if requirements['databased_norm'] is not None:
+                    databased_norm = requirements['databased_norm']
+                    file_name_data_norm = f'train_set_validation_split_{split_number}_standadizer.pkl'
+                else:
+                    databased_norm = None
+                    file_name_data_norm = None
+
                 data_loader_train = DataListLoader(
                     graph_dataset(
                         root = str(path_to_graphs / 'train' / 'graphs'),
                         path_to_graphs = path_to_graphs,
                         fold_ids = train_folds,
                         requirements_dict = requirements,
-                        graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl'
+                        graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl',
+                        normalize=databased_norm,
+                        normalizer_filename=file_name_data_norm
                     ),
                     batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )
@@ -92,7 +101,9 @@ def main():
                         path_to_graphs = path_to_graphs,
                         fold_ids = [split_number],
                         requirements_dict=requirements,
-                        graph_file_names= f'validation_validation_split_{split_number}_file_names.pkl'
+                        graph_file_names= f'validation_validation_split_{split_number}_file_names.pkl',
+                        normalize=databased_norm,
+                        normalizer_filename=file_name_data_norm
                     ),
                     batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
                 )

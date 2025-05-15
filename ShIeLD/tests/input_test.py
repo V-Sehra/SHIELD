@@ -32,7 +32,7 @@ def test_all_keys_in_req(req_file):
                         'anker_cell_selction_type', 'multiple_labels_per_subSample',
                         'batch_size', 'learning_rate',
                         'input_layer', 'layer_1',
-                        'out_put_layer', 'droupout_rate', 'attr_bool',
+                        'output_layer', 'droupout_rate', 'attr_bool',
                         'augmentation_number', 'X_col_name', 'Y_col_name',
                         'measument_sample_name',
                         'validation_split_column', 'number_validation_splits',
@@ -58,7 +58,7 @@ def test_all_keys_in_req(req_file):
 
     # int:
     all_ints = ['minimum_number_cells', 'batch_size', 'input_layer', 'layer_1',
-                'out_put_layer', 'augmentation_number', 'voro_neighbours']
+                'output_layer', 'augmentation_number', 'voro_neighbours']
     for item in all_ints:
         if not isinstance(requirements[item], (int,np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
@@ -125,7 +125,7 @@ def test_best_config(config_file):
             raise TypeError("config_file should be a string or Path object.")
 
 
-    required_keys = set(['layer_one', 'input_dim', 'droup_out_rate', 'final_layer',
+    required_keys = set(['layer_one', 'input_dim', 'droupout_rate', 'final_layer',
                          'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit','version'])
 
     key_set = set(best_config_dict.keys())
@@ -144,7 +144,7 @@ def test_best_config(config_file):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
-    all_floats = ['droup_out_rate', 'fussy_limit']
+    all_floats = ['droupout_rate', 'fussy_limit']
     for item in all_floats:
         if not isinstance(best_config_dict[item], (float,np.floating)):
             raise AssertionError(f"Item {item} is not a float.")
