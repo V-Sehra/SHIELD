@@ -50,10 +50,13 @@ class ShIeLD(nn.Module):
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings
 
         self.norm_type = norm_type  # Type of normalization to apply
-        if 'batch_norm' in self.norm_type.lower():
+
+        # Determine what normalization is used and needs to be loaded
+        if ('batch_norm'.lower() in self.norm_type.lower()) or \
+                ('sample_norm'.lower() in self.norm_type):
             # Batch normalization layer for the output of the GAT layer
             self.norm = BatchNorm1d(layer_1)
-        elif 'layer_norm' in self.norm_type.lower():
+        elif 'layer_norm'.lower() in self.norm_type.lower():
             # Layer normalization layer for the output of the GAT layer
             self.norm = nn.LayerNorm(layer_1)
         else:
@@ -81,10 +84,11 @@ class ShIeLD(nn.Module):
                 - list[torch.Tensor]: List of softmax predictions for each input graph.
                 - list[torch.Tensor]: List of attention scores from the GAT layer.
         """
-        if self.force_norm_train:
-            # Force batch normalization to be in training mode
-            self.norm.train()
 
+        # Force batch normalization to be in training mode
+        if self.force_norm_train:
+
+            self.norm.train()
 
         prediction = []  # List to store predictions for each graph
         attention = []  # List to store attention weights
@@ -99,6 +103,8 @@ class ShIeLD(nn.Module):
 
             if 'batch_norm' in self.norm_type.lower():
                 x = x_normed[whole_batch.ptr[idx]:whole_batch.ptr[idx + 1]]
+            elif 'sample_norm'.lower() in self.norm_type:
+                x = self.norm(data_list[idx].x.float())
             else:
                 x = data_list[idx].x.float()  # Convert node features to float
 
