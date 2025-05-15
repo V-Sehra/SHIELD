@@ -50,6 +50,7 @@ def main():
 
     print('evaluating the training results')
     hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
+    hyper_search_results = hyper_search_results.sort_values('total_acc_balanced_mean', ascending=False)
 
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
 
