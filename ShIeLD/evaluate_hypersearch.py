@@ -121,12 +121,12 @@ def main():
                 device = device)
 
             model = ShIeLD(
-                num_of_feat=int(requirements['input_layer']),
-                layer_1=requirements['layer_1'],
-                layer_final=requirements['out_put_layer'],
-                dp=best_config_dict['droup_out_rate'],
-                self_att=False, attr_bool=requirements['attr_bool'],
-                norm_type=requirements['comment_norm']
+                num_of_feat=int(best_config_dict['input_layer']),
+                layer_1=best_config_dict['layer_1'],
+                layer_final=best_config_dict['output_layer'],
+                dp=best_config_dict['droupout_rate'],
+                self_att=False, attr_bool=best_config_dict['attr_bool'],
+                norm_type=best_config_dict['comment_norm']
             ).to(device)
             model.train()
 
@@ -135,7 +135,7 @@ def main():
                 model=model,
                 data_loader=data_loader_train,
                 loss_fkt=loss_fkt,
-                attr_bool=requirements['attr_bool'],
+                attr_bool=best_config_dict['attr_bool'],
                 device=device)
 
             model.eval()
