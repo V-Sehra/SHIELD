@@ -77,7 +77,7 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
             'anker_value',  # Percentage of anchor cells used
             'radius_distance',      # Radius defining the neighborhood
             'fussy_limit',             # Threshold for fuzzy logic application
-            'dp',                      # Dropout rate
+            'droup_out_rate',                      # Dropout rate
             'comment',                 # General comments
             'comment_norm',            # Normalized comments
             'model_no',                # Model number

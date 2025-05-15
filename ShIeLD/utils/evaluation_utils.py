@@ -40,6 +40,37 @@ def break_title(title, max_len=10):
     return title  # No space found, return as is
 
 
+def get_best_config_dict(hyper_search_results ,requirements_dict):
+    """
+    Extracts the best configuration from hyperparameter search results.
+
+    Parameters:
+    - hyper_search_results (pd.DataFrame): DataFrame containing hyperparameter search results.
+    - requirements_dict (dict): Dictionary containing requirements for the model.
+
+    Returns:
+    - dict: The best configuration dictionary.
+    """
+    must_have_columns = ['layer_1', 'input_layer', 'droupout_rate', 'output_layer',
+                         'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit']
+
+    # Sort the results by balanced accuracy and select the top entry
+    best_config_dict = {}
+    for column in hyper_search_results.columns:
+        best_config_dict[column] = hyper_search_results[column].iloc[0]
+
+    # Create a dictionary with the best configuration
+    missing_keys = [key for key in must_have_columns if key not in best_config_dict]
+    for key in missing_keys:
+        if type(requirements_dict[key]) is list:
+            best_config_dict[key] = requirements_dict[key][0]
+        else:
+            best_config_dict[key] = requirements_dict[key]
+
+    return best_config_dict
+
+
+
 def get_cell_to_cell_interaction_dict(
         requirements_dict: Dict,
         data_loader: DataLoader,

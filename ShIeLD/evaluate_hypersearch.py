@@ -74,21 +74,8 @@ def main():
                 best_config_dict = pickle.load(file)
         else:
 
-            best_config_dict = {
-                'layer_one': requirements['layer_1'],
-                'input_dim': requirements['input_layer'],
-                'droup_out_rate': hyper_search_results['dp'].iloc[0] if 'dp' in hyper_search_results
-                                                                        else requirements['droup_out_rate'][0],
-                'final_layer': requirements['out_put_layer'],
-                'attr_bool': requirements['attr_bool'],
-                'anker_value': hyper_search_results['anker_value'].iloc[0] if 'anker_value' in hyper_search_results
-                                                                            else requirements['anker_value'][0],
-                'radius_distance': hyper_search_results['radius_distance'].iloc[0]
-                                                                        if 'radius_distance' in hyper_search_results
-                                                                        else requirements['radius_distance'][0],
-                'fussy_limit': hyper_search_results['fussy_limit'].iloc[0] if 'fussy_limit' in hyper_search_results
-                                                                        else requirements['fussy_limit'][0],
-            }
+            best_config_dict = evaluation_utils.get_best_config_dict(hyper_search_results = hyper_search_results,
+                                                                     requirements_dict=requirements)
 
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)

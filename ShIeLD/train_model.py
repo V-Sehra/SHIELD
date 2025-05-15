@@ -56,7 +56,7 @@ def main():
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
 
     meta_columns = ['anker_value', 'radius_distance', 'fussy_limit',
-                    'dp', 'comment', 'comment_norm', 'model_no','split_number']
+                    'droup_out_rate', 'comment', 'comment_norm', 'model_no','split_number']
 
     for radius_distance in requirements['radius_distance_all']:
         for fussy_limit in requirements['fussy_limit_all']:
