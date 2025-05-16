@@ -55,10 +55,10 @@ class ShIeLD(nn.Module):
         if ('batch_norm'.lower() in self.norm_type.lower()) or \
                 ('sample_norm'.lower() in self.norm_type):
             # Batch normalization layer for the output of the GAT layer
-            self.norm = BatchNorm1d(layer_1)
+            self.norm = BatchNorm1d(layer_1,affine = False)
         elif 'layer_norm'.lower() in self.norm_type.lower():
             # Layer normalization layer for the output of the GAT layer
-            self.norm = nn.LayerNorm(layer_1)
+            self.norm = nn.LayerNorm(layer_1,elementwise_affine = False)
         else:
             # If batch normalization is not used, set it to None
             self.norm = None

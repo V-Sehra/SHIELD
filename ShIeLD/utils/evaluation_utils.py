@@ -326,9 +326,9 @@ def get_p2p_att_score(sample:list, cell_phenotypes_sample: np.array, all_phenoty
     normalised_p2p = []
 
     # Find the cell type (phenotype) for each cell/node
-    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[0]] for sample_idx in
+    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[0].cpu()] for sample_idx in
                 range(len(sample))]
-    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[1]] for sample_idx in
+    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[1].cpu()] for sample_idx in
                 range(len(sample))]
 
     for sample_idx in range(len(scr_node)):
@@ -412,7 +412,8 @@ def plot_cell_cell_interaction_boxplots(
     star_size:int = 2000,
     line_width:int = 5,
     costum_fig_size: Optional[Tuple[int,int]] = None,
-    costum_star_shift: Optional[float] = None
+    costum_star_shift: Optional[float] = None,
+    Nan_to_zero: bool = False
 ):
     """
     Plots boxplots of cell-cell interactions and performs statistical significance tests.
@@ -424,6 +425,7 @@ def plot_cell_cell_interaction_boxplots(
         all_interaction_df (pd.DataFrame): DataFrame containing interaction values between cell types.
         top_connections (dict): Dictionary with cell types as keys and lists of (destination cell type, interaction values) as values.
         save_path (Optional[PosixPath]): Path to save the plot. If None, the plot is not saved.
+        Nan_to_zero (bool): If True, NaN values in interaction data are replaced with zeros.Otherwise removed
 
     Returns:
         None
@@ -439,12 +441,12 @@ def plot_cell_cell_interaction_boxplots(
     if costum_fig_size is not None:
         fig_size = costum_fig_size
     else:
-        fig_size = (170, 60) if interaction_limit == 16 else (130, 60)
+        fig_size = (170, 60) if interaction_limit > 16 else (130, 60)
 
     if costum_star_shift is not None:
         double_star_shift = costum_star_shift
     else:
-        double_star_shift = 0.16 if interaction_limit == 16 else 0.1
+        double_star_shift = 0.16 if interaction_limit > 16 else 0.1
 
     # Create subplots (2 rows, num_cells/2 columns)
     fig, axs = plt.subplots(
@@ -483,8 +485,14 @@ def plot_cell_cell_interaction_boxplots(
             # Perform Mann-Whitney U tests for each destination cell type
             for dst_cell_idx, dst_name in enumerate(names):
                 # Convert NaN values to zero for statistical testing
-                data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
-                data_2 = np.nan_to_num(values[dst_cell_idx].to_numpy())
+                if Nan_to_zero:
+                    data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
+                    data_2 = np.nan_to_num(values[dst_cell_idx].to_numpy())
+                else:
+                    data_1_raw = all_interaction_mean_df[src_cell].to_numpy()
+                    data_2_raw = values[dst_cell_idx].to_numpy()
+                    data_1 = data_1_raw[~np.isnan(data_1_raw)]
+                    data_2 = data_2_raw[~np.isnan(data_2_raw)]
 
                 # Conduct Mann-Whitney U test
                 _, p = mannwhitneyu(data_1, data_2, alternative='less')

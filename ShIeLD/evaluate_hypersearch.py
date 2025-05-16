@@ -136,7 +136,10 @@ def main():
                 data_loader=data_loader_train,
                 loss_fkt=loss_fkt,
                 attr_bool=best_config_dict['attr_bool'],
-                device=device)
+                device=device,
+                patience = best_config_dict['patience'] if 'patience' in best_config_dict.keys() else 5)
+
+
 
             model.eval()
             print('start validation')
