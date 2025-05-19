@@ -527,5 +527,5 @@ def plot_cell_cell_interaction_boxplots(
 
     # Save figure if a path is provided
     if save_path is not None:
-        plt.savefig(save_path, dpi=150)
+        plt.savefig(save_path, dpi=300)
 
