@@ -10,6 +10,7 @@ We applied SHIELD to multiplexed tissue imaging data in two key disease contexts
 
 - **Hepatocellular carcinoma (HCC)**: SHIELD identified differential immune interactions between tumor and adjacent healthy tissue, including a subtle but significant interaction between **MAIT cells** and **macrophages**, supporting previous findings on tumor progression.
 - **Diabetes**: Using imaging mass cytometry from diabetic pancreas tissue, SHIELD revealed dynamic immune-β cell interactions, uncovering stage-specific communication patterns between **helper T cells**, **cytotoxic T cells**, and **β cells**.
+- 	**Colorectal cancer (CRC)**: SHIELD uncovered a suppressive interaction between **CD8⁺ T cells** and **CD11b⁺CD68⁺ macrophages** enriched in non-responders. This finding refines previous observations of immune-suppressive neighborhood coupling in CRC and highlights a potential mechanism of immunotherapy resistance.
 
 In both cases, SHIELD recovered experimentally validated interactions and demonstrated its strength in extracting interpretable and spatially-aware immune landscape features.
 
