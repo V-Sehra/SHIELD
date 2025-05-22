@@ -14,9 +14,9 @@ import functools
 from pathlib import Path
 import pickle
 
-
 from utils import data_utils
 from tests import input_test
+
 
 # Main function to process dataset and generate graphs
 def main():
@@ -34,16 +34,15 @@ def main():
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
 
-    input_test.test_all_keys_in_req(req_file = requirements)
-
-    #TODO: need to implement a dynamic way to get to only create the test set which comed from the hypersearch
+    input_test.test_all_keys_in_req(req_file=requirements)
+    # TODO: need to implement a dynamic way to get to only create the test set which comed from the hypersearch
 
     # Determine the correct fold column based on dataset type
-    fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements['test_set_fold_number']][0]
+    fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements[
+        'test_set_fold_number']][0]
 
     # Load the raw dataset from CSV
     input_data = pd.read_csv(requirements['path_raw_data'])
-
 
     if requirements['filter_cells']:
         input_data = input_data[input_data[requirements['filter_column'][0]] == requirements['filter_value']]
@@ -73,7 +72,8 @@ def main():
                             samples_per_tissue = anker_value // 3
                             anchors = pd.DataFrame()
                             for label_dict_key in requirements['label_dict'].keys():
-                                anchors = pd.concat([anchors, single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
+                                anchors = pd.concat([anchors, single_sample[
+                                    single_sample[requirements['label_column']] == label_dict_key].sample(
                                     n=samples_per_tissue)])
                         else:
                             anchors = single_sample.sample(n=int(anker_value))
@@ -112,7 +112,7 @@ def main():
                         save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
 
                         # Ensure the directory exists
-                        save_path_folder_graphs.mkdir(parents = True, exist_ok=True)
+                        save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
                         # Print status updates
                         print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
@@ -130,14 +130,13 @@ def main():
                                 voronoi_list=voroni_id_fussy,
                                 sub_sample=sub_sample,
                                 repeat_id=repeat_counter,
-                                skip_existing = True,
+                                skip_existing=True,
                             ), vornoi_id
                         )
                         pool.close()
 
                     # Update repeat counter for unique graph IDs
                     repeat_counter += len(voroni_id_fussy)
-
 
 
 # Ensure the script runs only when executed directly

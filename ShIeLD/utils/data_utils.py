@@ -28,11 +28,10 @@ def bool_passer(argument):
     return (value)
 
 
-
-def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
-                          whole_data: pd.DataFrame,voronoi_list: List, sub_sample: str,
+def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
+                          whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
-                          repeat_id:int, skip_existing: bool =False):
+                          repeat_id: int, skip_existing: bool = False):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -50,9 +49,9 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
         None
     """
     tissue_dict = requiremets_dict['label_dict']
-    #List of evaluation column names.
+    # List of evaluation column names.
     eval_col_name = requiremets_dict['eval_columns']
-    #Column names for gene expression features.
+    # Column names for gene expression features.
     gene_col_name = requiremets_dict['markers']
 
     cosine = torch.nn.CosineSimilarity(dim=1)
@@ -63,10 +62,10 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
     # Determine the most frequent tissue type in this region
     dominating_tissue_type = graph_data[requiremets_dict['label_column']].value_counts().idxmax()
 
-    file_name = f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{(len(voronoi_list) * repeat_id)+vornoi_id}.pt'
+    file_name = f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{(len(voronoi_list) * repeat_id) + vornoi_id}.pt'
 
     if skip_existing:
-        if Path(f'{save_path_folder}',file_name).exists():
+        if Path(f'{save_path_folder}', file_name).exists():
             return
 
     # Convert gene expression features into a tensor
@@ -96,15 +95,12 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood:float,
     ).cpu()
 
     # Save the processed graph data
-    torch.save(data, Path(f'{save_path_folder}',file_name))
+    torch.save(data, Path(f'{save_path_folder}', file_name))
 
     return
 
 
-
-
-
-def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names:np.array)->pd.DataFrame:
+def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names: np.array) -> pd.DataFrame:
     """
     This function fills missing rows and columns in a given DataFrame with NaN values.
 
@@ -185,14 +181,16 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     else:
         return edge
 
-def get_median_with_threshold(series:pd.Series, threshold:float)->Optional[pd.Series]:
+
+def get_median_with_threshold(series: pd.Series, threshold: float) -> Optional[pd.Series]:
     if series.count() >= threshold:
         return series.median()
     else:
         return np.nan
 
+
 def get_voronoi_id(data_set: DataFrame,
-                    requiremets_dict : dict,
+                   requiremets_dict: dict,
                    anker_cell: DataFrame,
                    fussy_limit: Optional[float] = None,
                    centroid_bool: bool = False) -> np.array:
@@ -213,7 +211,6 @@ def get_voronoi_id(data_set: DataFrame,
     boarder_number = requiremets_dict['voro_neighbours']
     x_col_name = requiremets_dict['X_col_name']
     y_col_name = requiremets_dict['Y_col_name']
-
 
     # Create a KDTree for efficient nearest neighbor search
     tree = cKDTree(anker_cell[[x_col_name, y_col_name]])
@@ -255,16 +252,8 @@ def get_voronoi_id(data_set: DataFrame,
         return indices
 
 
-
-
-
-
-
-
-
-
-#Old functions
-#_______________________________
+# Old functions
+# _______________________________
 def create_test_train_split(args):
     """
     This function creates training and testing sets from a raw CSV file.
@@ -311,12 +300,12 @@ def create_test_train_split(args):
     return
 
 
-def replace_celltype(mat,celltype_list_to_replace):
+def replace_celltype(mat, celltype_list_to_replace):
     # Substring to find
     for substring_to_replace in celltype_list_to_replace:
         # Replace strings containing the substring
         for i, row in enumerate(mat):
-            for j,word in enumerate(row):
+            for j, word in enumerate(row):
                 if substring_to_replace in word:
                     mat[i][j] = substring_to_replace
 
@@ -341,14 +330,15 @@ def turn_raw_csv_to_graph_csv(raw_csv):
     raw_csv['Y_value'] = (raw_csv['YMax'] + raw_csv['YMin']) / 2
 
     # Filter the columns of the DataFrame to only include those that contain certain substrings
-    raw_csv = raw_csv.loc[:,raw_csv.columns.str.contains('Tissue|Patient|X_value|Y_value|.Intensity|Class|Class0|CD45.Positive.Classification|Celltype',
-                                                           na = False)]
+    raw_csv = raw_csv.loc[:, raw_csv.columns.str.contains(
+        'Tissue|Patient|X_value|Y_value|.Intensity|Class|Class0|CD45.Positive.Classification|Celltype',
+        na=False)]
     return raw_csv
 
 
 def turn_pixel_to_meter(pixel_radius):
     pixel_to_miliMeter_factor = 2649.291339
-    mycro_meter_radius = pixel_radius * (10**3/pixel_to_miliMeter_factor)
+    mycro_meter_radius = pixel_radius * (10 ** 3 / pixel_to_miliMeter_factor)
     return round(mycro_meter_radius)
 
 
@@ -373,7 +363,8 @@ def combine_cell_types(original_array, string_list):
         # Replace words containing the substring with 'substring_to_replace'
         original_array[indices != -1] = substring_to_replace
 
-        unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True, return_inverse=True)
+        unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True,
+                                                                     return_inverse=True)
 
         # Create a new array without duplicates
         original_array = unique_elements

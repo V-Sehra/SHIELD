@@ -1,9 +1,10 @@
 from torch_geometric.nn.aggr import MeanAggregation
 from torch_geometric.nn import GATv2Conv
 import torch.nn as nn
-from torch.nn import Linear,BatchNorm1d
+from torch.nn import Linear, BatchNorm1d
 import torch.nn.functional as F
 from torch_geometric.data import Batch
+
 
 class ShIeLD(nn.Module):
     """
@@ -20,9 +21,9 @@ class ShIeLD(nn.Module):
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
-    def __init__(self, num_of_feat: int, layer_1:int, dp: float,
-                 layer_final: int =2, edge_dim: int =1, similarity_typ: str ='euclide',
-                 self_att: bool =True, attr_bool:bool = True, norm_type: str = 'No_norm'):
+    def __init__(self, num_of_feat: int, layer_1: int, dp: float,
+                 layer_final: int = 2, edge_dim: int = 1, similarity_typ: str = 'euclide',
+                 self_att: bool = True, attr_bool: bool = True, norm_type: str = 'No_norm'):
         """
         Initializes the ShIeLD model.
 
@@ -55,10 +56,10 @@ class ShIeLD(nn.Module):
         if ('batch_norm'.lower() in self.norm_type.lower()) or \
                 ('sample_norm'.lower() in self.norm_type):
             # Batch normalization layer for the output of the GAT layer
-            self.norm = BatchNorm1d(layer_1,affine = False)
+            self.norm = BatchNorm1d(layer_1, affine=False)
         elif 'layer_norm'.lower() in self.norm_type.lower():
             # Layer normalization layer for the output of the GAT layer
-            self.norm = nn.LayerNorm(layer_1,elementwise_affine = False)
+            self.norm = nn.LayerNorm(layer_1, elementwise_affine=False)
         else:
             # If batch normalization is not used, set it to None
             self.norm = None
@@ -67,7 +68,6 @@ class ShIeLD(nn.Module):
             self.force_norm_train = True
         else:
             self.force_norm_train = False
-
 
     def forward(self, data_list):
         """
@@ -87,7 +87,6 @@ class ShIeLD(nn.Module):
 
         # Force batch normalization to be in training mode
         if self.force_norm_train:
-
             self.norm.train()
 
         prediction = []  # List to store predictions for each graph
@@ -132,6 +131,3 @@ class ShIeLD(nn.Module):
             attention.append(att)  # Store attention scores
 
         return prediction, attention
-
-
-

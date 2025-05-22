@@ -6,15 +6,13 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 
-
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader
 
-
 from . import model_utils
 
-from typing import List, Tuple,Optional
+from typing import List, Tuple, Optional
 
 
 def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
@@ -75,20 +73,21 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
     else:
         training_results_csv = pd.DataFrame(columns=[
             'anker_value',  # Percentage of anchor cells used
-            'radius_distance',      # Radius defining the neighborhood
-            'fussy_limit',             # Threshold for fuzzy logic application
-            'droup_out_rate',                      # Dropout rate
-            'comment',                 # General comments
-            'comment_norm',            # Normalized comments
-            'model_no',                # Model number
-            'bal_acc_train',           # Balanced accuracy on the training set
+            'radius_distance',  # Radius defining the neighborhood
+            'fussy_limit',  # Threshold for fuzzy logic application
+            'droup_out_rate',  # Dropout rate
+            'comment',  # General comments
+            'comment_norm',  # Normalized comments
+            'model_no',  # Model number
+            'bal_acc_train',  # Balanced accuracy on the training set
             'train_f1_score',
-            'bal_acc_validation',      # Balanced accuracy on the validation set
+            'bal_acc_validation',  # Balanced accuracy on the validation set
             'val_f1_score',
-            'split_number',            # Validation split number
+            'split_number',  # Validation split number
         ])
 
-    return training_results_csv,csv_file_path  # Return the DataFram
+    return training_results_csv, csv_file_path  # Return the DataFram
+
 
 def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropyLoss:
     """
@@ -114,25 +113,23 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropy
     elif type(path) == list:
         all_train_file_names = path
 
-
     for origin in tissue_dict.keys():
         number_tissue_graphs = len([file_name for file_name in all_train_file_names
-                                                            if origin in file_name])
+                                    if origin in file_name])
         class_weights.append(1 - (number_tissue_graphs / len(all_train_file_names)))
 
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device))
     return criterion
 
 
-
 def train_loop_shield(
-    optimizer: torch.optim.Optimizer,
-    model: torch.nn.Module,
-    data_loader: DataLoader,
-    loss_fkt: nn.CrossEntropyLoss,
-    attr_bool: bool,
-    device: str,
-    patience: Optional[int] = 5
+        optimizer: torch.optim.Optimizer,
+        model: torch.nn.Module,
+        data_loader: DataLoader,
+        loss_fkt: nn.CrossEntropyLoss,
+        attr_bool: bool,
+        device: str,
+        patience: Optional[int] = 5
 ) -> Tuple[torch.nn.Module, List[float]]:
     """
     Trains the ShIeLD model using the provided optimizer, data loader, and loss function.
@@ -166,7 +163,6 @@ def train_loop_shield(
 
         # Iterate over batches in the data loader
         for train_sample in tqdm(data_loader):
-
             # Zero the gradients before the backward pass
             optimizer.zero_grad()
 
@@ -198,4 +194,3 @@ def train_loop_shield(
 
     # Return the trained model and recorded loss values
     return model, train_loss
-

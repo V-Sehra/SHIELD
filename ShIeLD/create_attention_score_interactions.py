@@ -11,8 +11,8 @@ from torch_geometric.loader import DataListLoader
 import argparse
 import pickle
 from pathlib import Path
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from utils.data_class import graph_dataset
 from model import ShIeLD
@@ -42,16 +42,14 @@ def main():
     input_test.test_all_keys_in_req(req_file=requirements)
     input_test.test_best_config(config_file=best_config_dict)
 
-
     path_to_graphs = Path(requirements['path_to_data_set'] /
-                                  f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
-                                  f"min_cells_{requirements['minimum_number_cells']}" /
-                                  f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
-                                  f"radius_{best_config_dict['radius_distance']}")
+                          f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                          f"min_cells_{requirements['minimum_number_cells']}" /
+                          f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
+                          f"radius_{best_config_dict['radius_distance']}")
 
-
-    fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements['test_set_fold_number']]
-
+    fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements[
+        'test_set_fold_number']]
     data_loader = DataListLoader(
         graph_dataset(
             root=str(path_to_graphs / args.data_set_type / 'graphs'),
@@ -63,51 +61,53 @@ def main():
         batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
     )
     model = ShIeLD(
-                    num_of_feat=int(requirements['input_layer']),
-                    layer_1=requirements['layer_1'],
-                    layer_final=requirements['out_put_layer'],
-                    dp=best_config_dict['droup_out_rate'],
-                    self_att=False, attr_bool=requirements['attr_bool'],
-                    norm_type = requirements['comment_norm']
-                ).to(device)
+        num_of_feat=int(requirements['input_layer']),
+        layer_1=requirements['layer_1'],
+        layer_final=requirements['out_put_layer'],
+        dp=best_config_dict['droup_out_rate'],
+        self_att=False, attr_bool=requirements['attr_bool'],
+        norm_type=requirements['comment_norm']
+    ).to(device)
 
     model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model.pt'))
     model.eval()
 
-    if args.recalculate_cTc_Scroes or (not Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
+    if args.recalculate_cTc_Scroes or (
+    not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
         cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
-                requirements_dict = requirements,
-                data_loader = data_loader,
-                model= model,
-                device = device,
-                save_dict_path = Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'))
+            requirements_dict=requirements,
+            data_loader=data_loader,
+            model=model,
+            device=device,
+            save_dict_path=Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'))
     else:
-        with open(Path(requirements['path_to_model']/f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'), 'rb') as f:
+        with open(Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'),
+                  'rb') as f:
             cell_to_cell_interaction_dict = pickle.load(f)
-
 
     observed_tissues = list(requirements['label_dict'].keys())
     for number_interactions in [4, len(requirements['cell_type_names'])]:
         print(f'creating the interactions for top {number_interactions}:')
         for observed_tissue in observed_tissues:
+            interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_DataFrame(
+                tissue_id=requirements['label_dict'][observed_tissue],
+                interaction_dict=cell_to_cell_interaction_dict)
 
-            interaction_dataFrame, mean_interaction_dataFrame = evaluation_utils.get_interaction_DataFrame(tissue_id= requirements['label_dict'][observed_tissue],
-                                                                                                           interaction_dict = cell_to_cell_interaction_dict)
-
-
-            top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit = number_interactions,
-                                                             all_interaction_mean_df = mean_interaction_dataFrame,
-                                                             all_interaction_df = interaction_dataFrame)
+            top_connections = evaluation_utils.get_top_interaction_per_celltype(interaction_limit=number_interactions,
+                                                                                all_interaction_mean_df=mean_interaction_dataFrame,
+                                                                                all_interaction_df=interaction_dataFrame)
 
             Path(requirements['path_to_interaction_plots'] / 'boxplots').mkdir(parents=True, exist_ok=True)
-            save_path_boxplots = Path(requirements['path_to_interaction_plots'] / 'boxplots'/ f'{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png')
+            save_path_boxplots = Path(requirements[
+                                          'path_to_interaction_plots'] / 'boxplots' / f'{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png')
 
-            evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1= args.significance_threshold_1,
-                                                                 significance_2= args.significance_threshold_2,
-                                                                 interaction_limit = number_interactions,
-                                                                 all_interaction_mean_df = interaction_dataFrame,
-                                                                 top_connections = top_connections,
+            evaluation_utils.plot_cell_cell_interaction_boxplots(significance_1=args.significance_threshold_1,
+                                                                 significance_2=args.significance_threshold_2,
+                                                                 interaction_limit=number_interactions,
+                                                                 all_interaction_mean_df=interaction_dataFrame,
+                                                                 top_connections=top_connections,
                                                                  save_path=save_path_boxplots)
+
 
 # Ensure the script runs only when executed directly
 if __name__ == "__main__":

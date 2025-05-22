@@ -6,10 +6,9 @@ Created on Wed Jan 12 14:18:15 2024
 @author: Vivek
 """
 
-
 import torch
 from torch_geometric.nn.aggr import MeanAggregation
-from torch_geometric.nn import GATv2Conv,GCNConv
+from torch_geometric.nn import GATv2Conv, GCNConv
 import torch.nn as nn
 from torch.nn import Linear
 import torch.nn.functional as F
@@ -17,11 +16,10 @@ from torch_geometric.nn.norm import BatchNorm
 
 from typing import List, Tuple, Optional
 
-from sklearn.metrics import balanced_accuracy_score,f1_score
+from sklearn.metrics import balanced_accuracy_score, f1_score
 
 
-def get_acc_metrics(model, data_loader,device):
-
+def get_acc_metrics(model, data_loader, device):
     model_prediction = []
     true_label = []
 
@@ -35,11 +33,11 @@ def get_acc_metrics(model, data_loader,device):
 
         _, value_pred = torch.max(output, dim=1)
 
-
         model_prediction.extend(value_pred.cpu())
         true_label.extend(y.cpu())
 
-    return balanced_accuracy_score(true_label,model_prediction),f1_score(true_label, model_prediction, average='weighted')
+    return balanced_accuracy_score(true_label, model_prediction), f1_score(true_label, model_prediction,
+                                                                           average='weighted')
 
 
 def move_to_device(data, device):
@@ -60,7 +58,9 @@ def move_to_device(data, device):
     else:
         raise TypeError("Unsupported data type for moving to device.")
 
-def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per_patient: bool=False)  -> Tuple[List, List, torch.Tensor, torch.Tensor, Optional[List]]:
+
+def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per_patient: bool = False) -> Tuple[
+    List, List, torch.Tensor, torch.Tensor, Optional[List]]:
     """
     Performs a prediction step using a given model on a batch of samples.
 
@@ -78,10 +78,9 @@ def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per
     - y (torch.Tensor): Ground truth labels.
     - sample_ids (list or None): List of patient/sample IDs if `per_patient` is True, otherwise None.
     """
-    batch_sample = move_to_device(data = batch_sample, device = device)
+    batch_sample = move_to_device(data=batch_sample, device=device)
 
     prediction, attention = model(data_list=batch_sample)
-
 
     # Stack predictions into a single tensor
     output = torch.vstack(prediction)
@@ -99,7 +98,6 @@ def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per
         sample_ids = None
 
     return prediction, attention, output, y, sample_ids
-
 
 
 # Baseline Models
@@ -170,7 +168,6 @@ class NeuralNetwork(nn.Module):
         x = F.softmax(self.outputLayer(x), dim=1)
 
         return x
-
 
 
 class simple_GAT(nn.Module):
@@ -260,6 +257,7 @@ class simple_GAT(nn.Module):
             prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
 
         return prediction
+
 
 class simple_GNN(nn.Module):
     """

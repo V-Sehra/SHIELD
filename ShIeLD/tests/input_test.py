@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 
 
-
 def test_all_keys_in_req(req_file):
     """
     Test to check if the requirements file contains all required keys
@@ -13,30 +12,30 @@ def test_all_keys_in_req(req_file):
     Args:
         req_file (str): Path to the requirements file or requirements dict.
     """
-    if isinstance(req_file,dict):
+    if isinstance(req_file, dict):
         requirements = req_file
-    elif isinstance(req_file, (str,Path)):
+    elif isinstance(req_file, (str, Path)):
         with open(req_file, 'rb') as file:
             requirements = pickle.load(file)
     else:
         raise TypeError("req_file should be a string, Path object or dict.")
 
     # Define the required keys
-    required_keys = set(['path_raw_data', 'path_training_results','path_to_interaction_plots',
-                        'path_to_model', 'label_column',
-                        'cell_type_names', 'label_dict',
-                        'eval_columns', 'col_of_interest',
-                        'col_of_variables', 'minimum_number_cells',
-                        'radius_distance_all', 'fussy_limit_all',
-                        'anker_value_all','filter_cells',
-                        'anker_cell_selction_type', 'multiple_labels_per_subSample',
-                        'batch_size', 'learning_rate',
-                        'input_layer', 'layer_1',
-                        'output_layer', 'droupout_rate', 'attr_bool',
-                        'augmentation_number', 'X_col_name', 'Y_col_name',
-                        'measument_sample_name',
-                        'validation_split_column', 'number_validation_splits',
-                        'test_set_fold_number', 'voro_neighbours'])
+    required_keys = set(['path_raw_data', 'path_training_results', 'path_to_interaction_plots',
+                         'path_to_model', 'label_column',
+                         'cell_type_names', 'label_dict',
+                         'eval_columns', 'col_of_interest',
+                         'col_of_variables', 'minimum_number_cells',
+                         'radius_distance_all', 'fussy_limit_all',
+                         'anker_value_all', 'filter_cells',
+                         'anker_cell_selction_type', 'multiple_labels_per_subSample',
+                         'batch_size', 'learning_rate',
+                         'input_layer', 'layer_1',
+                         'output_layer', 'droupout_rate', 'attr_bool',
+                         'augmentation_number', 'X_col_name', 'Y_col_name',
+                         'measument_sample_name',
+                         'validation_split_column', 'number_validation_splits',
+                         'test_set_fold_number', 'voro_neighbours'])
 
     key_set = set(requirements.keys())
 
@@ -48,7 +47,6 @@ def test_all_keys_in_req(req_file):
     missing_keys = required_keys - key_set
     if len(missing_keys) > 0:
         raise AssertionError(f"Missing keys in requirements: {missing_keys}")
-
     # Check for correct format of the keys:
     # Paths:
     all_paths = {item for item in key_set if item.lower().startswith("path")}
@@ -60,7 +58,7 @@ def test_all_keys_in_req(req_file):
     all_ints = ['minimum_number_cells', 'batch_size', 'input_layer', 'layer_1',
                 'output_layer', 'augmentation_number', 'voro_neighbours']
     for item in all_ints:
-        if not isinstance(requirements[item], (int,np.integer)):
+        if not isinstance(requirements[item], (int, np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # string:
@@ -80,13 +78,12 @@ def test_all_keys_in_req(req_file):
 
     # list of floats or ints:
     all_lists_numbers = ['radius_distance_all', 'fussy_limit_all',
-                        'anker_value_all', 'droupout_rate',
-                        'number_validation_splits','test_set_fold_number']
+                         'anker_value_all', 'droupout_rate',
+                         'number_validation_splits', 'test_set_fold_number']
 
     for list_float in all_lists_numbers:
         if not isinstance(requirements[list_float], list) or not all(
-                isinstance(i, (float,int,np.integer, np.floating)) for i in requirements[list_float]):
-
+                isinstance(i, (float, int, np.integer, np.floating)) for i in requirements[list_float]):
             raise AssertionError(f"Item {list_float} is not a list of floats.")
 
     # boolians:
@@ -102,7 +99,7 @@ def test_all_keys_in_req(req_file):
 
         if not isinstance(requirements['filter_column'], list):
             raise AssertionError("filter_column should be a list containing the column to filter by.")
-        if not isinstance(requirements['filter_value'], (int, float,bool,np.integer, np.floating)):
+        if not isinstance(requirements['filter_value'], (int, float, bool, np.integer, np.floating)):
             raise AssertionError("filter_value should be an int, float or bool.")
 
 
@@ -112,7 +109,7 @@ def test_best_config(config_file):
         Args:
         config_file (str,dict): Path to the requirements file or requirements dict.
     """
-    if isinstance(config_file,dict):
+    if isinstance(config_file, dict):
         best_config_dict = config_file
     else:
         if isinstance(config_file, (str, Path)):
@@ -124,12 +121,10 @@ def test_best_config(config_file):
         else:
             raise TypeError("config_file should be a string or Path object.")
 
-
     required_keys = set(['layer_one', 'input_dim', 'droupout_rate', 'final_layer',
-                         'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit','version'])
+                         'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit', 'version'])
 
     key_set = set(best_config_dict.keys())
-
 
     # Check if all required keys are present
     missing_keys = required_keys - key_set
@@ -138,15 +133,15 @@ def test_best_config(config_file):
 
     # Check for correct format of the keys:
     # int:
-    all_ints = ['layer_one', 'input_dim', 'final_layer','version']
+    all_ints = ['layer_one', 'input_dim', 'final_layer', 'version']
     for item in all_ints:
-        if not isinstance(best_config_dict[item], (int,np.integer)):
+        if not isinstance(best_config_dict[item], (int, np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
     all_floats = ['droupout_rate', 'fussy_limit']
     for item in all_floats:
-        if not isinstance(best_config_dict[item], (float,np.floating)):
+        if not isinstance(best_config_dict[item], (float, np.floating)):
             raise AssertionError(f"Item {item} is not a float.")
 
     # bool:
@@ -156,7 +151,7 @@ def test_best_config(config_file):
             raise AssertionError(f"Item {item} is not a bool.")
 
     # float or int:
-    all_numbers = ['anker_value','radius_distance']
+    all_numbers = ['anker_value', 'radius_distance']
     for item in all_numbers:
-        if not isinstance(best_config_dict[item], (float,int,np.integer, np.floating)):
+        if not isinstance(best_config_dict[item], (float, int, np.integer, np.floating)):
             raise AssertionError(f"Item {item} is not a float or int.")
