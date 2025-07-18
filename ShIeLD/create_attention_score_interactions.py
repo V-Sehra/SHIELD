@@ -63,8 +63,8 @@ def main():
     model = ShIeLD(
         num_of_feat=int(requirements['input_layer']),
         layer_1=requirements['layer_1'],
-        layer_final=requirements['out_put_layer'],
-        dp=best_config_dict['droup_out_rate'],
+        layer_final=requirements['output_layer'],
+        dp=best_config_dict['droupout_rate'],
         self_att=False, attr_bool=requirements['attr_bool'],
         norm_type=requirements['comment_norm']
     ).to(device)
@@ -73,7 +73,7 @@ def main():
     model.eval()
 
     if args.recalculate_cTc_Scroes or (
-    not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
+            not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
         cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
             requirements_dict=requirements,
             data_loader=data_loader,
