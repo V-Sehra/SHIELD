@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from pathlib import PosixPath
 from tqdm import tqdm
 import pickle
-from typing import Dict, Optional,Tuple
+from typing import Dict, Optional, Tuple
 from itertools import compress
 from scipy.stats import mannwhitneyu
 
@@ -40,7 +40,7 @@ def break_title(title, max_len=10):
     return title  # No space found, return as is
 
 
-def get_best_config_dict(hyper_search_results ,requirements_dict):
+def get_best_config_dict(hyper_search_results, requirements_dict):
     """
     Extracts the best configuration from hyperparameter search results.
 
@@ -70,14 +70,14 @@ def get_best_config_dict(hyper_search_results ,requirements_dict):
     return best_config_dict
 
 
-
 def get_cell_to_cell_interaction_dict(
         requirements_dict: Dict,
         data_loader: DataLoader,
         model: torch.nn.Module,
         device: str,
-        save_dict_path: Optional[PosixPath] = None
-    )-> Dict:
+        save_dict_path: Optional[PosixPath] = None,
+        column_celltype_name: str = 'CellType',
+) -> Dict:
     """
     Computes cell-to-cell interaction metrics from a trained model's predictions and attention scores.
 
@@ -88,7 +88,7 @@ def get_cell_to_cell_interaction_dict(
     - attr_bool (bool): Whether to use attribution-based attention scores.
     - device: The computation device (e.g., "cpu" or "cuda").
     - save_dict_path (Optional[PosixPath]): Path to save/load the output dictionary. If None, results are not saved.
-
+    - column_celltype_name (str): which column in the evaluation data contains cell type information.
     Returns:
     - dict: A dictionary containing:
         - 'fals_pred': Boolean array indicating incorrect predictions.
@@ -118,7 +118,7 @@ def get_cell_to_cell_interaction_dict(
     # Find the index of the 'CellType' column in the evaluation data
     try:
         cell_type_eval_index = np.where(
-            np.char.lower(np.array(requirements_dict['eval_columns'])) == 'celltype'.lower()
+            np.char.lower(np.array(requirements_dict['eval_columns'])) == column_celltype_name.lower()
         )[0][0]
     except IndexError:
         raise ValueError(f"Column 'CellType' not found in {requirements_dict['eval_columns']}.")
@@ -197,7 +197,7 @@ def get_hypersear_results(requirements_dict: dict):
     """
 
     # Retrieve hyperparameter search results from training utilities.
-    hyper_search_results,csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
+    hyper_search_results, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
 
     # First-level grouping: Aggregate mean balanced accuracy per col_of_interest
     model_grouped = hyper_search_results.groupby(requirements_dict['col_of_interest']).agg(
@@ -219,7 +219,6 @@ def get_hypersear_results(requirements_dict: dict):
     ).reset_index()
 
     return hyper_grouped
-
 
 
 def get_interaction_DataFrame(
@@ -262,9 +261,9 @@ def get_interaction_DataFrame(
     return interaction_df, mean_interaction_df
 
 
-def get_top_interaction_per_celltype(interaction_limit:int,
-                                     all_interaction_mean_df:pd.DataFrame,
-                                     all_interaction_df:pd.DataFrame) -> Dict:
+def get_top_interaction_per_celltype(interaction_limit: int,
+                                     all_interaction_mean_df: pd.DataFrame,
+                                     all_interaction_df: pd.DataFrame) -> Dict:
     """
     Identifies the top interactions for each cell type based on interaction strength.
 
@@ -303,7 +302,8 @@ def get_top_interaction_per_celltype(interaction_limit:int,
     return top_connections
 
 
-def get_p2p_att_score(sample:list, cell_phenotypes_sample: np.array, all_phenotypes: np.array, node_attention_scores:list) -> Tuple[list, list, list]:
+def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenotypes: np.array,
+                      node_attention_scores: list) -> Tuple[list, list, list]:
     """
     This function calculates the attention score for each cell phenotype to all other phenotypes.
     It uses the end attention score p2p (phenotype to phenotype).
@@ -356,7 +356,8 @@ def get_p2p_att_score(sample:list, cell_phenotypes_sample: np.array, all_phenoty
 
     return raw_att_p2p, normalisation_factor_edge_number, normalised_p2p
 
-def create_parameter_influence_plots(df: pd.DataFrame, observed_variable:str, save_path: Optional[PosixPath] =None):
+
+def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, save_path: Optional[PosixPath] = None):
     """
     Creates and displays a boxplot to visualize the influence of a specific hyperparameter
     on model accuracy.
@@ -399,21 +400,20 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable:str, sa
         plt.savefig(save_path)
 
 
-
 def plot_cell_cell_interaction_boxplots(
-    significance_1: float,
-    significance_2: float,
-    interaction_limit: int,
-    all_interaction_mean_df: pd.DataFrame,
-    top_connections: dict,
-    save_path: Optional[PosixPath] = None,
-    # plotting parameteres
-    log_y:bool = False,
-    star_size:int = 2000,
-    line_width:int = 5,
-    costum_fig_size: Optional[Tuple[int,int]] = None,
-    costum_star_shift: Optional[float] = None,
-    Nan_to_zero: bool = False
+        significance_1: float,
+        significance_2: float,
+        interaction_limit: int,
+        all_interaction_mean_df: pd.DataFrame,
+        top_connections: dict,
+        save_path: Optional[PosixPath] = None,
+        # plotting parameteres
+        log_y: bool = False,
+        star_size: int = 2000,
+        line_width: int = 5,
+        costum_fig_size: Optional[Tuple[int, int]] = None,
+        costum_star_shift: Optional[float] = None,
+        Nan_to_zero: bool = False
 ):
     """
     Plots boxplots of cell-cell interactions and performs statistical significance tests.
@@ -457,8 +457,6 @@ def plot_cell_cell_interaction_boxplots(
         layout='constrained'
     )
 
-
-
     # Iterate over subplots
     for row in range(2):
         for idx in range(int(num_cells / 2)):
@@ -467,7 +465,8 @@ def plot_cell_cell_interaction_boxplots(
 
             # Extract names and values of top interactions
             names = [dst_cell[0] for dst_cell in top_connections[src_cell]]
-            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_connections[src_cell] if len(dst_cell[1]) > 2]
+            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_connections[src_cell] if
+                      len(dst_cell[1]) > 2]
 
             # Create boxplot
             axs[row, idx].set_title(break_title(src_cell))
@@ -501,8 +500,10 @@ def plot_cell_cell_interaction_boxplots(
                 if significance_2 < p < significance_1:
                     axs[row, idx].scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
                 elif p < significance_2:
-                    axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black', s=star_size)
-                    axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black', s=star_size)
+                    axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
+                                          s=star_size)
+                    axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
+                                          s=star_size)
 
             if values:
                 # Ensure x-ticks match available names
@@ -530,4 +531,3 @@ def plot_cell_cell_interaction_boxplots(
         if log_y:
             save_path = save_path.parent / (save_path.stem + '_log' + save_path.suffix)
         plt.savefig(save_path, dpi=150)
-
