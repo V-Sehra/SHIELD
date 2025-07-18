@@ -112,8 +112,18 @@ def get_cell_to_cell_interaction_dict(
     normed_p2p = []
     prediction_model = []
 
+    shorten_celltypeNames = False
+
     # Extract cell type information from requirements_dict
-    cell_types = np.array(requirements_dict['cell_type_names'])
+    if 'combine_cellPhenotypes' in requirements_dict.keys():
+        if requirements_dict['combine_cellPhenotypes'] is not None:
+            cell_types = data_utils.combine_cell_types(np.array(requirements_dict['cell_type_names']),
+                                                       requirements_dict['combine_cellPhenotypes'])
+            shorten_celltypeNames = True
+        else:
+            print(f'cannot use {requirements_dict["combine_cellPhenotypes"]} to combine the cell types will use all')
+    else:
+        cell_types = np.array(requirements_dict['cell_type_names'])
 
     # Find the index of the 'CellType' column in the evaluation data
     try:
@@ -121,7 +131,7 @@ def get_cell_to_cell_interaction_dict(
             np.char.lower(np.array(requirements_dict['eval_columns'])) == column_celltype_name.lower()
         )[0][0]
     except IndexError:
-        raise ValueError(f"Column 'CellType' not found in {requirements_dict['eval_columns']}.")
+        raise ValueError(f"Column {column_celltype_name} not found in {requirements_dict['eval_columns']}.")
 
     # Iterate over all samples in the data loader
     for data_sample in tqdm(data_loader, desc="Processing samples"):
@@ -149,7 +159,15 @@ def get_cell_to_cell_interaction_dict(
         node_level_attention_scores = [att_val[1].cpu().detach().numpy() for att_val in attention]
 
         # Extract cell type information for the given sample
-        cell_type_names = [sample.eval[:, cell_type_eval_index] for sample in data_sample]
+        cell_type_names = [
+            data_utils.combine_cell_types(
+                sample.eval[:, cell_type_eval_index],
+                requirements_dict['combine_cellPhenotypes']
+            )
+            if shorten_celltypeNames
+            else sample.eval[:, cell_type_eval_index]
+            for sample in data_sample
+        ]
 
         # Compute phenotype-to-phenotype attention scores
         phenotype_attention_matrix = get_p2p_att_score(

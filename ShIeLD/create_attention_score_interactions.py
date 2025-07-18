@@ -22,7 +22,7 @@ import tests.input_test as input_test
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-datSet', '--data_set', type=str, default='HCC')
+    parser.add_argument('-datSet', '--data_set_name', type=str, default='HCC')
 
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=None)
@@ -36,13 +36,13 @@ def main():
     args = parser.parse_args()
 
     if args.requirements_file_path is None:
-        args.requirements_file_path = Path.cwd() / 'examples' / args.data_set / 'requirements.pt'
+        args.requirements_file_path = Path.cwd() / 'examples' / args.data_set_name / 'requirements.pt'
         if not Path(args.requirements_file_path).exists():
             raise FileNotFoundError(
                 f"Default configuration path {args.requirements_file_path} was selected.\n"
                 f"But file found there. Please provide a valid path.")
     if args.best_config_dict_path is None:
-        args.best_config_dict_path = Path.cwd() / 'examples' / args.data_set / 'best_config.pt'
+        args.best_config_dict_path = Path.cwd() / 'examples' / args.data_set_name / 'best_config.pt'
         if not Path(args.best_config_dict_path).exists():
             raise FileNotFoundError(
                 f"Default configuration path {args.best_config_dict_path} was selected.\n"
@@ -91,11 +91,17 @@ def main():
     if args.recalculate_cTc_Scroes or (
             not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
 
+        if args.data_set_name == 'HCC':
+            column_celltype_name = 'class0'
+        else:
+            column_celltype_name = 'CellType'
+
         cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
             requirements_dict=requirements,
             data_loader=data_loader,
             model=model,
             device=device,
+            column_celltype_name=column_celltype_name,
             save_dict_path=Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'))
     else:
         with open(Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt'),
@@ -103,6 +109,8 @@ def main():
             cell_to_cell_interaction_dict = pickle.load(f)
 
     observed_tissues = list(requirements['label_dict'].keys())
+    Path(requirements['path_to_interaction_plots'] / 'boxplots').mkdir(parents=True, exist_ok=True)
+
     for number_interactions in [4, len(requirements['cell_type_names'])]:
         print(f'creating the interactions for top {number_interactions}:')
         for observed_tissue in observed_tissues:
@@ -114,7 +122,6 @@ def main():
                                                                                 all_interaction_mean_df=mean_interaction_dataFrame,
                                                                                 all_interaction_df=interaction_dataFrame)
 
-            Path(requirements['path_to_interaction_plots'] / 'boxplots').mkdir(parents=True, exist_ok=True)
             save_path_boxplots = Path(requirements[
                                           'path_to_interaction_plots'] / 'boxplots' / f'{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png')
 
