@@ -22,16 +22,32 @@ import tests.input_test as input_test
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-datSet', '--data_set', type=str, default='HCC')
+
     parser.add_argument("-req_path", "--requirements_file_path",
-                        default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
+                        default=None)
     parser.add_argument("-recalc", "--recalculate_cTc_Scroes", default=False)
     parser.add_argument("-config_dict", "--best_config_dict_path",
-                        default=Path.cwd() / 'examples' / 'CRC' / 'best_config.pt')
+                        default=None)
     parser.add_argument("-dat_type", "--data_set_type", default='test')
     parser.add_argument("-sig1", "--significance_threshold_1", type=float, default=0.0001)
     parser.add_argument("-sig2", "--significance_threshold_2", type=float, default=0.00001)
 
     args = parser.parse_args()
+
+    if args.requirements_file_path is None:
+        args.requirements_file_path = Path.cwd() / 'examples' / args.data_set / 'requirements.pt'
+        if not Path(args.requirements_file_path).exists():
+            raise FileNotFoundError(
+                f"Default configuration path {args.requirements_file_path} was selected.\n"
+                f"But file found there. Please provide a valid path.")
+    if args.best_config_dict_path is None:
+        args.best_config_dict_path = Path.cwd() / 'examples' / args.data_set / 'best_config.pt'
+        if not Path(args.best_config_dict_path).exists():
+            raise FileNotFoundError(
+                f"Default configuration path {args.best_config_dict_path} was selected.\n"
+                f"But file found there. Please provide a valid path.")
+
     print(args)
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
@@ -69,11 +85,12 @@ def main():
         norm_type=requirements['comment_norm']
     ).to(device)
 
-    model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model.pt'))
+    model.load_state_dict(torch.load(requirements['path_to_model'] / f'best_model_{best_config_dict["version"]}.pt'))
     model.eval()
 
     if args.recalculate_cTc_Scroes or (
             not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
+
         cell_to_cell_interaction_dict = evaluation_utils.get_cell_to_cell_interaction_dict(
             requirements_dict=requirements,
             data_loader=data_loader,
