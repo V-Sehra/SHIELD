@@ -18,6 +18,24 @@ from sklearn.neighbors import NearestNeighbors
 
 from typing import Optional, List, Union
 from pathlib import Path, PosixPath
+import random
+
+
+def assign_label_from_distribution(labels_in_graph: pd.Series, node_prob: bool = False) -> str:
+    '''
+
+    labels_in_graph(pd.Series): labels_in_graph:
+    node_prob(bool):
+    :return: str with label type
+    '''
+    labels = labels_in_graph.index.tolist()
+
+    if node_prob:
+        probs = (labels_in_graph / labels_in_graph.sum()).tolist()
+    else:
+        probs = [0.5, 0.5]
+
+    return random.choices(labels, weights=probs, k=1)[0]
 
 
 def bool_passer(argument):
@@ -31,7 +49,8 @@ def bool_passer(argument):
 def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
-                          repeat_id: int, skip_existing: bool = False):
+                          repeat_id: int, skip_existing: bool = False,
+                          noisy_labeling: bool = False, node_prob: bool = False):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -44,10 +63,13 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         requiremets_dict (dict): Dictionary containing dataset requirements.
         save_path_folder (str): Directory path where graphs are saved.
         repeat_id (int): Counter for repeated samples.
+        noisy_labeling (bool): If True, applies noisy labeling to the graph to check for robustness.
+        node_prob (bool): If True, uses node probabilities for label assignment.
 
     Returns:
         None
     """
+
     tissue_dict = requiremets_dict['label_dict']
     # List of evaluation column names.
     eval_col_name = requiremets_dict['eval_columns']
@@ -60,7 +82,12 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
     graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
 
     # Determine the most frequent tissue type in this region
-    dominating_tissue_type = graph_data[requiremets_dict['label_column']].value_counts().idxmax()
+    count_tissue_type = graph_data[requiremets_dict['label_column']].value_counts()
+    if noisy_labeling and (len(count_tissue_type) > 1):
+        dominating_tissue_type = assign_label_from_distribution(labels_in_graph=count_tissue_type,
+                                                                node_prob=node_prob)
+    else:
+        dominating_tissue_type = count_tissue_type.idxmax()
 
     file_name = f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{(len(voronoi_list) * repeat_id) + vornoi_id}.pt'
 
@@ -91,11 +118,12 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         eval=graph_data[eval_col_name].to_numpy(dtype=np.dtype('str')),
         eval_col_names=eval_col_name,
         sub_sample=sub_sample,
-        y=torch.tensor(tissue_dict[dominating_tissue_type]).flatten()
+        y=torch.tensor(tissue_dict[dominating_tissue_type]).flatten(),
+        y_true=count_tissue_type.idxmax()
     ).cpu()
 
     # Save the processed graph data
-    torch.save(data, Path(f'{save_path_folder}', file_name))
+    # torch.save(data, Path(f'{save_path_folder}', file_name))
 
     return
 
@@ -342,7 +370,7 @@ def turn_pixel_to_meter(pixel_radius):
     return round(mycro_meter_radius)
 
 
-def combine_cell_types(original_array, string_list):
+def combine_cell_types(original_array, string_list, retrun_org_matrix=False):
     """
     This function combines cell types in a given array based on a list of substrings.
     If a substring from the list is found in an element of the array, that element is replaced with the substring.
@@ -366,7 +394,7 @@ def combine_cell_types(original_array, string_list):
         unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True,
                                                                      return_inverse=True)
 
-        # Create a new array without duplicates
-        original_array = unique_elements
-
+    if retrun_org_matrix:
+        return unique_elements, original_array
+    # Remove duplicates and return the processed array
     return original_array
