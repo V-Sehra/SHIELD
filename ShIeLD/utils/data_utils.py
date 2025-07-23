@@ -18,10 +18,10 @@ from sklearn.neighbors import NearestNeighbors
 
 from typing import Optional, List, Union
 from pathlib import Path, PosixPath
-import random
 
 
-def assign_label_from_distribution(labels_in_graph: pd.Series, node_prob: bool = False) -> str:
+def assign_label_from_distribution(labels_in_graph: pd.Series,
+                                   node_prob: Union[str, bool] = False) -> str:
     '''
 
     labels_in_graph(pd.Series): labels_in_graph:
@@ -30,12 +30,17 @@ def assign_label_from_distribution(labels_in_graph: pd.Series, node_prob: bool =
     '''
     labels = labels_in_graph.index.tolist()
 
-    if node_prob:
-        probs = (labels_in_graph / labels_in_graph.sum()).tolist()
-    else:
+    if node_prob == False or node_prob == 'even':
         probs = [0.5, 0.5]
 
-    return random.choices(labels, weights=probs, k=1)[0]
+        return rnd.choices(labels, weights=probs, k=1)[0]
+
+    elif node_prob == True or node_prob == 'prob':
+        probs = (labels_in_graph / labels_in_graph.sum()).tolist()
+        return rnd.choices(labels, weights=probs, k=1)[0]
+    elif node_prob == 'both':
+        probs = (labels_in_graph / labels_in_graph.sum()).tolist()
+        return rnd.choices(labels, weights=probs, k=1)[0], random.choices(labels, weights=[0.5, 0.5], k=1)[0]
 
 
 def bool_passer(argument):
@@ -119,11 +124,12 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         eval_col_names=eval_col_name,
         sub_sample=sub_sample,
         y=torch.tensor(tissue_dict[dominating_tissue_type]).flatten(),
-        y_true=count_tissue_type.idxmax()
     ).cpu()
+    if noisy_labeling:
+        data.y_ture = count_tissue_type.idxmax()
 
     # Save the processed graph data
-    # torch.save(data, Path(f'{save_path_folder}', file_name))
+    torch.save(data, Path(f'{save_path_folder}', file_name))
 
     return
 
