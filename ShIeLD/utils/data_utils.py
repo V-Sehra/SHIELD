@@ -20,6 +20,49 @@ from typing import Optional, List, Union
 from pathlib import Path, PosixPath
 
 
+def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float = 0.1):
+    """
+    Generate synthetic edge matrices with controlled connectivity and randomness.
+
+    Parameters
+    ----------
+    original_edge_mat : np.ndarray
+        The original edge matrix of shape (2, N), where edges are defined as pairs (source, destination).
+    percent_number_cells : float, optional (default=0.1)
+        Percentage (0–1) of the number of nodes to use when generating additional random edges.
+
+    Returns
+    -------
+    edge_mat_same_connectivity : np.ndarray
+        A new edge matrix where each node has approximately the same average degree as in the original graph.
+    edge_mat_random_percentage : np.ndarray
+        A new edge matrix generated randomly using the specified percentage of total nodes.
+    """
+    # Get unique source nodes and their degree (connectivity)
+    unique, connectivity = np.unique(original_edge_mat[0], return_counts=True)
+    avg_connectivity = round(np.mean(connectivity))
+    num_nodes = np.max(unique)
+
+    # Generate a synthetic edge matrix with same average connectivity
+    src_same_connect = np.repeat(np.arange(num_nodes), avg_connectivity)
+    dst_same_connect = np.concatenate([
+        np.random.choice(num_nodes, avg_connectivity)
+        for _ in range(avg_connectivity)
+    ])
+    edge_mat_same_connectivity = np.array([src_same_connect, dst_same_connect])
+
+    # Generate a synthetic edge matrix with random edges based on percentage of nodes
+    random_repeats = round(num_nodes * percent_number_cells)
+    src_random = np.repeat(np.arange(num_nodes), random_repeats)
+    dst_random = np.concatenate([
+        np.random.choice(num_nodes, avg_connectivity)
+        for _ in range(random_repeats)
+    ])
+    edge_mat_random_percentage = np.array([src_random, dst_random])
+
+    return edge_mat_same_connectivity, edge_mat_random_percentage
+
+
 def assign_label_from_distribution(labels_in_graph: pd.Series,
                                    node_prob: Union[str, bool] = False) -> str:
     '''
@@ -40,7 +83,7 @@ def assign_label_from_distribution(labels_in_graph: pd.Series,
         return rnd.choices(labels, weights=probs, k=1)[0]
     elif node_prob == 'both':
         probs = (labels_in_graph / labels_in_graph.sum()).tolist()
-        return rnd.choices(labels, weights=probs, k=1)[0], random.choices(labels, weights=[0.5, 0.5], k=1)[0]
+        return rnd.choices(labels, weights=probs, k=1)[0], rnd.choices(labels, weights=[0.5, 0.5], k=1)[0]
 
 
 def bool_passer(argument):
@@ -55,7 +98,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
                           repeat_id: int, skip_existing: bool = False,
-                          noisy_labeling: bool = False, node_prob: bool = False):
+                          noisy_labeling: bool = False, node_prob: Union[str, bool] = False):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -69,7 +112,9 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         save_path_folder (str): Directory path where graphs are saved.
         repeat_id (int): Counter for repeated samples.
         noisy_labeling (bool): If True, applies noisy labeling to the graph to check for robustness.
-        node_prob (bool): If True, uses node probabilities for label assignment.
+        node_prob (bool,str): If True, uses node probabilities for label assignment.
+                              if both then return 50/50 chance and true prob
+                              if even only 50/50, if True or prob then the true dist
 
     Returns:
         None
@@ -88,13 +133,8 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict['label_column']].value_counts()
-    if noisy_labeling and (len(count_tissue_type) > 1):
-        dominating_tissue_type = assign_label_from_distribution(labels_in_graph=count_tissue_type,
-                                                                node_prob=node_prob)
-    else:
-        dominating_tissue_type = count_tissue_type.idxmax()
 
-    file_name = f'graph_subSample_{sub_sample}_{dominating_tissue_type}_{(len(voronoi_list) * repeat_id) + vornoi_id}.pt'
+    file_name = f'graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(len(voronoi_list) * repeat_id) + vornoi_id}.pt'
 
     if skip_existing:
         if Path(f'{save_path_folder}', file_name).exists():
@@ -123,10 +163,27 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         eval=graph_data[eval_col_name].to_numpy(dtype=np.dtype('str')),
         eval_col_names=eval_col_name,
         sub_sample=sub_sample,
-        y=torch.tensor(tissue_dict[dominating_tissue_type]).flatten(),
+        y=torch.tensor(tissue_dict[count_tissue_type.idxmax()]).flatten(),
     ).cpu()
-    if noisy_labeling:
-        data.y_ture = count_tissue_type.idxmax()
+
+    if noisy_labeling and (len(count_tissue_type) > 1):
+
+        if node_prob == False or node_prob == 'even':
+            even_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
+                                                        node_prob=node_prob)
+            print(even_label, count_tissue_type)
+            data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
+
+        elif node_prob == True or node_prob == 'prob':
+            prob_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
+                                                        node_prob=node_prob)
+            data.y_noise_prob = torch.tensor(tissue_dict[prob_label]).flatten()
+
+        elif node_prob == 'both':
+            prob_label, even_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
+                                                                    node_prob=node_prob)
+            data.y_noise_prob = torch.tensor(tissue_dict[prob_label]).flatten()
+            data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
 
     # Save the processed graph data
     torch.save(data, Path(f'{save_path_folder}', file_name))
