@@ -40,25 +40,21 @@ def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float 
     """
     # Get unique source nodes and their degree (connectivity)
     unique, connectivity = np.unique(original_edge_mat[0], return_counts=True)
-    avg_connectivity = round(np.mean(connectivity))
     num_nodes = np.max(unique)
 
     # Generate a synthetic edge matrix with same average connectivity
-    src_same_connect = np.repeat(np.arange(num_nodes), avg_connectivity)
-    dst_same_connect = np.concatenate([
-        np.random.choice(num_nodes, avg_connectivity)
-        for _ in range(avg_connectivity)
-    ])
-    edge_mat_same_connectivity = np.array([src_same_connect, dst_same_connect])
+    sample_number = round(np.mean(connectivity))
+    scr_same_connect = np.repeat(np.arange(num_nodes), sample_number)
+
+    # Sample exactly len(scr) destinations
+    dst_same_connect = np.random.choice(num_nodes, size=len(scr_same_connect))
+    edge_mat_same_connectivity = np.array([scr_same_connect, dst_same_connect])
 
     # Generate a synthetic edge matrix with random edges based on percentage of nodes
     random_repeats = round(num_nodes * percent_number_cells)
-    src_random = np.repeat(np.arange(num_nodes), random_repeats)
-    dst_random = np.concatenate([
-        np.random.choice(num_nodes, avg_connectivity)
-        for _ in range(random_repeats)
-    ])
-    edge_mat_random_percentage = np.array([src_random, dst_random])
+    src_random_percentage = np.repeat(np.arange(num_nodes), random_repeats)
+    dst_random_percentage = np.random.choice(num_nodes, size=len(src_random_percentage))
+    edge_mat_random_percentage = np.array([src_random_percentage, dst_random_percentage])
 
     return edge_mat_same_connectivity, edge_mat_random_percentage
 
