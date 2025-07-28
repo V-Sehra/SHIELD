@@ -94,7 +94,8 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
                           repeat_id: int, skip_existing: bool = False,
-                          noisy_labeling: bool = False, node_prob: Union[str, bool] = False):
+                          noisy_labeling: bool = False, node_prob: Union[str, bool] = False,
+                          randomise_edges: bool = False, percent_number_cells: Union[float, bool] = 0.1):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -111,6 +112,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         node_prob (bool,str): If True, uses node probabilities for label assignment.
                               if both then return 50/50 chance and true prob
                               if even only 50/50, if True or prob then the true dist
+        randomise_edges
 
     Returns:
         None
@@ -167,7 +169,6 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         if node_prob == False or node_prob == 'even':
             even_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
                                                         node_prob=node_prob)
-            print(even_label, count_tissue_type)
             data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
 
         elif node_prob == True or node_prob == 'prob':
@@ -180,6 +181,13 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                                                                     node_prob=node_prob)
             data.y_noise_prob = torch.tensor(tissue_dict[prob_label]).flatten()
             data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
+
+    if randomise_edges:
+        edge_mat_same_connectivity, edge_mat_random_percentage = get_random_edges(original_edge_mat=edge_mat[0],
+                                                                                  percent_number_cells=percent_number_cells)
+
+        data.edge_index_plate_sameCon = torch.tensor(edge_mat_same_connectivity).long()
+        data.edge_index_plate_percent = torch.tensor(edge_mat_random_percentage).long()
 
     # Save the processed graph data
     torch.save(data, Path(f'{save_path_folder}', file_name))
