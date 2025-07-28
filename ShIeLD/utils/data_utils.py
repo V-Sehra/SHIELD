@@ -95,7 +95,8 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
                           repeat_id: int, skip_existing: bool = False,
                           noisy_labeling: bool = False, node_prob: Union[str, bool] = False,
-                          randomise_edges: bool = False, percent_number_cells: float = 0.1):
+                          randomise_edges: bool = False, percent_number_cells: float = 0.1,
+                          segmentation: str = 'voronoi'):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -113,6 +114,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                               if both then return 50/50 chance and true prob
                               if even only 50/50, if True or prob then the true dist
         randomise_edges (bool): are you interested in randomsied edges for baselining
+        segmentation:str = 'voronoi'
 
     Returns:
         None
@@ -127,12 +129,21 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
     cosine = torch.nn.CosineSimilarity(dim=1)
 
     # Extract data for the current Voronoi region
-    graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
+    # Extract data for the current Voronoi region
+    if segmentation == 'voronoi':
+        graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
+        number_samples = len(voronoi_list)
+    elif segmentation == 'random':
+        if type(whole_data) != list:
+            raise ValueError(f"if segmentation is random then the provided whole set must be a list of DataFrames")
+
+        graph_data = whole_data[vornoi_id].copy()
+        number_samples = len(whole_data)
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict['label_column']].value_counts()
 
-    file_name = f'graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(len(voronoi_list) * repeat_id) + vornoi_id}.pt'
+    file_name = f'graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(number_samples * repeat_id) + vornoi_id}.pt'
 
     if skip_existing:
         if Path(f'{save_path_folder}', file_name).exists():
