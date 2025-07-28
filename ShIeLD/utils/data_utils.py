@@ -20,7 +20,7 @@ from typing import Optional, List, Union
 from pathlib import Path, PosixPath
 
 
-def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float = 0.1):
+def get_random_edges(original_edge_mat: np.ndarray, number_nodes: int, percent_number_cells: float = 0.1):
     """
     Generate synthetic edge matrices with controlled connectivity and randomness.
 
@@ -30,7 +30,8 @@ def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float 
         The original edge matrix of shape (2, N), where edges are defined as pairs (source, destination).
     percent_number_cells : float, optional (default=0.1)
         Percentage (0–1) of the number of nodes to use when generating additional random edges.
-
+    number_nodes : int
+        number of nodes within the graph
     Returns
     -------
     edge_mat_same_connectivity : np.ndarray
@@ -41,23 +42,22 @@ def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float 
     # Get unique source nodes and their degree (connectivity)
     if len(original_edge_mat[0]) > 0:
         unique, connectivity = np.unique(original_edge_mat[0], return_counts=True)
-        num_nodes = np.max(unique)
 
         # Generate a synthetic edge matrix with same average connectivity
         sample_number = round(np.mean(connectivity))
-        scr_same_connect = np.repeat(np.arange(num_nodes), sample_number)
+        scr_same_connect = np.repeat(np.arange(number_nodes), sample_number)
 
         # Sample exactly len(scr) destinations
-        dst_same_connect = np.random.choice(num_nodes, size=len(scr_same_connect))
+        dst_same_connect = np.random.choice(number_nodes, size=len(scr_same_connect))
         edge_mat_same_connectivity = np.array([scr_same_connect, dst_same_connect])
     else:
         print('Warning: The provided edge matrix is empty. Returning empty edge matrices.')
         edge_mat_same_connectivity = np.array([[], []])
 
     # Generate a synthetic edge matrix with random edges based on percentage of nodes
-    random_repeats = round(num_nodes * percent_number_cells)
-    src_random_percentage = np.repeat(np.arange(num_nodes), random_repeats)
-    dst_random_percentage = np.random.choice(num_nodes, size=len(src_random_percentage))
+    random_repeats = round(number_nodes * percent_number_cells)
+    src_random_percentage = np.repeat(np.arange(number_nodes), random_repeats)
+    dst_random_percentage = np.random.choice(number_nodes, size=len(src_random_percentage))
     edge_mat_random_percentage = np.array([src_random_percentage, dst_random_percentage])
 
     return edge_mat_same_connectivity, edge_mat_random_percentage
@@ -199,7 +199,8 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
 
     if randomise_edges:
         edge_mat_same_connectivity, edge_mat_random_percentage = get_random_edges(original_edge_mat=edge_mat[0],
-                                                                                  percent_number_cells=percent_number_cells)
+                                                                                  percent_number_cells=percent_number_cells,
+                                                                                  number_nodes=node_data.shape[0])
 
         data.edge_index_plate_sameCon = torch.tensor(edge_mat_same_connectivity).long()
         data.edge_index_plate_percent = torch.tensor(edge_mat_random_percentage).long()
