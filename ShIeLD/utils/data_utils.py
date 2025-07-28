@@ -39,16 +39,20 @@ def get_random_edges(original_edge_mat: np.ndarray, percent_number_cells: float 
         A new edge matrix generated randomly using the specified percentage of total nodes.
     """
     # Get unique source nodes and their degree (connectivity)
-    unique, connectivity = np.unique(original_edge_mat[0], return_counts=True)
-    num_nodes = np.max(unique)
+    if len(original_edge_mat[0]) > 0:
+        unique, connectivity = np.unique(original_edge_mat[0], return_counts=True)
+        num_nodes = np.max(unique)
 
-    # Generate a synthetic edge matrix with same average connectivity
-    sample_number = round(np.mean(connectivity))
-    scr_same_connect = np.repeat(np.arange(num_nodes), sample_number)
+        # Generate a synthetic edge matrix with same average connectivity
+        sample_number = round(np.mean(connectivity))
+        scr_same_connect = np.repeat(np.arange(num_nodes), sample_number)
 
-    # Sample exactly len(scr) destinations
-    dst_same_connect = np.random.choice(num_nodes, size=len(scr_same_connect))
-    edge_mat_same_connectivity = np.array([scr_same_connect, dst_same_connect])
+        # Sample exactly len(scr) destinations
+        dst_same_connect = np.random.choice(num_nodes, size=len(scr_same_connect))
+        edge_mat_same_connectivity = np.array([scr_same_connect, dst_same_connect])
+    else:
+        print('Warning: The provided edge matrix is empty. Returning empty edge matrices.')
+        edge_mat_same_connectivity = np.array([[], []])
 
     # Generate a synthetic edge matrix with random edges based on percentage of nodes
     random_repeats = round(num_nodes * percent_number_cells)
