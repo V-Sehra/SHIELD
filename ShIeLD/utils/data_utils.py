@@ -95,7 +95,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
                           repeat_id: int, skip_existing: bool = False,
                           noisy_labeling: bool = False, node_prob: Union[str, bool] = False,
-                          randomise_edges: bool = False, percent_number_cells: Union[float, bool] = 0.1):
+                          randomise_edges: bool = False, percent_number_cells: float = 0.1):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -112,7 +112,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         node_prob (bool,str): If True, uses node probabilities for label assignment.
                               if both then return 50/50 chance and true prob
                               if even only 50/50, if True or prob then the true dist
-        randomise_edges
+        randomise_edges (bool): are you interested in randomsied edges for baselining
 
     Returns:
         None
