@@ -70,7 +70,7 @@ def assign_label_from_distribution(labels_in_graph: pd.Series,
     labels = labels_in_graph.index.tolist()
 
     if node_prob == False or node_prob == 'even':
-        probs = [0.5, 0.5]
+        probs = [1 / len(labels_in_graph) for _ in range(len(labels_in_graph))]
 
         return rnd.choices(labels, weights=probs, k=1)[0]
 
