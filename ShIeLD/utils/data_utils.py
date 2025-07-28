@@ -83,7 +83,8 @@ def assign_label_from_distribution(labels_in_graph: pd.Series,
         return rnd.choices(labels, weights=probs, k=1)[0]
     elif node_prob == 'both':
         probs = (labels_in_graph / labels_in_graph.sum()).tolist()
-        return rnd.choices(labels, weights=probs, k=1)[0], rnd.choices(labels, weights=[0.5, 0.5], k=1)[0]
+        even_probs = [1 / len(labels_in_graph) for _ in range(len(labels_in_graph))]
+        return rnd.choices(labels, weights=probs, k=1)[0], rnd.choices(labels, weights=even_probs, k=1)[0]
 
 
 def bool_passer(argument):
