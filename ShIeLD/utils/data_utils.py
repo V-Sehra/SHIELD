@@ -211,6 +211,33 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
     return
 
 
+def reducePopulation(df: pd.DataFrame, columnName: str, cellTypeName: str, downsampleRatio: float = 0.3):
+    '''
+    This function reduces the population of a specific cell type in a DataFrame by downsampling it.
+    df (pd.DataFrame): original sample
+    columnName (str): which column name contrains the phenotypes
+    cellTypeName (str): which cell type should be reduced
+    downsampleRatio (float): the ratio of the cell type to be kept in the sample, default is 0.3 (30%)
+    :return df (pd.DataFrame): DataFrame with reduced population of the specified cell type
+    '''
+    # Example filter mask
+    mask = df[columnName].str.contains(cellTypeName, case=False, na=False)
+
+    # Rows containing "Macrophages"
+    cellTypeName_rows = df[mask]
+
+    # Rows not containing "Macrophages"
+    non_cellTypeName_rows = df[~mask]
+
+    # Subsample 30% of the "Macrophages" rows
+    cellTypeName_subsample = cellTypeName_rows.sample(frac=downsampleRatio, random_state=42)
+
+    # Combine them back
+    df = pd.concat([non_cellTypeName_rows, cellTypeName_subsample]).sort_index()
+
+    return df
+
+
 def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names: np.array) -> pd.DataFrame:
     """
     This function fills missing rows and columns in a given DataFrame with NaN values.
