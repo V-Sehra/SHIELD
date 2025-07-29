@@ -481,7 +481,7 @@ def turn_pixel_to_meter(pixel_radius):
     return round(mycro_meter_radius)
 
 
-def combine_cell_types(original_array, string_list, retrun_org_matrix=False):
+def combine_cell_types(original_array, string_list, retrun_adj_matrix=False):
     """
     This function combines cell types in a given array based on a list of substrings.
     If a substring from the list is found in an element of the array, that element is replaced with the substring.
@@ -494,18 +494,19 @@ def combine_cell_types(original_array, string_list, retrun_org_matrix=False):
     Returns:
     np.array: The processed array with combined cell types and without duplicates.
     """
+    adjusted_array = original_array.copy()
 
     for substring_to_replace in string_list:
         # Find indices where the substring occurs
-        indices = np.core.defchararray.find(original_array.astype(str), substring_to_replace)
+        indices = np.core.defchararray.find(adjusted_array.astype(str), substring_to_replace)
 
         # Replace words containing the substring with 'substring_to_replace'
-        original_array[indices != -1] = substring_to_replace
+        adjusted_array[indices != -1] = substring_to_replace
 
-        unique_elements, unique_indices, inverse_indices = np.unique(original_array, return_index=True,
-                                                                     return_inverse=True)
+    unique_elements, unique_indices, inverse_indices = np.unique(adjusted_array, return_index=True,
+                                                                 return_inverse=True)
 
-    if retrun_org_matrix:
-        return unique_elements, original_array
+    if retrun_adj_matrix:
+        return unique_elements, adjusted_array
     # Remove duplicates and return the processed array
-    return original_array
+    return unique_elements
