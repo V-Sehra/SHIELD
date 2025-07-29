@@ -92,7 +92,7 @@ def main():
             not Path(requirements['path_to_model'] / f'cT_t_cT_interactions_dict_{args.data_set_type}.pt').exists()):
 
         if args.data_set_name == 'HCC':
-            column_celltype_name = 'class0'
+            column_celltype_name = 'Class0'
         else:
             column_celltype_name = 'CellType'
 

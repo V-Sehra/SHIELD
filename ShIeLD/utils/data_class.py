@@ -13,6 +13,7 @@ import sys
 import pickle
 import pandas as pd
 from tqdm import tqdm
+
 cwd = os.getcwd()
 sys.path.append(cwd + "/utils/")
 
@@ -31,9 +32,8 @@ class graph_dataset(Dataset):
         root (str): Root directory containing graph files.
     """
 
-
-    def __init__(self, root, fold_ids,requirements_dict, graph_file_names,path_to_graphs,
-                 normalize=None,normalizer_filename=None) :
+    def __init__(self, root, fold_ids, requirements_dict, graph_file_names, path_to_graphs,
+                 normalize=None, normalizer_filename=None):
         """
         Initializes the diabetis_dataset.
 
@@ -44,9 +44,8 @@ class graph_dataset(Dataset):
             normalize (bool): If True, normalize the graph data.
         """
 
-
         # If the file storing graph filenames does not exist, create it
-        if not Path.exists(path_to_graphs/graph_file_names):
+        if not Path.exists(path_to_graphs / graph_file_names):
             print('Creating file name list:')
 
             csv_file = pd.read_csv(requirements_dict['path_raw_data'])
@@ -58,7 +57,7 @@ class graph_dataset(Dataset):
             df = pd.DataFrame(os.listdir(root), columns=['file_name'])
 
             # Extract the "XX_B" or "XX_A" pattern from each filename using regex
-            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_(\d+_[AB])_')[0]
+            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_([^_]+)_')[0]
 
             # Filter exact matches
             filtered_df = df[df['identifier'].isin(image_ids)]
@@ -66,14 +65,14 @@ class graph_dataset(Dataset):
             self.graph_file_names = filtered_df['file_name'].tolist()
 
             # Save the filtered filenames to avoid redundant processing in future runs
-            with open(path_to_graphs/graph_file_names, 'wb') as f:
+            with open(path_to_graphs / graph_file_names, 'wb') as f:
                 pickle.dump(self.graph_file_names, f)
 
         else:
             print('Load the previously stored list of graph filenames')
 
             # Load the previously stored list of graph filenames
-            with open(Path(path_to_graphs/graph_file_names), 'rb') as f:
+            with open(Path(path_to_graphs / graph_file_names), 'rb') as f:
                 self.graph_file_names = pickle.load(f)
 
         self.normalize = normalize
@@ -153,4 +152,3 @@ class graph_dataset(Dataset):
             if 'global_std' in self.normalize:
                 data.x = (data.x - self.total_mean) / self.sig
         return data
-

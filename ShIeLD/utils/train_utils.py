@@ -5,6 +5,7 @@ import numpy as np
 
 import pickle
 from tqdm import tqdm
+import os
 
 import torch.nn as nn
 import torch
@@ -12,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from . import model_utils
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 
 def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
@@ -45,7 +46,7 @@ def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
         return False
 
 
-def get_train_results_csv(requirement_dict: dict) -> DataFrame:
+def get_train_results_csv(requirement_dict: dict) -> Tuple[DataFrame, PosixPath]:
     """
     Retrieves or initializes a CSV file containing training results.
 
@@ -89,7 +90,8 @@ def get_train_results_csv(requirement_dict: dict) -> DataFrame:
     return training_results_csv, csv_file_path  # Return the DataFram
 
 
-def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropyLoss:
+def initiaize_loss(path: str, device: str, tissue_dict: dict,
+                   noise_yLabel: Union[bool, str] = False) -> nn.CrossEntropyLoss:
     """
     This function initializes the loss function as weighted loss.
     It calculates the class weights based on the number of graphs for each tissue type in the training data.
@@ -99,27 +101,51 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict) -> nn.CrossEntropy
     path (str): The path to the file containing the training file names.
     device (str): The device to which the tensor of class weights should be moved.
     tissue_dict (dict): A dictionary mapping tissue types to integers.
+    noise_yLabel (bool | str): If not False ['even','prob']. Will select the noise labels
+                                CAUTION: needed to be element of the data set
+                                'even': label selected evenly
+                                'prob': label selected according to the accurance of the cell types within a voronoi
 
     Returns:
     nn.CrossEntropyLoss: The initialized loss function with class weights.
     """
 
-    class_weights = []
-    # Collect all file names and prevent non-graphs to count
+    if noise_yLabel == False:
+        if type(path) == str or type(path) == PosixPath:
+            with open(path, 'rb') as f:
+                all_train_file_names = pickle.load(f)
+        elif type(path) == list:
+            all_train_file_names = path
 
-    if type(path) == str or type(path) == PosixPath:
-        with open(path, 'rb') as f:
-            all_train_file_names = pickle.load(f)
-    elif type(path) == list:
-        all_train_file_names = path
+        class_weights = []
+        for origin in tissue_dict.keys():
+            number_tissue_graphs = len([file_name for file_name in all_train_file_names
+                                        if origin in file_name])
+            class_weights.append(1 - (number_tissue_graphs / len(all_train_file_names)))
 
-    for origin in tissue_dict.keys():
-        number_tissue_graphs = len([file_name for file_name in all_train_file_names
-                                    if origin in file_name])
-        class_weights.append(1 - (number_tissue_graphs / len(all_train_file_names)))
+    else:
+        print('initializing loss with noise labels: ', noise_yLabel)
 
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device))
-    return criterion
+        if noise_yLabel != 'even' and noise_yLabel != 'prob':
+            raise ValueError(f"Invalid noise_yLabel: {noise_yLabel}. Must be 'even' or 'prob'.")
+
+        class_weights = np.zeros((len(tissue_dict.keys()), 1))
+
+        for files in tqdm(os.listdir(Path(path))):
+            try:
+                g = torch.load(Path(path) / files)
+                if f'y_noise_{noise_yLabel}' in g:
+                    class_weights[g[f'y_noise_{noise_yLabel}']] += 1
+                else:
+                    class_weights[g['y']] += 1
+            except:
+                print('skipping file: ', files, ' due to error in loading or missing label')
+
+        class_weights = 1 - (class_weights.T / sum(class_weights))
+        class_weights = class_weights.flatten()
+        print('done!')
+
+    return nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device), dtype=torch.float32).to(device)
 
 
 def train_loop_shield(
@@ -129,7 +155,8 @@ def train_loop_shield(
         loss_fkt: nn.CrossEntropyLoss,
         attr_bool: bool,
         device: str,
-        patience: Optional[int] = 5
+        patience: Optional[int] = 5,
+        noise_yLabel: Union[bool, str] = False
 ) -> Tuple[torch.nn.Module, List[float]]:
     """
     Trains the ShIeLD model using the provided optimizer, data loader, and loss function.
@@ -142,7 +169,10 @@ def train_loop_shield(
         attr_bool (bool): Boolean flag indicating whether edge attributes should be used.
         device (str): The device ('cuda' or 'cpu') where computations are performed.
         patience (int): Number of epochs to wait before stopping training if no improvement is observed.
-
+        noise_yLabel (bool | str): If not False ['even','prob']. Will select the noise labels
+                                    CAUTION: needed to be element of the data set
+                                    'even': label selected evenly
+                                    'prob': label selected according to the accurance of the cell types within a voronoi
     Returns:
         Tuple[torch.nn.Module, List[float]]: The trained model and a list of training loss values per epoch.
     """
@@ -171,7 +201,8 @@ def train_loop_shield(
                 batch_sample=train_sample,
                 model=model,
                 device=device,
-                per_patient=False  # Whether to track patient-level predictions
+                per_patient=False,  # Whether to track patient-level predictions
+                noise_yLabel=noise_yLabel
             )
 
             # Compute the loss between model output and ground truth labels

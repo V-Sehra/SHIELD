@@ -14,12 +14,28 @@ from torch.nn import Linear
 import torch.nn.functional as F
 from torch_geometric.nn.norm import BatchNorm
 
-from typing import List, Tuple, Optional
-
+from typing import List, Tuple, Optional, Union
+from torch.utils.data import DataLoader
 from sklearn.metrics import balanced_accuracy_score, f1_score
 
 
-def get_acc_metrics(model, data_loader, device):
+def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
+                    device: Union[torch.device, str], noise_yLabel: Union[bool, str] = False) -> Tuple[float, float]:
+    """
+    Computes the balanced accuracy and weighted F1 score for a model on the given dataset.
+
+    Parameters:
+    - model (torch.nn.Module): The trained PyTorch model used for evaluation.
+    - data_loader (DataLoader): A PyTorch DataLoader providing batches of graph data.
+    - device (torch.device or str): The device (CPU or GPU) to perform computations on.
+    - noise_yLabel (bool or str): If False, uses true labels. If 'even' or 'prob',
+      uses noisy labels provided in the dataset accordingly.
+
+    Returns:
+    - tuple: A tuple containing:
+        - balanced_accuracy (float): The balanced accuracy score.
+        - f1 (float): The weighted F1 score.
+    """
     model_prediction = []
     true_label = []
 
@@ -28,7 +44,8 @@ def get_acc_metrics(model, data_loader, device):
             batch_sample=sample,
             model=model,
             device=device,
-            per_patient=False  # Whether to track patient-level predictions
+            per_patient=False,  # Whether to track patient-level predictions
+            noise_yLabel=noise_yLabel
         )
 
         _, value_pred = torch.max(output, dim=1)
@@ -40,7 +57,7 @@ def get_acc_metrics(model, data_loader, device):
                                                                            average='weighted')
 
 
-def move_to_device(data, device):
+def move_to_device(data: Union[torch.tensor, List], device: Union[torch.device, str]):
     """
     Moves the input data to the specified device (CPU or GPU).
 
@@ -59,7 +76,11 @@ def move_to_device(data, device):
         raise TypeError("Unsupported data type for moving to device.")
 
 
-def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per_patient: bool = False) -> Tuple[
+def prediction_step(batch_sample: List,
+                    model: torch.nn.Module,
+                    device: str,
+                    per_patient: bool = False,
+                    noise_yLabel: Union[bool, str] = False) -> Tuple[
     List, List, torch.Tensor, torch.Tensor, Optional[List]]:
     """
     Performs a prediction step using a given model on a batch of samples.
@@ -86,8 +107,19 @@ def prediction_step(batch_sample: List, model: torch.nn.Module, device: str, per
     output = torch.vstack(prediction)
 
     # Extract ground truth labels and move them to the same device as output
-    y = torch.tensor([sample.y for sample in batch_sample]).to(output.device)
+    if noise_yLabel == False:
+        y = torch.tensor([sample.y for sample in batch_sample]).to(output.device)
+    else:
+        if noise_yLabel != 'even' and noise_yLabel != 'prob':
+            raise ValueError(f"Invalid noise_yLabel: {noise_yLabel}. Must be 'even' or 'prob'.")
 
+        y = []
+        for sample in batch_sample:
+            if f'y_noise_{noise_yLabel}' in sample:
+                y.append(sample[f'y_noise_{noise_yLabel}'])
+            else:
+                y.append(sample[f'y'])
+        y = torch.tensor(y).long().to(output.device)
     # Retrieve sample IDs if per_patient is True
     if per_patient:
         try:

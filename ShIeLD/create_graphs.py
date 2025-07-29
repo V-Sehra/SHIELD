@@ -34,13 +34,16 @@ def main():
 
     parser.add_argument("-segmentation", "--segmentation", type=str, default='voronoi',
                         choices=['random', 'voronoi'])
+
+    parser.add_argument("-downSample", "--reduce_population", default=False)
+    parser.add_argument("-column_celltype_name", "--column_celltype_name", default='Class0')
+
     # Parse command-line arguments
     args = parser.parse_args()
     print(args)
 
     # Load dataset requirements from a pickle file
-    with open(args.requirements_file_path, 'rb') as file:
-        requirements = pickle.load(file)
+    requirements = pickle.load(open(args.requirements_file_path, 'rb'))
 
     input_test.test_all_keys_in_req(req_file=requirements)
     # Determine the correct fold column based on dataset type
@@ -67,6 +70,20 @@ def main():
         for anker_value in requirements['anker_value_all']:
             for fussy_limit in requirements['fussy_limit_all']:
                 repeat_counter = 0  # Track repeat count for unique graph file naming
+                # If downsampling is enabled, reduce the population of the sample
+                if args.reduce_population is not False:
+                    # Check if the column for cell type exists
+                    if args.column_celltype_name not in single_sample.columns:
+                        raise ValueError(f"Column '{args.column_celltype_name}' not found in the dataset.")
+                    # Ensure the downsample ratio is specified in the requirements
+                    if 'downSampeling' not in requirements:
+                        raise ValueError("Downsampling ratio 'downSampeling' not specified in requirements.")
+                    downsampleRatio = requirements['downSampeling']
+
+                    single_sample = data_utils.reducePopulation(df=single_sample,
+                                                                columnName=args.column_celltype_name,
+                                                                cellTypeName=args.reduce_population,
+                                                                downsampleRatio=downsampleRatio)
 
                 for augment_id in range(requirements['augmentation_number']):
 
@@ -111,7 +128,7 @@ def main():
 
                         # Create an array of Voronoi region indices
                         vornoi_id = np.arange(0, len(voroni_id_fussy))
-                        number_samples = len(voroni_id_fussy)
+
 
                     elif args.segmentation == 'random':
                         single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
@@ -127,49 +144,49 @@ def main():
                         # the function create_graph_and_save will then select the dataFrames form the list
                         single_sample = complete_sclised
                         vornoi_id = np.arange(0, len(single_sample))
-                        number_samples = len(single_sample)
+
                         voroni_id_fussy = None
 
-                for radius_distance in requirements['radius_distance_all']:
-                    save_path = Path(requirements['path_to_data_set'] /
-                                     f'anker_value_{anker_value}'.replace('.', '_') /
-                                     f"min_cells_{requirements['minimum_number_cells']}" /
-                                     f'fussy_limit_{fussy_limit}'.replace('.', '_') /
-                                     f'radius_{radius_distance}')
+                    for radius_distance in requirements['radius_distance_all']:
+                        save_path = Path(requirements['path_to_data_set'] /
+                                         f'anker_value_{anker_value}'.replace('.', '_') /
+                                         f"min_cells_{requirements['minimum_number_cells']}" /
+                                         f'fussy_limit_{fussy_limit}'.replace('.', '_') /
+                                         f'radius_{radius_distance}')
 
-                    save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
+                        save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
 
-                    # Ensure the directory exists
-                    save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
+                        # Ensure the directory exists
+                        save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
-                    # Print status updates
-                    print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
-                    print(anker_value, radius_distance, fussy_limit, sub_sample)
+                        # Print status updates
+                        print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
+                        print(anker_value, radius_distance, fussy_limit, sub_sample)
 
-                    # Use multiprocessing to create and save graphs in parallel
-                    pool = mp.Pool(mp.cpu_count() - 2)
-                    graphs = pool.map(
-                        functools.partial(
-                            data_utils.create_graph_and_save,
-                            whole_data=single_sample,
-                            save_path_folder=save_path_folder_graphs,
-                            radius_neibourhood=radius_distance,
-                            requiremets_dict=requirements,
-                            voronoi_list=voroni_id_fussy,
-                            sub_sample=sub_sample,
-                            repeat_id=repeat_counter,
-                            skip_existing=True,
-                            noisy_labeling=args.noisy_labeling,
-                            node_prob=args.node_prob,
-                            randomise_edges=args.randomise_edges,
-                            percent_number_cells=args.percent_number_cells,
-                            segmentation=args.segmentation
-                        ), vornoi_id
-                    )
-                    pool.close()
+                        # Use multiprocessing to create and save graphs in parallel
+                        pool = mp.Pool(mp.cpu_count() - 2)
+                        graphs = pool.map(
+                            functools.partial(
+                                data_utils.create_graph_and_save,
+                                whole_data=single_sample,
+                                save_path_folder=save_path_folder_graphs,
+                                radius_neibourhood=radius_distance,
+                                requiremets_dict=requirements,
+                                voronoi_list=voroni_id_fussy,
+                                sub_sample=sub_sample,
+                                repeat_id=repeat_counter,
+                                skip_existing=True,
+                                noisy_labeling=args.noisy_labeling,
+                                node_prob=args.node_prob,
+                                randomise_edges=args.randomise_edges,
+                                percent_number_cells=args.percent_number_cells,
+                                segmentation=args.segmentation
+                            ), vornoi_id
+                        )
+                        pool.close()
 
-                # Update repeat counter for unique graph IDs
-                repeat_counter += number_samples
+                        # Update repeat counter for unique graph IDs
+                        repeat_counter += 1
 
 
 # Ensure the script runs only when executed directly

@@ -5,6 +5,8 @@ from torch.nn import Linear, BatchNorm1d
 import torch.nn.functional as F
 from torch_geometric.data import Batch
 
+from typing import Union
+
 
 class ShIeLD(nn.Module):
     """
@@ -23,7 +25,8 @@ class ShIeLD(nn.Module):
 
     def __init__(self, num_of_feat: int, layer_1: int, dp: float,
                  layer_final: int = 2, edge_dim: int = 1, similarity_typ: str = 'euclide',
-                 self_att: bool = True, attr_bool: bool = True, norm_type: str = 'No_norm'):
+                 self_att: bool = True, attr_bool: bool = True, norm_type: str = 'No_norm',
+                 noisy_edge: Union[bool, str] = False):
         """
         Initializes the ShIeLD model.
 
@@ -39,6 +42,13 @@ class ShIeLD(nn.Module):
             norm_type (str): Type of normalization to apply after the GAT layer (default: 'No_norm').
         """
         super(ShIeLD, self).__init__()
+
+        # if needed the edges can be varied by the selection of edge_type
+        self.noisy_edge = noisy_edge
+        if self.noisy_edge != False:
+            if self.noisy_edge != 'sameCon' and self.noisy_edge != 'percent':
+                raise ValueError(f'Noisy edge type {self.noisy_edge} not supported. '
+                                 f'Please use False, "sameCon" or "percent".')
 
         # Single GAT layer with optional self-loops
         self.conv1 = GATv2Conv(num_of_feat, layer_1, edge_dim=edge_dim,
@@ -107,7 +117,11 @@ class ShIeLD(nn.Module):
             else:
                 x = data_list[idx].x.float()  # Convert node features to float
 
-            edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+            if self.noisy_edge == False:
+                edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+            else:
+                edge_index = data_list[idx][
+                    f'edge_index_plate_{self.noisy_edge}'].long()
 
             # Apply GAT convolution, with or without edge attributes
             if self.attr_bool:

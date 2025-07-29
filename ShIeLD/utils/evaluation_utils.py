@@ -117,8 +117,9 @@ def get_cell_to_cell_interaction_dict(
     # Extract cell type information from requirements_dict
     if 'combine_cellPhenotypes' in requirements_dict.keys():
         if requirements_dict['combine_cellPhenotypes'] is not None:
-            cell_types = data_utils.combine_cell_types(np.array(requirements_dict['cell_type_names']),
-                                                       requirements_dict['combine_cellPhenotypes'])
+            cell_types = data_utils.combine_cell_types(original_array=np.array(requirements_dict['cell_type_names']),
+                                                       string_list=requirements_dict['combine_cellPhenotypes'],
+                                                       retrun_adj_matrix=False)
             shorten_celltypeNames = True
         else:
             print(f'cannot use {requirements_dict["combine_cellPhenotypes"]} to combine the cell types will use all')
@@ -159,15 +160,15 @@ def get_cell_to_cell_interaction_dict(
         node_level_attention_scores = [att_val[1].cpu().detach().numpy() for att_val in attention]
 
         # Extract cell type information for the given sample
-        cell_type_names = [
-            data_utils.combine_cell_types(
-                sample.eval[:, cell_type_eval_index],
-                requirements_dict['combine_cellPhenotypes']
-            )
-            if shorten_celltypeNames
-            else sample.eval[:, cell_type_eval_index]
-            for sample in data_sample
-        ]
+        if shorten_celltypeNames:
+            cell_type_names = []
+            for sample in data_sample:
+                cell_type_names.append(data_utils.combine_cell_types(
+                    original_array=sample.eval[:, cell_type_eval_index],
+                    string_list=requirements_dict['combine_cellPhenotypes'],
+                    retrun_adj_matrix=True)[1])
+        else:
+            cell_type_names = [sample.eval[:, cell_type_eval_index] for sample in data_sample]
 
         # Compute phenotype-to-phenotype attention scores
         phenotype_attention_matrix = get_p2p_att_score(
@@ -475,6 +476,7 @@ def plot_cell_cell_interaction_boxplots(
         layout='constrained'
     )
 
+    p_val_scores = []
     # Iterate over subplots
     for row in range(2):
         for idx in range(int(num_cells / 2)):
@@ -513,6 +515,7 @@ def plot_cell_cell_interaction_boxplots(
 
                 # Conduct Mann-Whitney U test
                 _, p = mannwhitneyu(data_1, data_2, alternative='less')
+                p_val_scores.append((src_cell, dst_name, np.log10(max(p, 1e-300))))
 
                 # Mark significance on the plot
                 if significance_2 < p < significance_1:
@@ -544,8 +547,14 @@ def plot_cell_cell_interaction_boxplots(
             if log_y:
                 axs[row, idx].set_yscale('log')
 
+    df = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'log10(p)'])
+
+    # Pivot to matrix format
+    log_p_matrix = df.pivot(index='src', columns='dst', values='log10(p)')
+    print(log_p_matrix)
     # Save figure if a path is provided
     if save_path is not None:
         if log_y:
             save_path = save_path.parent / (save_path.stem + '_log' + save_path.suffix)
         plt.savefig(save_path, dpi=150)
+        log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_log_p_values.csv'))
