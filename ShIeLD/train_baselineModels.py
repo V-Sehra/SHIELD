@@ -138,11 +138,11 @@ for repeat in range(requirements['augmentation_number']):
 
     model.eval()
     print('start validation')
-    train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
+    train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
         model=model, data_loader=data_loader_train, device=device
     )
 
-    val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
+    val_bal_acc, val_f1_score, test_cm = model_utils.get_acc_metrics(
         model=model, data_loader=data_loader_test, device=device
     )
 
@@ -150,7 +150,9 @@ for repeat in range(requirements['augmentation_number']):
     print(f"Val Balanced Accuracy: {val_bal_acc}, Val F1 Score: {val_f1_score}")
     pickle.dump({'train_bal_acc': train_bal_acc,
                  'train_f1_score': train_f1_score,
+                 'train_cm': train_cm,
                  'val_bal_acc': val_bal_acc,
-                 'val_f1_score': val_f1_score},
+                 'val_f1_score': val_f1_score,
+                 'val_cm': test_cm, },
                 open(requirements['path_training_results'] / f"repeat_{repeat}_results.pkl", 'wb'))
     torch.save(model.state_dict(), requirements['path_to_model'] / f"model_repeat_{repeat}.pt")

@@ -16,7 +16,7 @@ from torch_geometric.nn.norm import BatchNorm
 
 from typing import List, Tuple, Optional, Union
 from torch.utils.data import DataLoader
-from sklearn.metrics import balanced_accuracy_score, f1_score
+from sklearn.metrics import balanced_accuracy_score, f1_score, confusion_matrix
 
 
 def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
@@ -54,7 +54,8 @@ def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
         true_label.extend(y.cpu())
 
     return balanced_accuracy_score(true_label, model_prediction), f1_score(true_label, model_prediction,
-                                                                           average='weighted')
+                                                                           average='weighted'), confusion_matrix(
+        y_true=true_label, y_pred=model_prediction, normalize='true')
 
 
 def move_to_device(data: Union[torch.tensor, List], device: Union[torch.device, str]):
