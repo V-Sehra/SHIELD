@@ -122,7 +122,6 @@ class ShIeLD(nn.Module):
             else:
                 edge_index = data_list[idx][
                     f'edge_index_plate_{self.noisy_edge}'].long()
-
             # Apply GAT convolution, with or without edge attributes
             if self.attr_bool:
                 edge_attr = data_list[idx].edge_att.float()

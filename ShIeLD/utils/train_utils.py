@@ -123,6 +123,9 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict,
                                         if origin in file_name])
             class_weights.append(1 - (number_tissue_graphs / len(all_train_file_names)))
 
+        class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
+
+
     else:
         print('initializing loss with noise labels: ', noise_yLabel)
 
@@ -142,10 +145,11 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict,
                 print('skipping file: ', files, ' due to error in loading or missing label')
 
         class_weights = 1 - (class_weights.T / sum(class_weights))
-        class_weights = class_weights.flatten()
+        class_weights = torch.tensor(class_weights.flatten(), dtype=torch.float32).to(device)
+
         print('done!')
 
-    return nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device), dtype=torch.float32).to(device)
+    return nn.CrossEntropyLoss(weight=class_weights).to(device)
 
 
 def train_loop_shield(
