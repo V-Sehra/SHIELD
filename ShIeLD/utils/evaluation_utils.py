@@ -376,6 +376,48 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
     return raw_att_p2p, normalisation_factor_edge_number, normalised_p2p
 
 
+def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: list,
+                            title='Mean Confusion Matrix ± STD (%)'):
+    """
+    Plots a confusion matrix with values shown as mean ± std in each cell.
+
+    Parameters:
+    - mean_cm (ndarray): Mean confusion matrix (in %), shape (C, C)
+    - std_cm (ndarray): Standard deviation matrix, shape (C, C)
+    - class_names (list of str): Names of the classes
+    - title (str): Plot title
+    """
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    cmap = plt.cm.Blues
+    im = ax.imshow(mean_cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=1)
+
+    # Add colorbar
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.set_ylabel('%', rotation=270, labelpad=15)
+
+    # Set ticks and labels
+    ax.set(
+        xticks=np.arange(len(class_names)),
+        yticks=np.arange(len(class_names)),
+        xticklabels=class_names,
+        yticklabels=class_names,
+        ylabel='True label',
+        xlabel='Predicted label',
+        title=title
+    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+
+    # Annotate each cell with "mean±std"
+    for i in range(mean_cm.shape[0]):
+        for j in range(mean_cm.shape[1]):
+            cell_text = f"{mean_cm[i, j]:.2f}±{std_cm[i, j]:.2f}"
+            ax.text(j, i, cell_text, ha='center', va='center', color='black', fontsize=15)
+
+    plt.tight_layout()
+    plt.show()
+
+
 def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, save_path: Optional[PosixPath] = None):
     """
     Creates and displays a boxplot to visualize the influence of a specific hyperparameter
