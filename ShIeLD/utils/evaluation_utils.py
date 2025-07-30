@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from pathlib import PosixPath
 from tqdm import tqdm
 import pickle
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 from itertools import compress
 from scipy.stats import mannwhitneyu
 
@@ -77,6 +77,7 @@ def get_cell_to_cell_interaction_dict(
         device: str,
         save_dict_path: Optional[PosixPath] = None,
         column_celltype_name: str = 'CellType',
+        edge_noise: Union[bool, str] = False,
 ) -> Dict:
     """
     Computes cell-to-cell interaction metrics from a trained model's predictions and attention scores.
@@ -89,6 +90,9 @@ def get_cell_to_cell_interaction_dict(
     - device: The computation device (e.g., "cpu" or "cuda").
     - save_dict_path (Optional[PosixPath]): Path to save/load the output dictionary. If None, results are not saved.
     - column_celltype_name (str): which column in the evaluation data contains cell type information.
+
+    -edge_noise (bool,str): If an alternative edge index is used this parameter describes it
+
     Returns:
     - dict: A dictionary containing:
         - 'fals_pred': Boolean array indicating incorrect predictions.
@@ -175,7 +179,8 @@ def get_cell_to_cell_interaction_dict(
             sample=data_sample,
             cell_phenotypes_sample=cell_type_names,
             all_phenotypes=cell_types,
-            node_attention_scores=node_level_attention_scores
+            node_attention_scores=node_level_attention_scores,
+            edge_noise=edge_noise
         )
 
         # Store phenotype attention metrics
@@ -322,7 +327,7 @@ def get_top_interaction_per_celltype(interaction_limit: int,
 
 
 def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenotypes: np.array,
-                      node_attention_scores: list) -> Tuple[list, list, list]:
+                      node_attention_scores: list, edge_noise: Union[bool, str]) -> Tuple[list, list, list]:
     """
     This function calculates the attention score for each cell phenotype to all other phenotypes.
     It uses the end attention score p2p (phenotype to phenotype).
@@ -333,6 +338,7 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
     cell_phenotypes_sample (np.array): An array of cell phenotype names for each sample.
     all_phenotypes (np.array): An array of all phenotype names.
     node_attention_scores (list): A list of attention scores for each node.
+    edge_noise (bool,str): If an alternative edge index is used this parameter describes it
 
     Returns:
     list: A list of raw attention scores for each phenotype to all other phenotypes.
@@ -344,10 +350,15 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
     normalisation_factor_edge_number = []
     normalised_p2p = []
 
+    if edge_noise is False:
+        edge_index_name = 'edge_index_plate'
+    else:
+        edge_index_name = f'edge_index_plate_{edge_noise}'
+
     # Find the cell type (phenotype) for each cell/node
-    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[0].cpu()] for sample_idx in
+    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][0].cpu()] for sample_idx in
                 range(len(sample))]
-    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx].edge_index_plate[1].cpu()] for sample_idx in
+    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][1].cpu()] for sample_idx in
                 range(len(sample))]
 
     for sample_idx in range(len(scr_node)):

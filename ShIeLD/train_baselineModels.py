@@ -54,7 +54,6 @@ best_model_specs = {'number_of_anker_cells': 500,
                     'radius_neibourhood': 530,
                     'fussy_limit': 0.8,
                     'fussy_reference_beak': 'True'}
-# Change input_dim to 23 ; currently baselining with falty data
 
 model_specs = {'layer_1': 23,
                'input_layer': 23,
@@ -106,8 +105,6 @@ loss_fkt = train_utils.initiaize_loss(
     device=device,
     noise_yLabel=args.noise_yLabel
 )
-# for quick debugging loading
-# loss_fkt = torch.nn.CrossEntropyLoss(weight=torch.tensor([0.60, 0.6, 0.6], dtype=torch.float32).to(device)).to(device)
 requirements['path_to_model'].mkdir(parents=True, exist_ok=True)
 requirements['path_training_results'].mkdir(parents=True, exist_ok=True)
 
