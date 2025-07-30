@@ -432,7 +432,8 @@ def plot_cell_cell_interaction_boxplots(
         line_width: int = 5,
         costum_fig_size: Optional[Tuple[int, int]] = None,
         costum_star_shift: Optional[float] = None,
-        Nan_to_zero: bool = False
+        Nan_to_zero: bool = False,
+        stars: bool = False
 ):
     """
     Plots boxplots of cell-cell interactions and performs statistical significance tests.
@@ -445,6 +446,7 @@ def plot_cell_cell_interaction_boxplots(
         top_connections (dict): Dictionary with cell types as keys and lists of (destination cell type, interaction values) as values.
         save_path (Optional[PosixPath]): Path to save the plot. If None, the plot is not saved.
         Nan_to_zero (bool): If True, NaN values in interaction data are replaced with zeros.Otherwise removed
+        stars (bool): If true marks the significance of the interaction with stars. else the log10Value
 
     Returns:
         None
@@ -518,13 +520,18 @@ def plot_cell_cell_interaction_boxplots(
                 p_val_scores.append((src_cell, dst_name, np.log10(max(p, 1e-300))))
 
                 # Mark significance on the plot
-                if significance_2 < p < significance_1:
-                    axs[row, idx].scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
-                elif p < significance_2:
-                    axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
-                                          s=star_size)
-                    axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
-                                          s=star_size)
+                if stars:
+                    if significance_2 < p < significance_1:
+                        axs[row, idx].scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
+                    elif p < significance_2:
+                        axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
+                                              s=star_size)
+                        axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
+                                              s=star_size)
+                else:
+                    sig_text = f"{np.log10(max(p, 1e-300)):.2f}"
+                    axs[row, idx].text(dst_cell_idx + 1, 1.01, sig_text,
+                                       color='black', fontsize=30, ha='center')
 
             if values:
                 # Ensure x-ticks match available names
@@ -551,10 +558,54 @@ def plot_cell_cell_interaction_boxplots(
 
     # Pivot to matrix format
     log_p_matrix = df.pivot(index='src', columns='dst', values='log10(p)')
-    print(log_p_matrix)
+
     # Save figure if a path is provided
     if save_path is not None:
         if log_y:
             save_path = save_path.parent / (save_path.stem + '_log' + save_path.suffix)
-        plt.savefig(save_path, dpi=150)
-        log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_log_p_values.csv'))
+            log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_log_p_values.csv'))
+
+        else:
+            log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_p_values.csv'))
+        plt.savefig(save_path, dpi=250)
+
+
+def plot_confusion_with_std(mean_cm, std_cm, class_names, title='Mean Confusion Matrix ± STD (%)'):
+    """
+    Plots a confusion matrix with values shown as mean ± std in each cell.
+
+    Parameters:
+    - mean_cm (ndarray): Mean confusion matrix (in %), shape (C, C)
+    - std_cm (ndarray): Standard deviation matrix, shape (C, C)
+    - class_names (list of str): Names of the classes
+    - title (str): Plot title
+    """
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    cmap = plt.cm.Blues
+    im = ax.imshow(mean_cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=1)
+
+    # Add colorbar
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.set_ylabel('%', rotation=270, labelpad=15)
+
+    # Set ticks and labels
+    ax.set(
+        xticks=np.arange(len(class_names)),
+        yticks=np.arange(len(class_names)),
+        xticklabels=class_names,
+        yticklabels=class_names,
+        ylabel='True label',
+        xlabel='Predicted label',
+        title=title
+    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+
+    # Annotate each cell with "mean±std"
+    for i in range(mean_cm.shape[0]):
+        for j in range(mean_cm.shape[1]):
+            cell_text = f"{mean_cm[i, j]:.2f}±{std_cm[i, j]:.2f}"
+            ax.text(j, i, cell_text, ha='center', va='center', color='black', fontsize=15)
+
+    plt.tight_layout()
+    plt.show()

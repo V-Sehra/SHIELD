@@ -18,6 +18,12 @@ parser.add_argument("-req_path", "--requirements_file_path",
 
 parser.add_argument("-aug", "--augmentation",
                     default='noisyLabel_prob')
+parser.add_argument("-noisy_edge", "--noisy_edge",
+                    default=False)
+parser.add_argument("-noise_yLabel", "--noise_yLabel",
+                    default=False)
+parser.add_argument("-c", "--comment",
+                    default=False)
 
 args = parser.parse_args()
 
@@ -26,15 +32,11 @@ if args.augmentation == 'noisyLabel_prob':
 
 elif args.augmentation == 'noisyLabel_even':
     args.noise_yLabel = 'even'
-else:
-    args.noise_yLabel = False
 
 if args.augmentation == 'edge_augmentation_percent':
     args.noisy_edge = 'percent'
 elif args.augmentation == 'edge_augmentation_sameCon':
     args.noisy_edge = 'sameCon'
-else:
-    args.noisy_edge = False
 
 if args.requirements_file_path is None:
     args.requirements_file_path = Path.cwd() / 'rebuttle' / f'req_HCC_{args.augmentation}.pt'
@@ -42,6 +44,11 @@ requirements = pickle.load(open(args.requirements_file_path, 'rb'))
 
 # need to overwrite the batch size:
 requirements['batch_size'] = 32
+
+if args.comment is not False:
+    requirements['path_training_results'] = Path(str(requirements['path_training_results']) + f'{args.comment}')
+    requirements['path_to_model'] = Path(str(requirements['path_to_model']) + f'{args.comment}')
+
 print(args)
 best_model_specs = {'number_of_anker_cells': 500,
                     'radius_neibourhood': 530,
@@ -140,6 +147,7 @@ for repeat in range(requirements['augmentation_number']):
     )
 
     print(f"Train Balanced Accuracy: {train_bal_acc}, Train F1 Score: {train_f1_score}")
+    print(f"Val Balanced Accuracy: {val_bal_acc}, Val F1 Score: {val_f1_score}")
     pickle.dump({'train_bal_acc': train_bal_acc,
                  'train_f1_score': train_f1_score,
                  'val_bal_acc': val_bal_acc,
