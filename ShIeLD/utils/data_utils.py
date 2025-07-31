@@ -51,7 +51,6 @@ def get_random_edges(original_edge_mat: np.ndarray, number_nodes: int, percent_n
         dst_same_connect = np.random.choice(number_nodes, size=len(scr_same_connect))
         edge_mat_same_connectivity = np.array([scr_same_connect, dst_same_connect])
     else:
-        print('Warning: The provided edge matrix is empty. Returning empty edge matrices.')
         edge_mat_same_connectivity = np.array([[], []])
 
     # Generate a synthetic edge matrix with random edges based on percentage of nodes

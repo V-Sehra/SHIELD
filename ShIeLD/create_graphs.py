@@ -170,19 +170,23 @@ def main():
 
 
                 elif args.segmentation == 'random':
-                    single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
-                    samples_per_tissue = anker_value // len(requirements['label_dict'].keys())
-                    complete_sclised = []
 
-                    for label_dict_key in requirements['label_dict'].keys():
-                        complete_sclised.extend(np.array_split(
-                            single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
-                                frac=1),
-                            samples_per_tissue))
-                    # need to overwrite the orginal sample to a list of subsamples
+                    if requirements['multiple_labels_per_subSample']:
+                        samples_per_tissue = anker_value // len(requirements['label_dict'].keys())
+                        sample_collection = []
+                        for label_dict_key in requirements['label_dict'].keys():
+                            sample_collection.extend(np.array_split(
+                                single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
+                                    frac=1),
+                                samples_per_tissue))
+
+                    else:
+
+                        n_chunks = int(int(len(single_sample) * anker_value))
+                        sample_collection = np.array_split(single_sample.sample(frac=1, random_state=42), n_chunks)
+
                     # the function create_graph_and_save will then select the dataFrames form the list
-                    single_sample = complete_sclised
-                    vornoi_id = np.arange(0, len(single_sample))
+                    subsection_id = np.arange(0, len(single_sample))
 
                     voroni_id_fussy = None
 
@@ -207,7 +211,7 @@ def main():
                         graphs = pool.map(
                             functools.partial(
                                 data_utils.create_graph_and_save,
-                                whole_data=single_sample,
+                                whole_data=sample_collection,
                                 save_path_folder=save_path_folder_graphs,
                                 radius_neibourhood=radius_distance,
                                 requiremets_dict=requirements,
@@ -220,7 +224,7 @@ def main():
                                 randomise_edges=args.randomise_edges,
                                 percent_number_cells=args.percent_number_cells,
                                 segmentation=args.segmentation
-                            ), vornoi_id
+                            ), subsection_id
                         )
                         pool.close()
 
