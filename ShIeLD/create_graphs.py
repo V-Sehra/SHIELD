@@ -190,7 +190,7 @@ def main():
                         save_path = Path(requirements['path_to_data_set'] /
                                          f'anker_value_{anker_value}'.replace('.', '_') /
                                          f"min_cells_{requirements['minimum_number_cells']}" /
-                                         'random_sampeling' /
+                                         'random_sampling' /
                                          f'radius_{radius_distance}')
 
                         save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'

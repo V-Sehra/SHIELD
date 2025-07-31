@@ -50,6 +50,18 @@ if args.comment is not False:
     requirements['path_to_model'] = Path(str(requirements['path_to_model']) + f'{args.comment}')
 
 print(args)
+
+if 'sampleing' in requirements.keys():
+    if requirements['sampleing'] == 'random':
+        fussy_vector = ['randomSampling']
+        fussy_folder_name = 'random_sampling'
+    elif requirements['sampleing'] == 'voronoi':
+        fussy_folder_name = True
+        fussy_vector = ['fussy_limit_all']
+else:
+    fussy_vector = ['fussy_limit_all']
+    fussy_folder_name = True
+
 best_model_specs = {'number_of_anker_cells': 500,
                     'radius_neibourhood': 530,
                     'fussy_limit': 0.8,
@@ -70,11 +82,25 @@ fussy_limit = best_model_specs['fussy_limit']
 
 minimum_number_cells = 25
 
-path_to_graphs = Path(requirements['path_to_data_set'] /
-                      f'anker_value_{anker_number}'.replace('.', '_') /
-                      f"min_cells_{requirements['minimum_number_cells']}" /
-                      f"fussy_limit_{fussy_limit}".replace('.', '_') /
-                      f'radius_{radius_distance}')
+if 'sampleing' in requirements.keys():
+    if requirements['sampleing'] == 'random':
+        path_to_graphs = Path(requirements['path_to_data_set'] /
+                              f'anker_value_{anker_number}'.replace('.', '_') /
+                              f"min_cells_{requirements['minimum_number_cells']}" /
+                              'random_sampling' /
+                              f'radius_{radius_distance}')
+    elif requirements['sampleing'] == 'voronoi':
+        path_to_graphs = Path(requirements['path_to_data_set'] /
+                              f'anker_value_{anker_number}'.replace('.', '_') /
+                              f"min_cells_{requirements['minimum_number_cells']}" /
+                              f"fussy_limit_{fussy_limit}".replace('.', '_') /
+                              f'radius_{radius_distance}')
+else:
+    path_to_graphs = Path(requirements['path_to_data_set'] /
+                          f'anker_value_{anker_number}'.replace('.', '_') /
+                          f"min_cells_{requirements['minimum_number_cells']}" /
+                          f"fussy_limit_{fussy_limit}".replace('.', '_') /
+                          f'radius_{radius_distance}')
 
 data_loader_train = DataListLoader(
     graph_dataset(
