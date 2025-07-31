@@ -36,6 +36,10 @@ def main():
     parser.add_argument("-c", "--comment", type=str, default='random_anker')
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
+    parser.add_argument("-noisy_edge", "--noisy_edge",
+                        default=False)
+    parser.add_argument("-noise_yLabel", "--noise_yLabel",
+                        default=False)
 
     args = parser.parse_args()
 
@@ -50,6 +54,18 @@ def main():
     else:
         patience = None
 
+    # if there where no voronois constructed the fussylimit makes no sence
+    if 'sampleing' in requirements.keys():
+        if requirements['sampleing'] == 'random':
+            fussy_vector = ['randomSampling']
+            fussy_folder_name = 'random_sampling'
+        elif requirements['sampleing'] == 'voronoi':
+            fussy_folder_name = True
+            fussy_vector = ['fussy_limit_all']
+    else:
+        fussy_vector = ['fussy_limit_all']
+        fussy_folder_name = True
+
     split_number = int(args.split_number)
 
     training_results_csv, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements)
@@ -58,14 +74,21 @@ def main():
                     'droupout_rate', 'comment', 'comment_norm', 'model_no', 'split_number']
 
     for radius_distance in requirements['radius_distance_all']:
-        for fussy_limit in requirements['fussy_limit_all']:
+        for fussy_limit in fussy_vector:
             for anker_number in requirements['anker_value_all']:
 
-                path_to_graphs = Path(requirements['path_to_data_set'] /
-                                      f'anker_value_{anker_number}'.replace('.', '_') /
-                                      f"min_cells_{requirements['minimum_number_cells']}" /
-                                      f"fussy_limit_{fussy_limit}".replace('.', '_') /
-                                      f'radius_{radius_distance}')
+                if fussy_folder_name is True:
+                    path_to_graphs = Path(requirements['path_to_data_set'] /
+                                          f'anker_value_{anker_number}'.replace('.', '_') /
+                                          f"min_cells_{requirements['minimum_number_cells']}" /
+                                          f"fussy_limit_{fussy_limit}".replace('.', '_') /
+                                          f'radius_{radius_distance}')
+                else:
+                    path_to_graphs = Path(requirements['path_to_data_set'] /
+                                          f'anker_value_{anker_number}'.replace('.', '_') /
+                                          f"min_cells_{requirements['minimum_number_cells']}" /
+                                          f'{fussy_folder_name}' /
+                                          f'radius_{radius_distance}')
 
                 torch.cuda.empty_cache()
 
@@ -113,18 +136,22 @@ def main():
                                   requirements['comment_norm'], num, split_number]]
                         ).all(axis=1).any():
 
+                            loss_init_path = path_to_graphs / 'train' / 'graphs' if args.noise_yLabel is not False else path_to_graphs / f'train_set_validation_split_{split_number}_file_names.pkl'
                             loss_fkt = train_utils.initiaize_loss(
-                                path=Path(
-                                    Path(path_to_graphs / f'train_set_validation_split_{split_number}_file_names.pkl')),
+                                path=Path(loss_init_path),
                                 tissue_dict=requirements['label_dict'],
-                                device=device
+                                device=device,
+                                noise_yLabel=args.noise_yLabel
                             )
 
                             model = ShIeLD(
                                 num_of_feat=int(requirements['input_layer']),
-                                layer_1=requirements['layer_1'], dp=dp, layer_final=requirements['output_layer'],
+                                layer_1=requirements['layer_1'],
+                                layer_final=requirements['output_layer'],
+                                dp=dp,
                                 self_att=False, attr_bool=requirements['attr_bool'],
-                                norm_type=requirements['comment_norm']
+                                norm_type=requirements['comment_norm'],
+                                noisy_edge=args.noisy_edge
                             ).to(device)
 
                             model.train()
@@ -136,18 +163,19 @@ def main():
                                 loss_fkt=loss_fkt,
                                 attr_bool=requirements['attr_bool'],
                                 device=device,
-                                patience=patience
+                                patience=patience,
+                                noise_yLabel=args.noise_yLabel
                             )
 
                             model.eval()
-                            train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
+                            print('start validation')
+                            train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
                                 model=model, data_loader=data_loader_train, device=device
                             )
-                            print('start validation')
-                            val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
+
+                            val_bal_acc, val_f1_score, test_cm = model_utils.get_acc_metrics(
                                 model=model, data_loader=data_loader_validation, device=device
                             )
-
                             model_csv = pd.DataFrame([[anker_number, radius_distance, fussy_limit,
                                                        dp, args.comment, requirements['comment_norm'], num,
                                                        train_bal_acc, train_f1_score, val_bal_acc, val_f1_score,
