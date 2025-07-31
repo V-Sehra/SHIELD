@@ -26,7 +26,7 @@ def test_all_keys_in_req(req_file):
                          'cell_type_names', 'label_dict',
                          'eval_columns', 'col_of_interest',
                          'col_of_variables', 'minimum_number_cells',
-                         'radius_distance_all', 'fussy_limit_all',
+                         'radius_distance_all',
                          'anker_value_all', 'filter_cells',
                          'anker_cell_selction_type', 'multiple_labels_per_subSample',
                          'batch_size', 'learning_rate',
@@ -77,7 +77,7 @@ def test_all_keys_in_req(req_file):
             raise AssertionError(f"Item {list_str} is not a list of strings.")
 
     # list of floats or ints:
-    all_lists_numbers = ['radius_distance_all', 'fussy_limit_all',
+    all_lists_numbers = ['radius_distance_all',
                          'anker_value_all', 'droupout_rate',
                          'number_validation_splits', 'test_set_fold_number']
 
@@ -122,7 +122,7 @@ def test_best_config(config_file):
             raise TypeError("config_file should be a string or Path object.")
 
     required_keys = set(['layer_one', 'input_dim', 'droupout_rate', 'final_layer',
-                         'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit', 'version'])
+                         'attr_bool', 'anker_value', 'radius_distance', 'version'])
 
     key_set = set(best_config_dict.keys())
 
@@ -139,7 +139,7 @@ def test_best_config(config_file):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
-    all_floats = ['droupout_rate', 'fussy_limit']
+    all_floats = ['droupout_rate']
     for item in all_floats:
         if not isinstance(best_config_dict[item], (float, np.floating)):
             raise AssertionError(f"Item {item} is not a float.")
