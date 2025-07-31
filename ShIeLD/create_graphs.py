@@ -186,7 +186,7 @@ def main():
                         sample_collection = np.array_split(single_sample.sample(frac=1, random_state=42), n_chunks)
 
                     # the function create_graph_and_save will then select the dataFrames form the list
-                    subsection_id = np.arange(0, len(single_sample))
+                    subsection_id = np.arange(0, len(sample_collection))
 
                     voroni_id_fussy = None
 
