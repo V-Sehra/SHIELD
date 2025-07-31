@@ -473,8 +473,6 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, s
 
 
 def plot_cell_cell_interaction_boxplots(
-        significance_1: float,
-        significance_2: float,
         interaction_limit: int,
         all_interaction_mean_df: pd.DataFrame,
         top_connections: dict,
@@ -486,7 +484,9 @@ def plot_cell_cell_interaction_boxplots(
         costum_fig_size: Optional[Tuple[int, int]] = None,
         costum_star_shift: Optional[float] = None,
         Nan_to_zero: bool = False,
-        stars: bool = False
+        stars: bool = False,
+        significance_1: Optional[float] = None,
+        significance_2: Optional[float] = None,
 ):
     """
     Plots boxplots of cell-cell interactions and performs statistical significance tests.
@@ -504,7 +504,10 @@ def plot_cell_cell_interaction_boxplots(
     Returns:
         None
     """
-
+    if stars:
+        if significance_1 is None or significance_2 is None:
+            raise ValueError("significance_1 and significance_2 must be provided when stars=True.")
+    
     # Set plot font size
     plt.rcParams.update({'font.size': 50})
 
