@@ -68,28 +68,29 @@ def main():
         single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
 
         for anker_value in requirements['anker_value_all']:
-            for fussy_limit in requirements['fussy_limit_all']:
-                repeat_counter = 0  # Track repeat count for unique graph file naming
-                # If downsampling is enabled, reduce the population of the sample
-                if args.reduce_population is not False:
-                    # Check if the column for cell type exists
-                    if args.column_celltype_name not in single_sample.columns:
-                        raise ValueError(f"Column '{args.column_celltype_name}' not found in the dataset.")
-                    # Ensure the downsample ratio is specified in the requirements
-                    if 'downSampeling' not in requirements:
-                        raise ValueError("Downsampling ratio 'downSampeling' not specified in requirements.")
-                    downsampleRatio = requirements['downSampeling']
 
-                    single_sample = data_utils.reducePopulation(df=single_sample,
-                                                                columnName=args.column_celltype_name,
-                                                                cellTypeName=args.reduce_population,
-                                                                downsampleRatio=downsampleRatio)
+            # If downsampling is enabled, reduce the population of the sample
+            if args.reduce_population is not False:
+                # Check if the column for cell type exists
+                if args.column_celltype_name not in single_sample.columns:
+                    raise ValueError(f"Column '{args.column_celltype_name}' not found in the dataset.")
+                # Ensure the downsample ratio is specified in the requirements
+                if 'downSampeling' not in requirements:
+                    raise ValueError("Downsampling ratio 'downSampeling' not specified in requirements.")
+                downsampleRatio = requirements['downSampeling']
 
-                for augment_id in range(requirements['augmentation_number']):
+                single_sample = data_utils.reducePopulation(df=single_sample,
+                                                            columnName=args.column_celltype_name,
+                                                            cellTypeName=args.reduce_population,
+                                                            downsampleRatio=downsampleRatio)
 
-                    # If one want to baseline the method selection from the Voronoi to random sampleing
-                    # change the segmentation to random
-                    if args.segmentation == 'voronoi':
+            for augment_id in range(requirements['augmentation_number']):
+
+                # If one want to baseline the method selection from the Voronoi to random sampleing
+                # change the segmentation to random
+                if args.segmentation == 'voronoi':
+                    for fussy_limit in requirements['fussy_limit_all']:
+
                         # Randomly select anchor cells based on either the percentage or absulut value
                         if requirements['anker_cell_selction_type'] == '%':
                             anchors = single_sample.sample(n=int(len(single_sample) * anker_value))
@@ -129,29 +130,67 @@ def main():
                         # Create an array of Voronoi region indices
                         vornoi_id = np.arange(0, len(voroni_id_fussy))
 
+                        for radius_distance in requirements['radius_distance_all']:
+                            save_path = Path(requirements['path_to_data_set'] /
+                                             f'anker_value_{anker_value}'.replace('.', '_') /
+                                             f"min_cells_{requirements['minimum_number_cells']}" /
+                                             f'fussy_limit_{fussy_limit}'.replace('.', '_') /
+                                             f'radius_{radius_distance}')
 
-                    elif args.segmentation == 'random':
-                        single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
-                        samples_per_tissue = anker_value // len(requirements['label_dict'].keys())
-                        complete_sclised = []
+                            save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
 
-                        for label_dict_key in requirements['label_dict'].keys():
-                            complete_sclised.extend(np.array_split(
-                                single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
-                                    frac=1),
-                                samples_per_tissue))
-                        # need to overwrite the orginal sample to a list of subsamples
-                        # the function create_graph_and_save will then select the dataFrames form the list
-                        single_sample = complete_sclised
-                        vornoi_id = np.arange(0, len(single_sample))
+                            # Ensure the directory exists
+                            save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
-                        voroni_id_fussy = None
+                            # Print status updates
+                            print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
+                            print(anker_value, radius_distance, fussy_limit, sub_sample)
+
+                            # Use multiprocessing to create and save graphs in parallel
+                            pool = mp.Pool(mp.cpu_count() - 2)
+                            graphs = pool.map(
+                                functools.partial(
+                                    data_utils.create_graph_and_save,
+                                    whole_data=single_sample,
+                                    save_path_folder=save_path_folder_graphs,
+                                    radius_neibourhood=radius_distance,
+                                    requiremets_dict=requirements,
+                                    voronoi_list=voroni_id_fussy,
+                                    sub_sample=sub_sample,
+                                    repeat_id=augment_id,
+                                    skip_existing=True,
+                                    noisy_labeling=args.noisy_labeling,
+                                    node_prob=args.node_prob,
+                                    randomise_edges=args.randomise_edges,
+                                    percent_number_cells=args.percent_number_cells,
+                                    segmentation=args.segmentation
+                                ), vornoi_id
+                            )
+                            pool.close()
+
+
+                elif args.segmentation == 'random':
+                    single_sample = data_sample[data_sample[requirements['measument_sample_name']] == sub_sample]
+                    samples_per_tissue = anker_value // len(requirements['label_dict'].keys())
+                    complete_sclised = []
+
+                    for label_dict_key in requirements['label_dict'].keys():
+                        complete_sclised.extend(np.array_split(
+                            single_sample[single_sample[requirements['label_column']] == label_dict_key].sample(
+                                frac=1),
+                            samples_per_tissue))
+                    # need to overwrite the orginal sample to a list of subsamples
+                    # the function create_graph_and_save will then select the dataFrames form the list
+                    single_sample = complete_sclised
+                    vornoi_id = np.arange(0, len(single_sample))
+
+                    voroni_id_fussy = None
 
                     for radius_distance in requirements['radius_distance_all']:
                         save_path = Path(requirements['path_to_data_set'] /
                                          f'anker_value_{anker_value}'.replace('.', '_') /
                                          f"min_cells_{requirements['minimum_number_cells']}" /
-                                         f'fussy_limit_{fussy_limit}'.replace('.', '_') /
+                                         'random_sampeling' /
                                          f'radius_{radius_distance}')
 
                         save_path_folder_graphs = save_path / f'{args.data_set_type}' / 'graphs'
@@ -160,8 +199,8 @@ def main():
                         save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
                         # Print status updates
-                        print('anker_value', 'radius_neibourhood', 'fussy_limit', 'image')
-                        print(anker_value, radius_distance, fussy_limit, sub_sample)
+                        print('anker_value', 'radius_neibourhood', 'image')
+                        print(anker_value, radius_distance, sub_sample)
 
                         # Use multiprocessing to create and save graphs in parallel
                         pool = mp.Pool(mp.cpu_count() - 2)
@@ -174,7 +213,7 @@ def main():
                                 requiremets_dict=requirements,
                                 voronoi_list=voroni_id_fussy,
                                 sub_sample=sub_sample,
-                                repeat_id=repeat_counter,
+                                repeat_id=augment_id,
                                 skip_existing=True,
                                 noisy_labeling=args.noisy_labeling,
                                 node_prob=args.node_prob,
@@ -184,9 +223,6 @@ def main():
                             ), vornoi_id
                         )
                         pool.close()
-
-                        # Update repeat counter for unique graph IDs
-                        repeat_counter += 1
 
 
 # Ensure the script runs only when executed directly
