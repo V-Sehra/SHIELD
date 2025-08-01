@@ -12,8 +12,8 @@ import torch
 import pandas as pd
 
 from tqdm import tqdm
-from torch_geometric.loader import DataListLoader
 
+from torch_geometric.loader import DataListLoader
 from utils.data_class import graph_dataset
 import utils.train_utils as train_utils
 import utils.model_utils as model_utils
@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-split", "--split_number", type=int, default=2)
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
-    parser.add_argument("-c", "--comment", type=str, default='random_anker')
+    parser.add_argument("-c", "--comment", type=str, default='noVoro')
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
     parser.add_argument("-noisy_edge", "--noisy_edge",
@@ -52,7 +52,7 @@ def main():
     if 'patience' in requirements.keys():
         patience = requirements['patience']
     else:
-        patience = None
+        patience = 5
 
     # if there where no voronois constructed the fussylimit makes no sence
     if 'sampleing' in requirements.keys():

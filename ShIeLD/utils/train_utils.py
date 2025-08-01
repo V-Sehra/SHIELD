@@ -29,12 +29,11 @@ def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
     Returns:
     bool: True if training should be stopped, False otherwise.
     """
-
-    if patience < 2:
-        raise ValueError("Patience should be greater than 1.")
-
     if patience is None:
         patience = 5
+        
+    if patience < 2:
+        raise ValueError("Patience should be greater than 1.")
 
     if len(loss_epoch) >= patience:
 
@@ -76,7 +75,7 @@ def get_train_results_csv(requirement_dict: dict) -> Tuple[DataFrame, PosixPath]
             'anker_value',  # Percentage of anchor cells used
             'radius_distance',  # Radius defining the neighborhood
             'fussy_limit',  # Threshold for fuzzy logic application
-            'droup_out_rate',  # Dropout rate
+            'droupout_rate',  # Dropout rate
             'comment',  # General comments
             'comment_norm',  # Normalized comments
             'model_no',  # Model number

@@ -45,7 +45,8 @@ class graph_dataset(Dataset):
         """
 
         # If the file storing graph filenames does not exist, create it
-        if not Path.exists(path_to_graphs / graph_file_names):
+        if not Path.exists(path_to_graphs / graph_file_names) or len(
+                pickle.load(open(path_to_graphs / graph_file_names, 'rb'))) == 0:
             print('Creating file name list:')
 
             csv_file = pd.read_csv(requirements_dict['path_raw_data'])
@@ -56,11 +57,13 @@ class graph_dataset(Dataset):
             # List files in root
             df = pd.DataFrame(os.listdir(root), columns=['file_name'])
 
-            # Extract the "XX_B" or "XX_A" pattern from each filename using regex
-            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_([^_]+)_')[0]
+            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_(.*?)(?:_[^_]+)?\.pt')[0]
 
-            # Filter exact matches
             filtered_df = df[df['identifier'].isin(image_ids)]
+            # Fallback: If nothing matched, try more general pattern (e.g., LHCC51 or 29_B_anything)
+            if filtered_df.empty:
+                df['identifier'] = df['file_name'].str.extract(r'graph_subSample_([A-Za-z0-9]+(?:_[AB])?)')[0]
+                filtered_df = df[df['identifier'].isin(image_ids)]
 
             self.graph_file_names = filtered_df['file_name'].tolist()
 
