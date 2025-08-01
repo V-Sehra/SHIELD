@@ -46,7 +46,7 @@ def main():
     requirements = pickle.load(open(Path.cwd() / args.requirements_file_path, 'rb'))
     input_test.test_all_keys_in_req(req_file=requirements)
 
-    print(args, requirements['comment_norm'])
+    print(args)
 
     # extract training patience if defined:
     if 'patience' in requirements.keys():
@@ -130,11 +130,13 @@ def main():
 
                 for dp in requirements['droupout_rate']:
                     for num in tqdm(range(int(args.number_of_training_repeats))):
+                        
+                        row_values = [anker_number, radius_distance, fussy_limit, dp, args.comment,
+                                      requirements['comment_norm'], num, split_number]
 
-                        if not training_results_csv[meta_columns].isin(
-                                [[anker_number, radius_distance, fussy_limit, dp, args.comment,
-                                  requirements['comment_norm'], num, split_number]]
-                        ).all(axis=1).any():
+                        filter_match = (training_results_csv[meta_columns] == row_values).all(axis=1)
+
+                        if not filter_match.any():
 
                             loss_init_path = path_to_graphs / 'train' / 'graphs' if args.noise_yLabel is not False else path_to_graphs / f'train_set_validation_split_{split_number}_file_names.pkl'
                             loss_fkt = train_utils.initiaize_loss(
