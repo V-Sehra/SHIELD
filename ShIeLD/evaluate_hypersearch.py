@@ -79,12 +79,20 @@ def main():
                 pickle.dump(best_config_dict, file)
 
         print('best configuration:')
-        print(best_config_dict)
-        path_to_graphs = Path(requirements['path_to_data_set'] /
-                              f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
-                              f"min_cells_{requirements['minimum_number_cells']}" /
-                              f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
-                              f"radius_{best_config_dict['radius_distance']}")
+        print(best_config_dict['fussy_limit'])
+        if best_config_dict['fussy_limit'] != 'random_sampling':
+            print(f"fussy limit: {best_config_dict['fussy_limit']}, ")
+            path_to_graphs = Path(requirements['path_to_data_set'] /
+                                  f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                                  f"min_cells_{requirements['minimum_number_cells']}" /
+                                  f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
+                                  f"radius_{best_config_dict['radius_distance']}")
+        else:
+            path_to_graphs = Path(requirements['path_to_data_set'] /
+                                  f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                                  f"min_cells_{requirements['minimum_number_cells']}" /
+                                  f"{best_config_dict['fussy_limit']}" /
+                                  f"radius_{best_config_dict['radius_distance']}")
 
         data_loader_train = DataListLoader(
             graph_dataset(
@@ -138,11 +146,11 @@ def main():
 
             model.eval()
             print('start validation')
-            train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
+            train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
                 model=model, data_loader=data_loader_train, device=device
             )
 
-            val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
+            val_bal_acc, val_f1_score, valö_cm = model_utils.get_acc_metrics(
                 model=model, data_loader=data_loader_test, device=device
             )
 

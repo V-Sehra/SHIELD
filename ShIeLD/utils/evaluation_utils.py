@@ -53,9 +53,9 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
     """
     if 'sampleing' in requirements_dict.keys():
         if requirements_dict['sampleing'] == 'random':
-            requirements_dict['fussy_limit'] = ['randomSampling']
+            requirements_dict['fussy_limit'] = 'random_sampling'
 
-    must_have_columns = ['layer_1', 'input_layer', 'droupout_rate', 'output_layer',
+    must_have_columns = ['layer_1', 'input_layer', 'droupout_rate', 'output_layer', 'comment_norm',
                          'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit']
 
     # Sort the results by balanced accuracy and select the top entry
