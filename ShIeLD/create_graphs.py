@@ -37,6 +37,7 @@ def main():
 
     parser.add_argument("-downSample", "--reduce_population", default=False)
     parser.add_argument("-column_celltype_name", "--column_celltype_name", default='Class0')
+    parser.add_argument("-rev", "--reverse_sampling", default=False, type=bool, choices=[True, False])
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -62,6 +63,8 @@ def main():
 
     # Get unique sample names
     sample = data_sample[requirements['measument_sample_name']].unique()
+    if args.reverse_sampling:
+        sample = sample[::-1]
 
     # Iterate over each sample in the dataset
     for sub_sample in tqdm(sample):

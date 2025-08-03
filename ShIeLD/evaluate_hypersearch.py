@@ -30,7 +30,6 @@ print(device)
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-req_path", "--requirements_file_path",
                         default=Path.cwd() / 'examples' / 'CRC' / 'requirements.pt')
@@ -40,8 +39,9 @@ def main():
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
 
     args = parser.parse_args()
+    args.best_config_dict_path = Path(args.best_config_dict_path)
+    args.requirements_file_path = Path(args.requirements_file_path)
     print(args)
-
 
     with open(args.requirements_file_path, 'rb') as file:
         requirements = pickle.load(file)
@@ -49,13 +49,12 @@ def main():
     requirements['path_to_model'].mkdir(parents=True, exist_ok=True)
 
     print('evaluating the training results')
-    hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict = requirements)
+    hyper_search_results = evaluation_utils.get_hypersear_results(requirements_dict=requirements)
     hyper_search_results = hyper_search_results.sort_values('total_acc_balanced_mean', ascending=False)
 
     hyper_search_results.to_csv(Path(requirements['path_training_results'] / 'hyper_search_results.csv'), index=False)
 
     melted_results = hyper_search_results.melt(id_vars=['total_acc_balanced_mean'], var_name='hyperparameter')
-
 
     save_path_folder = Path(requirements['path_training_results'] / 'hyper_search_plots')
     save_path_folder.mkdir(parents=True, exist_ok=True)
@@ -63,9 +62,8 @@ def main():
     print('creating hyperparameter search plots')
 
     for observable_of_interest in requirements['col_of_variables']:
-
-        evaluation_utils.create_parameter_influence_plots(df = melted_results,
-                                                          observed_variable = observable_of_interest,
+        evaluation_utils.create_parameter_influence_plots(df=melted_results,
+                                                          observed_variable=observable_of_interest,
                                                           save_path=save_path_folder / f'{observable_of_interest}.png')
 
     if data_utils.bool_passer(args.retain_best_model_config_bool):
@@ -74,12 +72,11 @@ def main():
                 best_config_dict = pickle.load(file)
         else:
 
-            best_config_dict = evaluation_utils.get_best_config_dict(hyper_search_results = hyper_search_results,
+            best_config_dict = evaluation_utils.get_best_config_dict(hyper_search_results=hyper_search_results,
                                                                      requirements_dict=requirements)
 
             with open(args.best_config_dict_path, 'wb') as file:
                 pickle.dump(best_config_dict, file)
-
 
         print('best configuration:')
         print(best_config_dict)
@@ -111,14 +108,14 @@ def main():
             batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
         )
 
-        #which of the 5 models has the best predictive power
+        # which of the 5 models has the best predictive power
         best_model_f1score = 0
         for num in tqdm(range(args.number_of_training_repeats)):
 
             loss_fkt = train_utils.initiaize_loss(
-                path=Path(path_to_graphs /f'train_set_file_names.pkl'),
+                path=Path(path_to_graphs / f'train_set_file_names.pkl'),
                 tissue_dict=requirements['label_dict'],
-                device = device)
+                device=device)
 
             model = ShIeLD(
                 num_of_feat=int(best_config_dict['input_layer']),
@@ -137,14 +134,12 @@ def main():
                 loss_fkt=loss_fkt,
                 attr_bool=best_config_dict['attr_bool'],
                 device=device,
-                patience = best_config_dict['patience'] if 'patience' in best_config_dict.keys() else 5)
-
-
+                patience=best_config_dict['patience'] if 'patience' in best_config_dict.keys() else 5)
 
             model.eval()
             print('start validation')
             train_bal_acc, train_f1_score = model_utils.get_acc_metrics(
-                model=model, data_loader=data_loader_train,device=device
+                model=model, data_loader=data_loader_train, device=device
             )
 
             val_bal_acc, val_f1_score = model_utils.get_acc_metrics(
@@ -154,7 +149,8 @@ def main():
             if val_f1_score > best_model_f1score:
                 best_model_f1score = val_f1_score
 
-                print(f'best model so far: VersioNo.{num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}')
+                print(
+                    f'best model so far: VersioNo.{num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}')
                 print(f'train scores: bal= {train_bal_acc} f1= {train_f1_score}')
                 # Save the best model
 
@@ -166,11 +162,8 @@ def main():
                 with open(args.best_config_dict_path, 'wb') as file:
                     pickle.dump(best_config_dict, file)
 
-
             model_save_path = requirements['path_to_model'] / f'model_{num}.pt'
             torch.save(model.state_dict(), model_save_path)
-
-
 
 
 if __name__ == "__main__":

@@ -151,6 +151,7 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
 
     if skip_existing:
         if Path(f'{save_path_folder}', file_name).exists():
+            print(f'Skipping existing file: {file_name}')
             return
 
     # Convert gene expression features into a tensor

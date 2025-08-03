@@ -5,17 +5,7 @@
       <paths name="M3">
         <serverdata>
           <mappings>
-            <mapping deploy="ShIeLD_github_test/ShIeLD/" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-          <excludedPaths>
-            <excludedPath local="true" path="/usr/libexec/sftp-server" />
-          </excludedPaths>
-        </serverdata>
-      </paths>
-      <paths name="mlc1">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/SHIELD" local="$PROJECT_DIR$" web="" />
+            <mapping deploy="ShIeLD_github_test/ShIeLD" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
