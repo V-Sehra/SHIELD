@@ -51,6 +51,10 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
     Returns:
     - dict: The best configuration dictionary.
     """
+    if 'sampleing' in requirements_dict.keys():
+        if requirements_dict['sampleing'] == 'random':
+            requirements_dict['fussy_limit'] = ['randomSampling']
+
     must_have_columns = ['layer_1', 'input_layer', 'droupout_rate', 'output_layer',
                          'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit']
 
@@ -507,7 +511,7 @@ def plot_cell_cell_interaction_boxplots(
     if stars:
         if significance_1 is None or significance_2 is None:
             raise ValueError("significance_1 and significance_2 must be provided when stars=True.")
-    
+
     # Set plot font size
     plt.rcParams.update({'font.size': 50})
 
