@@ -79,9 +79,8 @@ def main():
                 pickle.dump(best_config_dict, file)
 
         print('best configuration:')
-        print(best_config_dict['fussy_limit'])
+        print(best_config_dict)
         if best_config_dict['fussy_limit'] != 'random_sampling':
-            print(f"fussy limit: {best_config_dict['fussy_limit']}, ")
             path_to_graphs = Path(requirements['path_to_data_set'] /
                                   f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
                                   f"min_cells_{requirements['minimum_number_cells']}" /
