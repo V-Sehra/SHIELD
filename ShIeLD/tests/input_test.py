@@ -133,7 +133,7 @@ def test_best_config(config_file):
 
     # Check for correct format of the keys:
     # int:
-    all_ints = ['layer_one', 'input_dim', 'final_layer', 'version']
+    all_ints = ['layer_1', 'input_layer', 'output_layer', 'version']
     for item in all_ints:
         if not isinstance(best_config_dict[item], (int, np.integer)):
             raise AssertionError(f"Item {item} is not an integer.")
