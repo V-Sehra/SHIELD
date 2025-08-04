@@ -19,9 +19,9 @@ parser.add_argument("-req_path", "--requirements_file_path",
 parser.add_argument("-aug", "--augmentation",
                     default='noisyLabel_prob')
 parser.add_argument("-noisy_edge", "--noisy_edge",
-                    default=False)
+                    default=False, choices=['percent', 'sameCon', False])
 parser.add_argument("-noise_yLabel", "--noise_yLabel",
-                    default=False)
+                    default=False, choices=['prob', 'even', False])
 parser.add_argument("-c", "--comment",
                     default=False)
 
@@ -64,12 +64,12 @@ else:
 
 best_model_specs = {'number_of_anker_cells': 500,
                     'radius_neibourhood': 530,
-                    'fussy_limit': 0.8,
+                    'fussy_limit': 'random_sampling',
                     'fussy_reference_beak': 'True'}
 
 model_specs = {'layer_1': 23,
                'input_layer': 23,
-               'droupout_rate': 0.2,
+               'droupout_rate': 0.8,
                'final_layer': 3,
                'attr_bool': False,
                'output_layer': 3,
