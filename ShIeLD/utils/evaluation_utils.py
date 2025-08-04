@@ -70,7 +70,8 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
             best_config_dict[key] = requirements_dict[key][0]
         else:
             best_config_dict[key] = requirements_dict[key]
-
+    best_config_dict['output_layer'] = requirements_dict['output_layer']
+    
     return best_config_dict
 
 

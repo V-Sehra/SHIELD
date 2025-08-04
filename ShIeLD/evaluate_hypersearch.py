@@ -149,7 +149,7 @@ def main():
                 model=model, data_loader=data_loader_train, device=device
             )
 
-            val_bal_acc, val_f1_score, valö_cm = model_utils.get_acc_metrics(
+            val_bal_acc, val_f1_score, val_cm = model_utils.get_acc_metrics(
                 model=model, data_loader=data_loader_test, device=device
             )
 

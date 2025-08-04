@@ -121,7 +121,7 @@ def test_best_config(config_file):
         else:
             raise TypeError("config_file should be a string or Path object.")
 
-    required_keys = set(['layer_one', 'input_dim', 'droupout_rate', 'final_layer',
+    required_keys = set(['layer_1', 'input_layer', 'droupout_rate', 'output_layer',
                          'attr_bool', 'anker_value', 'radius_distance', 'version'])
 
     key_set = set(best_config_dict.keys())

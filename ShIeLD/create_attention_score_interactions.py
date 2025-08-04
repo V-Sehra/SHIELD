@@ -32,7 +32,7 @@ def main():
     parser.add_argument("-dat_type", "--data_set_type", default='test')
     parser.add_argument("-sig1", "--significance_threshold_1", type=float, default=0.0001)
     parser.add_argument("-sig2", "--significance_threshold_2", type=float, default=0.00001)
-
+    parser.add_argument("-stars", "--stars", type=bool, default=False, choices=[True, False])
     args = parser.parse_args()
 
     if args.requirements_file_path is None:
@@ -58,11 +58,18 @@ def main():
     input_test.test_all_keys_in_req(req_file=requirements)
     input_test.test_best_config(config_file=best_config_dict)
 
-    path_to_graphs = Path(requirements['path_to_data_set'] /
-                          f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
-                          f"min_cells_{requirements['minimum_number_cells']}" /
-                          f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
-                          f"radius_{best_config_dict['radius_distance']}")
+    if best_config_dict['fussy_limit'] != 'random_sampling':
+        path_to_graphs = Path(requirements['path_to_data_set'] /
+                              f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                              f"min_cells_{requirements['minimum_number_cells']}" /
+                              f"fussy_limit_{best_config_dict['fussy_limit']}".replace('.', '_') /
+                              f"radius_{best_config_dict['radius_distance']}")
+    else:
+        path_to_graphs = Path(requirements['path_to_data_set'] /
+                              f'anker_value_{best_config_dict["anker_value"]}'.replace('.', '_') /
+                              f"min_cells_{requirements['minimum_number_cells']}" /
+                              f"{best_config_dict['fussy_limit']}" /
+                              f"radius_{best_config_dict['radius_distance']}")
 
     fold_ids = [requirements['number_validation_splits'] if args.data_set_type == 'train' else requirements[
         'test_set_fold_number']]
@@ -130,7 +137,8 @@ def main():
                                                                  interaction_limit=number_interactions,
                                                                  all_interaction_mean_df=interaction_dataFrame,
                                                                  top_connections=top_connections,
-                                                                 save_path=save_path_boxplots)
+                                                                 save_path=save_path_boxplots,
+                                                                 stars=args.stars)
 
 
 # Ensure the script runs only when executed directly
