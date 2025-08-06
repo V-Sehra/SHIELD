@@ -577,7 +577,7 @@ def plot_cell_cell_interaction_boxplots(
 
             for dst_cell_idx, dst_name in enumerate(names):
                 fdr_scores.append([src_cell, dst_name, adjusted_log10[dst_cell_idx]])
-                sig_text = f"{adjusted_log10[dst_cell_idx]:.2f}"
+                sig_text = f"{adjusted_log10[dst_cell_idx]:.0f}"
                 ax.text(dst_cell_idx + 1, 1.01, sig_text, color='black', fontsize=30, ha='center')
 
             if values:
@@ -602,24 +602,23 @@ def plot_cell_cell_interaction_boxplots(
     # Build and export p-value matrix
     log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
     log_FDR_matrix = pd.DataFrame(fdr_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
-
+    plt.show()
+    
     if save_path is not None:
         plot_path = save_path.with_name(save_path.stem + ('_log' if log_y else '') + save_path.suffix)
         log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
         log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + '_FDR_values.csv'))
         plt.savefig(plot_path, dpi=250)
-        plot_top_k_log_p_values_per_row(log_pval_matrix=log_FDR_matrix,
+        plot_top_k_log_p_values_per_row(log_pval_matrix_path=plot_path.with_name(plot_path.stem + '_FDR_values.csv'),
                                         k=interaction_limit,
-                                        font_size=50,
-                                        figsize=(20, 10),
-                                        rename_labels=False,
+                                        font_size=12,
+                                        figsize=(8, 6),
+                                        rename_labels=True,
                                         save_path=plot_path.with_name(plot_path.stem + '_FDR_values_per_row.png'))
-
-    plt.show()
 
 
 def plot_top_k_log_p_values_per_row(
-        log_pval_matrix: pd.DataFrame,
+        log_pval_matrix_path: PosixPath,
         k: int = 8,
         font_size: int = 12,
         figsize: tuple = (8, 6),
@@ -642,6 +641,7 @@ def plot_top_k_log_p_values_per_row(
         None
     """
     # Extract row labels and clean data matrix
+    log_pval_matrix = pd.read_csv(log_pval_matrix_path)
     src_labels = log_pval_matrix['src']
     df_values = log_pval_matrix.drop(columns=log_pval_matrix.columns[0])  # Drop 'src'
 
@@ -665,7 +665,7 @@ def plot_top_k_log_p_values_per_row(
         x_vals = np.arange(len(top_vals))
 
         # Create the plot
-        plt.figure(figsize=figsize)
+        fig = plt.figure(figsize=figsize)
         plt.scatter(x_vals, top_vals, color='tab:blue', s=10)
 
         # Annotate points with cell type names
@@ -676,7 +676,7 @@ def plot_top_k_log_p_values_per_row(
                 elif txt == 'M2 Macrophages PD-L1-':
                     txt = 'MAC -'
 
-            plt.annotate(txt, (x_vals[j], top_vals.iloc[j]),
+            plt.annotate(break_title(txt, max_len=10), (x_vals[j], top_vals.iloc[j]),
                          fontsize=10, rotation=90, ha='left', va='bottom',
                          clip_on=False, xytext=(0, 2), textcoords='offset points')
 
@@ -687,9 +687,11 @@ def plot_top_k_log_p_values_per_row(
         plt.ylim([0, max(neg_log_vals) * 1.2])
         plt.grid(True)
         plt.tight_layout()
-        plt.show()
+        # plt.show()
+
         if save_path is not None:
-            plt.savefig(save_path, dpi=250)
+            plt.savefig(save_path.with_name(save_path.stem + f'{src_labels[row]}.png'), dpi=250)
+        plt.close(fig)
 
 
 def plot_confusion_with_std(mean_cm, std_cm, class_names, title='Mean Confusion Matrix ± STD (%)'):

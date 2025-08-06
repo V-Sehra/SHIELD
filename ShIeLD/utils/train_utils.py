@@ -31,7 +31,7 @@ def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
     """
     if patience is None:
         patience = 5
-        
+
     if patience < 2:
         raise ValueError("Patience should be greater than 1.")
 
@@ -124,6 +124,20 @@ def initiaize_loss(path: str, device: str, tissue_dict: dict,
 
         class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
 
+    elif noise_yLabel is True:
+        print('initializing loss with noise labels: No Voronoi')
+
+        class_weights = np.zeros((len(tissue_dict.keys()), 1))
+
+        for files in tqdm(os.listdir(Path(path))):
+            try:
+                g = torch.load(Path(path) / files)
+                class_weights[g['y']] += 1
+            except:
+                print('skipping file: ', files, ' due to error in loading or missing label')
+
+        class_weights = 1 - (class_weights.T / sum(class_weights))
+        class_weights = torch.tensor(class_weights.flatten(), dtype=torch.float32).to(device)
 
     else:
         print('initializing loss with noise labels: ', noise_yLabel)

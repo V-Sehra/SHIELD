@@ -4,7 +4,7 @@ import argparse
 
 from torch_geometric.loader import DataListLoader
 
-from utils import train_utils, model_utils
+from utils import train_utils, model_utils, data_utils
 from utils.data_class import graph_dataset
 from model import ShIeLD
 
@@ -19,13 +19,15 @@ parser.add_argument("-req_path", "--requirements_file_path",
 parser.add_argument("-aug", "--augmentation",
                     default='noisyLabel_prob')
 parser.add_argument("-noisy_edge", "--noisy_edge",
-                    default=False, choices=['percent', 'sameCon', False])
+                    default=False, choices=['percent', 'sameCon', 'False'])
 parser.add_argument("-noise_yLabel", "--noise_yLabel",
-                    default=False, choices=['prob', 'even', False])
+                    default=False, choices=['prob', 'even', 'False', 'True'])
 parser.add_argument("-c", "--comment",
                     default=False)
 
 args = parser.parse_args()
+args.noise_yLabel = data_utils.bool_passer(args.noise_yLabel)
+args.noisy_edge = data_utils.bool_passer(args.noisy_edge)
 
 if args.augmentation == 'noisyLabel_prob':
     args.noise_yLabel = 'prob'

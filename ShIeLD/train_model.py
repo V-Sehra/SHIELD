@@ -40,6 +40,7 @@ def main():
                         default=False)
     parser.add_argument("-noise_yLabel", "--noise_yLabel",
                         default=False)
+    parser.add_argument("-rev", "--reverse_sampling", default=False, type=bool, choices=[True, False])
 
     args = parser.parse_args()
 
@@ -73,7 +74,11 @@ def main():
     meta_columns = ['anker_value', 'radius_distance', 'fussy_limit',
                     'droupout_rate', 'comment', 'comment_norm', 'model_no', 'split_number']
 
-    for radius_distance in requirements['radius_distance_all']:
+    radii = requirements['radius_distance_all']
+    if args.reverse_sampling:
+        radii = radii[::-1]
+
+    for radius_distance in radii:
         for fussy_limit in fussy_vector:
             for anker_number in requirements['anker_value_all']:
 
@@ -130,7 +135,7 @@ def main():
 
                 for dp in requirements['droupout_rate']:
                     for num in tqdm(range(int(args.number_of_training_repeats))):
-                        
+
                         row_values = [anker_number, radius_distance, fussy_limit, dp, args.comment,
                                       requirements['comment_norm'], num, split_number]
 
