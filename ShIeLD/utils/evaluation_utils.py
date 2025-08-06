@@ -608,8 +608,88 @@ def plot_cell_cell_interaction_boxplots(
         log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
         log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + '_FDR_values.csv'))
         plt.savefig(plot_path, dpi=250)
+        plot_top_k_log_p_values_per_row(log_pval_matrix=log_FDR_matrix,
+                                        k=interaction_limit,
+                                        font_size=50,
+                                        figsize=(20, 10),
+                                        rename_labels=False,
+                                        save_path=plot_path.with_name(plot_path.stem + '_FDR_values_per_row.png'))
 
     plt.show()
+
+
+def plot_top_k_log_p_values_per_row(
+        log_pval_matrix: pd.DataFrame,
+        k: int = 8,
+        font_size: int = 12,
+        figsize: tuple = (8, 6),
+        rename_labels: bool = True,
+        save_path: Optional[PosixPath] = None
+):
+    """
+    Plots the top-k -log10(p) values for each row in a p-value matrix (e.g., FDR-corrected p-values).
+    Each row corresponds to a source cell type and columns to destination cell types.
+    For each row, an individual scatter plot is generated showing the most significant interactions.
+
+    Args:
+        log_pval_matrix (pd.DataFrame): DataFrame with 'src' column (row labels) and -log10(p) values in other columns.
+        k (int): Number of top -log10(p) values to plot per row (default: 8).
+        font_size (int): Font size used in plots (default: 12).
+        figsize (tuple): Size of each individual plot (default: (8, 6)).
+        rename_labels (bool): If True, abbreviates 'M2 Macrophages PD-L1+' to 'MAC +' and 'PD-L1-' to 'MAC -'.
+
+    Returns:
+        None
+    """
+    # Extract row labels and clean data matrix
+    src_labels = log_pval_matrix['src']
+    df_values = log_pval_matrix.drop(columns=log_pval_matrix.columns[0])  # Drop 'src'
+
+    plt.rcParams.update({'font.size': font_size})
+
+    # Loop through each row (i.e., each source cell type)
+    for row in range(len(df_values)):
+        values = df_values.iloc[row]
+        mask = ~values.isna()  # Only keep non-NaN values
+        vals_clean = values[mask]
+        labels_clean = np.array(values.index)[mask]
+
+        # Compute -log10(p) from log10(p)
+        neg_log_vals = -vals_clean
+
+        # Sort and get top-k
+        sorted_idx = np.argsort(neg_log_vals)[::-1]
+        top_idx = sorted_idx[:k]
+        top_vals = neg_log_vals.iloc[top_idx]
+        top_labels = labels_clean[top_idx]
+        x_vals = np.arange(len(top_vals))
+
+        # Create the plot
+        plt.figure(figsize=figsize)
+        plt.scatter(x_vals, top_vals, color='tab:blue', s=10)
+
+        # Annotate points with cell type names
+        for j, txt in enumerate(top_labels):
+            if rename_labels:
+                if txt == 'M2 Macrophages PD-L1+':
+                    txt = 'MAC +'
+                elif txt == 'M2 Macrophages PD-L1-':
+                    txt = 'MAC -'
+
+            plt.annotate(txt, (x_vals[j], top_vals.iloc[j]),
+                         fontsize=10, rotation=90, ha='left', va='bottom',
+                         clip_on=False, xytext=(0, 2), textcoords='offset points')
+
+        # Plot configuration
+        plt.title(src_labels[row], fontsize=font_size)
+        plt.ylabel('-log10(p)', fontsize=font_size)
+        plt.xticks([])
+        plt.ylim([0, max(neg_log_vals) * 1.2])
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+        if save_path is not None:
+            plt.savefig(save_path, dpi=250)
 
 
 def plot_confusion_with_std(mean_cm, std_cm, class_names, title='Mean Confusion Matrix ± STD (%)'):
