@@ -9,7 +9,7 @@ Created Nov 2024
 from . import train_utils
 from . import model_utils
 from . import data_utils
-
+from statsmodels.stats.multitest import multipletests
 import pandas as pd
 import numpy as np
 
@@ -71,7 +71,7 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
         else:
             best_config_dict[key] = requirements_dict[key]
     best_config_dict['output_layer'] = requirements_dict['output_layer']
-    
+
     return best_config_dict
 
 
@@ -482,153 +482,134 @@ def plot_cell_cell_interaction_boxplots(
         all_interaction_mean_df: pd.DataFrame,
         top_connections: dict,
         save_path: Optional[PosixPath] = None,
-        # plotting parameteres
+        *,
         log_y: bool = False,
         star_size: int = 2000,
         line_width: int = 5,
-        costum_fig_size: Optional[Tuple[int, int]] = None,
-        costum_star_shift: Optional[float] = None,
-        Nan_to_zero: bool = False,
+        custom_fig_size: Optional[Tuple[int, int]] = None,
+        custom_star_shift: Optional[float] = None,
+        nan_to_zero: bool = False,
         stars: bool = False,
         significance_1: Optional[float] = None,
         significance_2: Optional[float] = None,
 ):
     """
-    Plots boxplots of cell-cell interactions and performs statistical significance tests.
+    Plots boxplots of cell-cell interactions with optional statistical testing and significance annotations.
 
     Args:
-        significance_1 (float): The p-value threshold for marking significant interactions with one star.
-        significance_2 (float): The p-value threshold for marking highly significant interactions with two stars.
-        interaction_limit (int): The number of top interactions to display per cell type.
-        all_interaction_df (pd.DataFrame): DataFrame containing interaction values between cell types.
-        top_connections (dict): Dictionary with cell types as keys and lists of (destination cell type, interaction values) as values.
-        save_path (Optional[PosixPath]): Path to save the plot. If None, the plot is not saved.
-        Nan_to_zero (bool): If True, NaN values in interaction data are replaced with zeros.Otherwise removed
-        stars (bool): If true marks the significance of the interaction with stars. else the log10Value
-
-    Returns:
-        None
+        interaction_limit: Number of top interactions to display per cell type.
+        all_interaction_mean_df: DataFrame with interaction values between cell types.
+        top_connections: Dictionary {cell type: list of (destination cell type, values)}.
+        save_path: Optional path to save the figure and p-value CSVs.
+        log_y: If True, apply log scale to y-axis.
+        star_size: Size of stars used for significance.
+        line_width: Line width for plot elements.
+        custom_fig_size: Custom figure size.
+        custom_star_shift: Shift distance for double-star placement.
+        nan_to_zero: If True, converts NaNs to zeros before statistical testing.
+        stars: Whether to annotate significance with stars.
+        significance_1: Threshold for single-star significance.
+        significance_2: Threshold for double-star significance.
     """
-    if stars:
-        if significance_1 is None or significance_2 is None:
-            raise ValueError("significance_1 and significance_2 must be provided when stars=True.")
+    if stars and (significance_1 is None or significance_2 is None):
+        raise ValueError("Both significance_1 and significance_2 must be set when stars=True")
 
-    # Set plot font size
     plt.rcParams.update({'font.size': 50})
 
     cell_types = all_interaction_mean_df.columns
     num_cells = len(cell_types)
 
-    # Configure figure size and double star shift based on interaction limit
-    if costum_fig_size is not None:
-        fig_size = costum_fig_size
-    else:
-        fig_size = (170, 60) if interaction_limit > 16 else (130, 60)
+    fig_size = custom_fig_size or ((170, 60) if interaction_limit > 16 else (130, 60))
+    double_star_shift = custom_star_shift if custom_star_shift is not None else (
+        0.16 if interaction_limit > 16 else 0.1)
 
-    if costum_star_shift is not None:
-        double_star_shift = costum_star_shift
-    else:
-        double_star_shift = 0.16 if interaction_limit > 16 else 0.1
-
-    # Create subplots (2 rows, num_cells/2 columns)
-    fig, axs = plt.subplots(
-        nrows=2,
-        ncols=int(num_cells / 2),
-        figsize=fig_size,
-        sharey=True,
-        layout='constrained'
-    )
+    fig, axs = plt.subplots(nrows=2, ncols=num_cells // 2, figsize=fig_size, sharey=True, layout='constrained')
 
     p_val_scores = []
-    # Iterate over subplots
+    fdr_scores = []
     for row in range(2):
-        for idx in range(int(num_cells / 2)):
-            # Get the source cell type
-            src_cell = cell_types[idx + int(num_cells / 2) * row]
+        for idx in range(num_cells // 2):
+            ax = axs[row, idx]
+            src_cell = cell_types[idx + (num_cells // 2) * row]
+            top_conns = top_connections.get(src_cell, [])
 
-            # Extract names and values of top interactions
-            names = [dst_cell[0] for dst_cell in top_connections[src_cell]]
-            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_connections[src_cell] if
-                      len(dst_cell[1]) > 2]
+            names = [dst_cell[0] for dst_cell in top_conns]
+            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_conns if len(dst_cell[1]) > 2]
 
-            # Create boxplot
-            axs[row, idx].set_title(break_title(src_cell))
-            axs[row, idx].grid(True, linewidth=line_width)
-            box = axs[row, idx].boxplot(values)
+            ax.set_title(src_cell)
+            ax.grid(True, linewidth=line_width)
 
-            # Customize plot aesthetics
+            box = ax.boxplot(values, patch_artist=True)
+
+            # Make boxplots white (opaque)
+            for patch in box['boxes']:
+                patch.set_facecolor('white')
+
+            # Line styling
             for element in ['boxes', 'whiskers', 'caps', 'medians', 'fliers']:
                 plt.setp(box[element], linewidth=line_width)
 
-            # Thicken subplot axis spines
-            for spine in axs[row, idx].spines.values():
+            for spine in ax.spines.values():
                 spine.set_linewidth(line_width)
 
-            # Perform Mann-Whitney U tests for each destination cell type
             for dst_cell_idx, dst_name in enumerate(names):
-                # Convert NaN values to zero for statistical testing
-                if Nan_to_zero:
+                if nan_to_zero:
                     data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
-                    data_2 = np.nan_to_num(values[dst_cell_idx].to_numpy())
+                    data_2 = np.nan_to_num(values[dst_cell_idx])
                 else:
-                    data_1_raw = all_interaction_mean_df[src_cell].to_numpy()
-                    data_2_raw = values[dst_cell_idx].to_numpy()
-                    data_1 = data_1_raw[~np.isnan(data_1_raw)]
-                    data_2 = data_2_raw[~np.isnan(data_2_raw)]
+                    d1 = all_interaction_mean_df[src_cell].to_numpy()
+                    d2 = values[dst_cell_idx]
+                    data_1 = d1[~np.isnan(d1)]
+                    data_2 = d2[~np.isnan(d2)]
 
-                # Conduct Mann-Whitney U test
-                _, p = mannwhitneyu(data_1, data_2, alternative='less')
-                p_val_scores.append((src_cell, dst_name, np.log10(max(p, 1e-300))))
+                _, p_val = mannwhitneyu(data_1, data_2, alternative='less')
+                p_val_scores.append([src_cell, dst_name, p_val])
 
-                # Mark significance on the plot
                 if stars:
-                    if significance_2 < p < significance_1:
-                        axs[row, idx].scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
-                    elif p < significance_2:
-                        axs[row, idx].scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
-                                              s=star_size)
-                        axs[row, idx].scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
-                                              s=star_size)
-                else:
-                    sig_text = f"{np.log10(max(p, 1e-300)):.2f}"
-                    axs[row, idx].text(dst_cell_idx + 1, 1.01, sig_text,
-                                       color='black', fontsize=30, ha='center')
+                    if significance_2 < p_val < significance_1:
+                        ax.scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
+                    elif p_val < significance_2:
+                        ax.scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black', s=star_size)
+                        ax.scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black', s=star_size)
+
+            _, p_adj, _, _ = multipletests([x[2] for x in p_val_scores], method='fdr_bh')
+            adjusted_log10 = np.log10(p_adj)
+
+            for dst_cell_idx, dst_name in enumerate(names):
+                fdr_scores.append([src_cell, dst_name, adjusted_log10[dst_cell_idx]])
+                sig_text = f"{adjusted_log10[dst_cell_idx]:.2f}"
+                ax.text(dst_cell_idx + 1, 1.01, sig_text, color='black', fontsize=30, ha='center')
 
             if values:
-                # Ensure x-ticks match available names
                 if len(names) < interaction_limit:
-                    missing_names = cell_types[~cell_types.isin(names)].to_list()
-                    names.extend(missing_names)
+                    missing = cell_types[~cell_types.isin(names)].to_list()
+                    names.extend(missing)
 
-                axs[row, idx].set_xticks(np.arange(1, len(values) + 1), names[:len(values)], rotation=90)
+                ax.set_xticks(np.arange(1, len(values) + 1))
+                ax.set_xticklabels(names[:len(values)], rotation=90)
 
-            axs[row, idx].grid(False)
+            ax.grid(True, axis='y')
 
-            # Compute statistical summaries (median, quartiles)
-            mat = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
-            median = np.median(mat)
-            lower_q, upper_q = np.quantile(mat, [0.25, 0.75])
+            full_data = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
+            median = np.median(full_data)
+            q1, q3 = np.quantile(full_data, [0.25, 0.75])
+            ax.axhspan(q1, q3, facecolor='green', alpha=0.2)
+            ax.axhline(y=median, color='red', linestyle='--', linewidth=line_width)
 
-            # Highlight interquartile range and median line
-            axs[row, idx].axhspan(lower_q, upper_q, facecolor='green', alpha=0.2)
-            axs[row, idx].axhline(y=median, color='red', linestyle='--', linewidth=line_width)
             if log_y:
-                axs[row, idx].set_yscale('log')
+                ax.set_yscale('log')
 
-    df = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'log10(p)'])
+    # Build and export p-value matrix
+    log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
+    log_FDR_matrix = pd.DataFrame(fdr_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
 
-    # Pivot to matrix format
-    log_p_matrix = df.pivot(index='src', columns='dst', values='log10(p)')
-
-    # Save figure if a path is provided
     if save_path is not None:
-        if log_y:
-            save_path = save_path.parent / (save_path.stem + '_log' + save_path.suffix)
-            log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_log_p_values.csv'))
+        plot_path = save_path.with_name(save_path.stem + ('_log' if log_y else '') + save_path.suffix)
+        log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
+        log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + '_FDR_values.csv'))
+        plt.savefig(plot_path, dpi=250)
 
-        else:
-            log_p_matrix.to_csv(save_path.parent / (save_path.stem + '_p_values.csv'))
-        plt.savefig(save_path, dpi=250)
+    plt.show()
 
 
 def plot_confusion_with_std(mean_cm, std_cm, class_names, title='Mean Confusion Matrix ± STD (%)'):
