@@ -41,6 +41,7 @@ def main():
     args = parser.parse_args()
     args.best_config_dict_path = Path(args.best_config_dict_path)
     args.requirements_file_path = Path(args.requirements_file_path)
+    args.retrain_best_model_config_bool = data_utils.bool_passer(args.retain_best_model_config_bool)
     print(args, flush=True)
 
     with open(args.requirements_file_path, 'rb') as file:
