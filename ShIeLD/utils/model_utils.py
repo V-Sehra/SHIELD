@@ -108,7 +108,7 @@ def prediction_step(batch_sample: List,
     output = torch.vstack(prediction)
 
     # Extract ground truth labels and move them to the same device as output
-    if noise_yLabel == False:
+    if noise_yLabel == False or noise_yLabel == True:
         y = torch.tensor([sample.y for sample in batch_sample]).to(output.device)
     else:
         if noise_yLabel != 'even' and noise_yLabel != 'prob':

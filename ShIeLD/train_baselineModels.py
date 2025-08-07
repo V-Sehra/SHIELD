@@ -51,7 +51,7 @@ if args.comment is not False:
     requirements['path_training_results'] = Path(str(requirements['path_training_results']) + f'{args.comment}')
     requirements['path_to_model'] = Path(str(requirements['path_to_model']) + f'{args.comment}')
 
-print(args)
+print(args, flush=True)
 
 if 'sampleing' in requirements.keys():
     if requirements['sampleing'] == 'random':

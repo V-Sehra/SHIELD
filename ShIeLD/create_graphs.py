@@ -27,9 +27,9 @@ def main():
     parser.add_argument("-dat_type", "--data_set_type", default='test')
 
     # benchmarking parameters
-    parser.add_argument("-n_label", "--noisy_labeling", type=bool, default=False, choices=[True, False])
+    parser.add_argument("-n_label", "--noisy_labeling", default=False)
     parser.add_argument("-node_prob", "--node_prob", default=False)
-    parser.add_argument("-rnd_edges", "--randomise_edges", type=bool, default=False, choices=[True, False])
+    parser.add_argument("-rnd_edges", "--randomise_edges", default=False)
     parser.add_argument("-p_edges", "--percent_number_cells", type=float, default=0.1)
 
     parser.add_argument("-segmentation", "--segmentation", type=str, default='voronoi',
@@ -37,10 +37,16 @@ def main():
 
     parser.add_argument("-downSample", "--reduce_population", default=False)
     parser.add_argument("-column_celltype_name", "--column_celltype_name", default='Class0')
-    parser.add_argument("-rev", "--reverse_sampling", default=False, type=bool, choices=[True, False])
+    parser.add_argument("-rev", "--reverse_sampling", default=False)
 
     # Parse command-line arguments
     args = parser.parse_args()
+    args.n_label = data_utils.bool_passer(args.n_label)
+    args.node_prob = data_utils.bool_passer(args.node_prob)
+    args.randomise_edges = data_utils.bool_passer(args.randomise_edges)
+    args.reduce_population = data_utils.bool_passer(args.reduce_population)
+    args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
+    
     print(args)
 
     # Load dataset requirements from a pickle file

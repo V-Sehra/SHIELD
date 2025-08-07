@@ -5,6 +5,7 @@ Created Nov 2024
 
 @author: Vivek
 """
+
 import argparse
 import pickle
 from pathlib import Path
@@ -17,6 +18,7 @@ from torch_geometric.loader import DataListLoader
 from utils.data_class import graph_dataset
 import utils.train_utils as train_utils
 import utils.model_utils as model_utils
+import utils.data_utils as data_utils
 
 from tests import input_test
 
@@ -40,14 +42,15 @@ def main():
                         default=False)
     parser.add_argument("-noise_yLabel", "--noise_yLabel",
                         default=False)
-    parser.add_argument("-rev", "--reverse_sampling", default=False, type=bool, choices=[True, False])
+    parser.add_argument("-rev", "--reverse_sampling", default=False)
 
     args = parser.parse_args()
+    args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
 
     requirements = pickle.load(open(Path.cwd() / args.requirements_file_path, 'rb'))
     input_test.test_all_keys_in_req(req_file=requirements)
 
-    print(args)
+    print(args, flush=True)
 
     # extract training patience if defined:
     if 'patience' in requirements.keys():

@@ -89,8 +89,10 @@ def assign_label_from_distribution(labels_in_graph: pd.Series,
 def bool_passer(argument):
     if argument == 'True' or argument == 'true' or argument == '1' or argument == 1 or argument == True:
         value = True
-    else:
+    elif argument == 'False' or argument == 'false' or argument == '0' or argument == 0 or argument == False:
         value = False
+    else:
+        value = argument
     return (value)
 
 
