@@ -393,8 +393,9 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
 
 
 def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: list,
-                            title='Mean Confusion Matrix ± STD (%)'):
+                            title='Mean Confusion Matrix ± STD (%)', save_path: Optional[PosixPath] = None):
     """
+
     Plots a confusion matrix with values shown as mean ± std in each cell.
 
     Parameters:
@@ -402,6 +403,7 @@ def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: li
     - std_cm (ndarray): Standard deviation matrix, shape (C, C)
     - class_names (list of str): Names of the classes
     - title (str): Plot title
+    - save_path (Optional[PosixPath]): Path to save the figure. If None, the figure is not saved.
     """
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -432,6 +434,8 @@ def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: li
 
     plt.tight_layout()
     plt.show()
+    if save_path is not None:
+        fig.savefig(save_path, bbox_inches='tight', dpi=300)
 
 
 def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, save_path: Optional[PosixPath] = None):
@@ -603,7 +607,7 @@ def plot_cell_cell_interaction_boxplots(
     log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
     log_FDR_matrix = pd.DataFrame(fdr_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
     plt.show()
-    
+
     if save_path is not None:
         plot_path = save_path.with_name(save_path.stem + ('_log' if log_y else '') + save_path.suffix)
         log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
@@ -692,44 +696,3 @@ def plot_top_k_log_p_values_per_row(
         if save_path is not None:
             plt.savefig(save_path.with_name(save_path.stem + f'{src_labels[row]}.png'), dpi=250)
         plt.close(fig)
-
-
-def plot_confusion_with_std(mean_cm, std_cm, class_names, title='Mean Confusion Matrix ± STD (%)'):
-    """
-    Plots a confusion matrix with values shown as mean ± std in each cell.
-
-    Parameters:
-    - mean_cm (ndarray): Mean confusion matrix (in %), shape (C, C)
-    - std_cm (ndarray): Standard deviation matrix, shape (C, C)
-    - class_names (list of str): Names of the classes
-    - title (str): Plot title
-    """
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-    cmap = plt.cm.Blues
-    im = ax.imshow(mean_cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=1)
-
-    # Add colorbar
-    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.set_ylabel('%', rotation=270, labelpad=15)
-
-    # Set ticks and labels
-    ax.set(
-        xticks=np.arange(len(class_names)),
-        yticks=np.arange(len(class_names)),
-        xticklabels=class_names,
-        yticklabels=class_names,
-        ylabel='True label',
-        xlabel='Predicted label',
-        title=title
-    )
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
-
-    # Annotate each cell with "mean±std"
-    for i in range(mean_cm.shape[0]):
-        for j in range(mean_cm.shape[1]):
-            cell_text = f"{mean_cm[i, j]:.2f}±{std_cm[i, j]:.2f}"
-            ax.text(j, i, cell_text, ha='center', va='center', color='black', fontsize=15)
-
-    plt.tight_layout()
-    plt.show()
