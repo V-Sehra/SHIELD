@@ -96,6 +96,59 @@ def bool_passer(argument):
     return (value)
 
 
+def compute_connection_matrix(src, dst, phenotype_names, absolute_bool):
+    """
+    Compute a cell-cell interaction matrix between source and destination cell types.
+
+    Parameters
+    ----------
+    src : array-like
+        List or array of source cell phenotypes (categorical labels).
+    dst : array-like
+        List or array of destination cell phenotypes (categorical labels), same length as `src`.
+    phenotype_names : list of str
+        List of all known phenotype (cell type) names to define matrix dimensions and ordering.
+    absolute_bool : bool
+        If True, return absolute interaction counts.
+        If False, return row-normalized percentages (i.e., conditional distributions of dst per src).
+
+    Returns
+    -------
+    pd.DataFrame
+        A square DataFrame where rows represent source phenotypes and columns represent destination phenotypes.
+        Values are either absolute counts or row-wise percentages depending on `absolute_bool`.
+        Rows and columns are aligned with the `phenotype_names` order.
+
+    Notes
+    -----
+    This function is typically used to analyze neighborhood-based cell-cell interactions in spatial omics data.
+    """
+
+    # Convert inputs to numpy arrays for efficient processing
+    src = np.array(src)
+    dst = np.array(dst)
+
+    # Get sorted list of unique phenotype names for consistent ordering
+    phenotypes = sorted(set(phenotype_names))
+
+    # Create a DataFrame from source-destination pairings
+    df_conn = pd.DataFrame({'src': src, 'dst': dst})
+
+    # Count how often each (src, dst) pair occurs; pivot into a square matrix
+    conn_counts = df_conn.groupby(['src', 'dst']).size().unstack(fill_value=0)
+
+    # Ensure all phenotype combinations are represented, even if absent in the data
+    conn_counts = conn_counts.reindex(index=phenotypes, columns=phenotypes, fill_value=0)
+
+    if absolute_bool:
+        # Return raw counts of connections
+        return conn_counts
+    else:
+        # Normalize each row to percentage (conditional on source phenotype)
+        conn_percent = conn_counts.div(conn_counts.sum(axis=1).replace(0, 1), axis=0) * 100
+        return conn_percent
+    
+
 def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
                           whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
                           requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
