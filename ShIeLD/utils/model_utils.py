@@ -377,3 +377,80 @@ class simple_GNN(nn.Module):
             prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
 
         return prediction
+
+
+class simple_1l_GNN(nn.Module):
+    """
+    A simple onlayer Graph Neural Network (GNN) using three GCNConv layers, batch normalization,
+    dropout, and a final linear layer for classification.
+
+    Attributes:
+        conv1 (GCNConv): First graph convolutional layer.
+        conv2 (GCNConv): Second graph convolutional layer.
+        conv3 (GCNConv): Third graph convolutional layer.
+        lin (nn.Linear): Final linear layer to map to output classes.
+        similarity_typ (str): Type of similarity metric used (default: 'euclide').
+        dp (float): Dropout probability for regularization.
+        Pre_norm (bool): Whether to apply batch normalization before processing.
+        BatchNorm (BatchNorm1d): Batch normalization layer for input features.
+        Mean_agg (MeanAggregation): Aggregation function for node embeddings.
+    """
+
+    def __init__(self, num_of_feat, f_3, dp, Pre_norm, f_final=2):
+        """
+        Initializes the GNN model.
+
+        Args:
+            num_of_feat (int): Number of input node features.
+            f_1 (int): Number of features in the first GCN layer.
+            dp (float): Dropout probability for regularization.
+            Pre_norm (bool): Whether to apply batch normalization to input features.
+            f_final (int): Number of output classes (default: 2).
+
+        """
+        super(simple_1l_GNN, self).__init__()
+
+        self.conv1 = GCNConv(num_of_feat, f_3)
+
+        self.lin = Linear(f_3, f_final)
+
+        self.dp = dp
+        self.Mean_agg = MeanAggregation()  # Aggregates node embeddings into a graph representation
+
+    def forward(self, data_list):
+        """
+        Forward pass for processing multiple graph samples.
+
+        Args:
+            data_list (list[torch.Tensor]): List of the Dataobjects i.e:
+                                            -node feature tensors, each corresponding to a graph.
+                                            -edge index tensors defining graph connectivity.
+                                            -edge attribute tensors [optional].
+
+        Returns:
+            tuple:
+                - list[torch.Tensor]: List of softmax predictions for each input graph.
+                - list[torch.Tensor]: List of attention scores from the GAT layer.
+        """
+
+        prediction = []  # List to store predictions for each graph
+
+        sample_number = len(data_list)  # Number of graphs in the batch
+
+        for idx in range(sample_number):
+            x = data_list[idx].x.float()  # Convert node features to float
+
+            edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+
+            # Apply GAT convolution, with or without edge attributes
+            x = self.conv1(x=x, edge_index=edge_index)
+
+            x = F.relu(x)  # Apply ReLU activation
+            x = F.dropout(x, p=self.dp, training=self.training)  # Apply dropout
+
+            x = self.Mean_agg(x, dim=0)  # Aggregate node embeddings into a graph representation
+            x = self.lin(x)  # Final linear transformation
+
+            prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
+
+        return prediction, []

@@ -606,19 +606,21 @@ def plot_cell_cell_interaction_boxplots(
     # Build and export p-value matrix
     log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
     log_FDR_matrix = pd.DataFrame(fdr_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
-    plt.show()
 
     if save_path is not None:
         plot_path = save_path.with_name(save_path.stem + ('_log' if log_y else '') + save_path.suffix)
         log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
         log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + '_FDR_values.csv'))
         plt.savefig(plot_path, dpi=250)
+        plt.show()
         plot_top_k_log_p_values_per_row(log_pval_matrix_path=plot_path.with_name(plot_path.stem + '_FDR_values.csv'),
                                         k=interaction_limit,
                                         font_size=12,
                                         figsize=(8, 6),
                                         rename_labels=True,
                                         save_path=plot_path.with_name(plot_path.stem + '_FDR_values_per_row.png'))
+    else:
+        plt.show()
 
 
 def plot_top_k_log_p_values_per_row(
