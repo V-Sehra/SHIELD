@@ -386,13 +386,8 @@ class simple_1l_GNN(nn.Module):
 
     Attributes:
         conv1 (GCNConv): First graph convolutional layer.
-        conv2 (GCNConv): Second graph convolutional layer.
-        conv3 (GCNConv): Third graph convolutional layer.
         lin (nn.Linear): Final linear layer to map to output classes.
-        similarity_typ (str): Type of similarity metric used (default: 'euclide').
         dp (float): Dropout probability for regularization.
-        Pre_norm (bool): Whether to apply batch normalization before processing.
-        BatchNorm (BatchNorm1d): Batch normalization layer for input features.
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
@@ -404,7 +399,6 @@ class simple_1l_GNN(nn.Module):
             num_of_feat (int): Number of input node features.
             f_1 (int): Number of features in the first GCN layer.
             dp (float): Dropout probability for regularization.
-            Pre_norm (bool): Whether to apply batch normalization to input features.
             f_final (int): Number of output classes (default: 2).
 
         """
