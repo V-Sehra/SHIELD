@@ -391,7 +391,7 @@ class simple_1l_GNN(nn.Module):
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
-    def __init__(self, num_of_feat, f_3, dp, Pre_norm, f_final=2):
+    def __init__(self, num_of_feat, f_3, dp, noisy_edge: Union[bool, str] = False, f_final=2):
         """
         Initializes the GNN model.
 
@@ -410,6 +410,7 @@ class simple_1l_GNN(nn.Module):
 
         self.dp = dp
         self.Mean_agg = MeanAggregation()  # Aggregates node embeddings into a graph representation
+        self.noisy_edge = noisy_edge
 
     def forward(self, data_list):
         """
@@ -434,7 +435,11 @@ class simple_1l_GNN(nn.Module):
         for idx in range(sample_number):
             x = data_list[idx].x.float()  # Convert node features to float
 
-            edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+            if self.noisy_edge == False:
+                edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+            else:
+                edge_index = data_list[idx][
+                    f'edge_index_plate_{self.noisy_edge}'].long()
 
             # Apply GAT convolution, with or without edge attributes
             x = self.conv1(x=x, edge_index=edge_index)
