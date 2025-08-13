@@ -623,6 +623,133 @@ def plot_cell_cell_interaction_boxplots(
         plt.show()
 
 
+def plot_pct_vs_mean(
+        cell_types: Iterable[str],
+        top_connections_attentionScore: Dict[str, List],  # [(interaction_name, pd.Series), ...] or [pd.Series,...]
+        top_connections_edge_values: Dict[str, List],  # same structure; used to compute % occurrence
+        *,
+        save_dir: Optional[Union[str, Path]] = None,
+        annotate: bool = True,
+        min_len: int = 3,
+        figsize: Tuple[int, int] = (10, 7),
+) -> None:
+    """
+    Plot, for each cell type, a scatter of:
+        X-axis: percentage occurrence per interaction (from edge/neighborhood series)
+        Y-axis: mean score per interaction (from attention/score series)
+
+    Parameters
+    ----------
+    cell_types : iterable of str
+        Cell types to plot (e.g., columns from your mean DF).
+    top_connections_attentionScore : dict[cell_type -> list]
+        For each cell_type, a list containing either:
+          - (interaction_name, pd.Series) or [interaction_name, pd.Series], or
+          - pd.Series whose index is already the interaction_name repeated.
+        Series values are the *scores* (used for Y).
+    top_connections_edge_values : dict[cell_type -> list]
+        Same structure, but values represent occurrences/neighborhood counts (used for X).
+    save_dir : str | Path | None
+        If provided, saves one PNG per cell type into this directory.
+    annotate : bool
+        Draw interaction names next to points.
+    min_len : int
+        Require at least this many non-NaN entries per series to include an interaction.
+    figsize : (int, int)
+        Matplotlib figure size.
+
+    Notes
+    -----
+    - The function assumes each Series' index carries the interaction label repeated.
+      If you provide (interaction_name, series), the index is overwritten with that name.
+    - If edge values are missing for a cell type, percentages are estimated from score labels.
+    """
+
+    def _series_list(items: List) -> List[pd.Series]:
+        """Normalize list to numeric Series with proper index labels; drop short/NaN."""
+        out = []
+        for it in items:
+            if isinstance(it, (list, tuple)) and len(it) >= 2:
+                name, s = it[0], it[1]
+            else:
+                name, s = None, it
+            if not isinstance(s, pd.Series):
+                continue
+            s = pd.to_numeric(s, errors="coerce").dropna()
+            if len(s) < min_len:
+                continue
+            if name is not None:
+                s = s.copy()
+                s.index = pd.Index([str(name)] * len(s))
+            out.append(s)
+        return out
+
+    # Prepare save directory if requested
+    if save_dir is not None:
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+    for cell_type in cell_types:
+        # Y: mean score per interaction
+        score_items = top_connections_attentionScore.get(cell_type, [])
+        score_series = _series_list(score_items)
+        if not score_series:
+            continue
+        scores_all = pd.concat(score_series)
+        mean_by_interaction = scores_all.groupby(scores_all.index).mean()
+
+        # X: percentage occurrence per interaction
+        edge_items = top_connections_edge_values.get(cell_type, [])
+        edge_series = _series_list(edge_items)
+        edges_all = pd.concat(edge_series) if edge_series else scores_all  # fallback
+        counts = edges_all.index.value_counts()
+        pct_by_interaction = counts / counts.sum() * 100.0
+
+        # Merge X & Y
+        df = pd.concat(
+            [
+                pd.Series(pct_by_interaction, name="percentage"),
+                pd.Series(mean_by_interaction, name="mean"),
+            ],
+            axis=1,
+        ).dropna().reset_index().rename(columns={"index": "interaction"})
+
+        if df.empty:
+            continue
+
+        # Reference lines at medians
+        x_med = df["percentage"].median()
+        y_med = df["mean"].median()
+
+        # Plot
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.scatter(df["percentage"], df["mean"])
+
+        if annotate:
+            # small alternating nudge to reduce overlap
+            for i, row in df.iterrows():
+                ha = "left" if i % 2 == 0 else "right"
+                dx = 0.2 if ha == "left" else -0.2
+                ax.text(row["percentage"] + dx, row["mean"], str(row["interaction"]),
+                        fontsize=8, ha=ha, va="center")
+
+        # Dotted crosshairs (median thresholds)
+        ax.axvline(x_med, linestyle="--", linewidth=1)
+        ax.axhline(y_med, linestyle="--", linewidth=1)
+
+        ax.set_xlabel("Percentage occurrence (%)")
+        ax.set_ylabel("Mean interaction score")
+        ax.set_title(f"Occurance % vs Interaction mean — {cell_type}")
+        plt.tight_layout()
+
+        # Save per cell type if requested
+        if save_dir is not None:
+            safe_cell = re.sub(r"[^A-Za-z0-9._-]+", "_", str(cell_type))
+            fig.savefig(save_dir / f"pct_vs_mean__{safe_cell}.png", dpi=150, bbox_inches="tight")
+
+        plt.show()
+
+
 def plot_top_k_log_p_values_per_row(
         log_pval_matrix_path: PosixPath,
         k: int = 8,
