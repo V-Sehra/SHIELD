@@ -737,12 +737,22 @@ def plot_pct_vs_mean(
 
         if annotate:
             # small alternating nudge to reduce overlap
-            for i, row in df.iterrows():
-                ha = "left" if i % 2 == 0 else "right"
-                dx = 0.2 if ha == "left" else -0.2
-                ax.text(row["percentage"] + dx, row["mean"], str(row["interaction"]),
-                        fontsize=8, ha=ha, va="center")
+            placements = [
+                ("left", "bottom", (2, 2)),
+                ("right", "bottom", (-2, 2)),
+                ("left", "top", (2, -2)),
+                ("right", "top", (-2, -2)),
+            ]
 
+            for i, row in df.iterrows():
+                ha, va, offset = placements[i % len(placements)]
+
+                # ax.text(row["percentage"] + dx, row["mean"], str(row["interaction"]),
+                #        fontsize=25, ha=ha, va="center")
+                plt.annotate(break_title(str(row["interaction"]), max_len=10),
+                             (row["percentage"], row["mean"]),
+                             fontsize=12, rotation=0, ha=ha, va=va,
+                             clip_on=False, xytext=offset, textcoords='offset points')
         # Dotted crosshairs (median thresholds)
         ax.axvline(x_med, linestyle="--", linewidth=1)
         ax.axhline(y_med, linestyle="--", linewidth=1)
