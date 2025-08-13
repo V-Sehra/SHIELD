@@ -16,13 +16,14 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from pathlib import PosixPath
+from pathlib import PosixPath, Path
 from tqdm import tqdm
 import pickle
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, Iterable, List
 from itertools import compress
 from scipy.stats import mannwhitneyu
 
+import re
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -273,6 +274,9 @@ def get_interaction_DataFrame(
     sample_mask = interaction_dict['true_labels'] == tissue_id
     selected_dfs = list(compress(interaction_dict['normed_p2p'], sample_mask))
 
+    edge_values = pd.concat(list(compress(interaction_dict['normalisation_factor_edge_number'],
+                                          sample_mask)))
+
     # Define threshold for filtering interactions
     threshold = len(selected_dfs) * 0.01
 
@@ -287,12 +291,13 @@ def get_interaction_DataFrame(
         .sort_index()[sorted(interaction_df.columns)]
     )
 
-    return interaction_df, mean_interaction_df
+    return interaction_df, mean_interaction_df, edge_values
 
 
 def get_top_interaction_per_celltype(interaction_limit: int,
                                      all_interaction_mean_df: pd.DataFrame,
-                                     all_interaction_df: pd.DataFrame) -> Dict:
+                                     all_interaction_df: pd.DataFrame,
+                                     edge_values_df: pd.DataFrame) -> Dict:
     """
     Identifies the top interactions for each cell type based on interaction strength.
 
@@ -307,6 +312,8 @@ def get_top_interaction_per_celltype(interaction_limit: int,
     """
 
     top_connections = {}
+
+    top_connections_edge_values = {}
     cell_types = all_interaction_mean_df.columns
 
     # Loop over each cell type
@@ -320,15 +327,18 @@ def get_top_interaction_per_celltype(interaction_limit: int,
         )
 
         values = []
+        edge_values = []
 
         # Loop over each top connection and store its value
         for dst_cell in top_dst_cells:
             values.append((dst_cell, all_interaction_df[src_cell][dst_cell]))
+            edge_values.append((dst_cell, edge_values_df[src_cell][dst_cell]))
 
         # Store the strongest connections in the dictionary
         top_connections[src_cell] = values
+        top_connections_edge_values[src_cell] = edge_values
 
-    return top_connections
+    return top_connections, top_connections_edge_values
 
 
 def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenotypes: np.array,
@@ -628,7 +638,7 @@ def plot_pct_vs_mean(
         top_connections_attentionScore: Dict[str, List],  # [(interaction_name, pd.Series), ...] or [pd.Series,...]
         top_connections_edge_values: Dict[str, List],  # same structure; used to compute % occurrence
         *,
-        save_dir: Optional[Union[str, Path]] = None,
+        save_dir: Optional[Union[str, PosixPath]] = None,
         annotate: bool = True,
         min_len: int = 3,
         figsize: Tuple[int, int] = (10, 7),
