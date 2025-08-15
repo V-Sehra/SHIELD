@@ -21,6 +21,69 @@ from torch_geometric.nn import global_mean_pool, GraphNorm
 from torch.nn import BatchNorm1d
 
 
+def load_model(model_type: str, params: Dict[str, Union[str, float, int, List]]) -> nn.Module:
+    """
+    Load and initialize a GNN model based on the specified type and parameters.
+
+    Args:
+        model_type (str): Type of the model to load. Expected: 'GAT' or 'GNN'.
+        params (dict): Dictionary of model parameters, must contain:
+            - input_dim (int)
+            - hidden_dims (list[int])
+            - output_dim (int)
+            - dropout (float)
+            - batch_norm_bool (bool)
+            - layer_norm_bool (bool)
+            - graph_norm_bool (bool)
+            - similarity_typ (str)
+            - activation (str)
+
+    Returns:
+        nn.Module: Instantiated model.
+
+    Raises:
+        ValueError: If the `model_type` is not recognized.
+    """
+
+    if model_type == 'GAT':
+        model = GAT(input_dim=params['input_dim'],
+                    hidden_dims=params['hidden_dims'],
+                    output_dim=params['output_dim'],
+                    dropout=params['dropout'],
+                    batch_norm_bool=params['batch_norm_bool'],
+                    layer_norm_bool=params['layer_norm_bool'],
+                    graph_norm_bool=params['graph_norm_bool'],
+                    similarity_typ=params['similarity_typ'],
+                    activation_function=params['activation']
+                    )
+    elif model_type == 'GNN':
+        model = GCN(
+            input_dim=params['input_dim'],
+            hidden_dims=params['hidden_dims'],
+            output_dim=params['output_dim'],
+            dropout=params['dropout'],
+            batch_norm_bool=params['batch_norm_bool'],
+            layer_norm_bool=params['layer_norm_bool'],
+            graph_norm_bool=params['graph_norm_bool'],
+            similarity_typ=params['similarity_typ'],
+            activation_function=params['activation']
+        )
+    elif model_type == 'MLP':
+        model = MLP(input_dim=params['input_dim'],
+                    hidden_dims=params['hidden_dims'],
+                    output_dim=params['output_dim'],
+                    dropout=params['dropout'],
+                    batch_norm_bool=params['batch_norm_bool'],
+                    layer_norm_bool=params['layer_norm_bool'],
+                    activation_function=params['activation']
+                    )
+
+    else:
+        raise ValueError(f"Unsupported model_type '{model_type}'. Must be 'GAT', 'GNN' or MLP.")
+
+    return model
+
+
 def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
                     device: Union[torch.device, str], noise_yLabel: Union[bool, str] = False) -> Tuple[float, float]:
     """
