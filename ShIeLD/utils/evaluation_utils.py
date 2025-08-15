@@ -29,6 +29,15 @@ import matplotlib.pyplot as plt
 
 
 def break_title(title, max_len=10):
+    if title == 'M2 Macrophages PD-L1+' or title == 'M2 Macrophages PD-L1-':
+        return f'MAC {title[-1]}'
+    if title == 'Mixed Immune CD45+':
+        return 'Mixed Immune'
+
+    if len(title) > 12 and 'T cells' in title:
+        # Shorten titles with 'T cells' to 'T cells'
+        # return title[len('T cells '):]
+        title = title[len('T cells '):]
     if len(title) <= max_len:
         return title
     # Find the last space before the max_len limit
@@ -549,69 +558,71 @@ def plot_cell_cell_interaction_boxplots(
 
             names = [dst_cell[0] for dst_cell in top_conns]
             values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_conns if len(dst_cell[1]) > 2]
+            if len(values) != 0:
+                ax.set_title(src_cell)
+                ax.grid(True, linewidth=line_width)
 
-            ax.set_title(src_cell)
-            ax.grid(True, linewidth=line_width)
+                box = ax.boxplot(values, patch_artist=True)
 
-            box = ax.boxplot(values, patch_artist=True)
+                # Make boxplots white (opaque)
+                for patch in box['boxes']:
+                    patch.set_facecolor('white')
 
-            # Make boxplots white (opaque)
-            for patch in box['boxes']:
-                patch.set_facecolor('white')
+                # Line styling
+                for element in ['boxes', 'whiskers', 'caps', 'medians', 'fliers']:
+                    plt.setp(box[element], linewidth=line_width)
 
-            # Line styling
-            for element in ['boxes', 'whiskers', 'caps', 'medians', 'fliers']:
-                plt.setp(box[element], linewidth=line_width)
+                for spine in ax.spines.values():
+                    spine.set_linewidth(line_width)
 
-            for spine in ax.spines.values():
-                spine.set_linewidth(line_width)
+                for dst_cell_idx, dst_name in enumerate(names):
+                    if nan_to_zero:
+                        data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
+                        data_2 = np.nan_to_num(values[dst_cell_idx])
+                    else:
+                        d1 = all_interaction_mean_df[src_cell].to_numpy()
+                        d2 = values[dst_cell_idx]
+                        data_1 = d1[~np.isnan(d1)]
+                        data_2 = d2[~np.isnan(d2)]
 
-            for dst_cell_idx, dst_name in enumerate(names):
-                if nan_to_zero:
-                    data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
-                    data_2 = np.nan_to_num(values[dst_cell_idx])
-                else:
-                    d1 = all_interaction_mean_df[src_cell].to_numpy()
-                    d2 = values[dst_cell_idx]
-                    data_1 = d1[~np.isnan(d1)]
-                    data_2 = d2[~np.isnan(d2)]
+                    _, p_val = mannwhitneyu(data_1, data_2, alternative='less')
+                    p_val_scores.append([src_cell, dst_name, p_val])
 
-                _, p_val = mannwhitneyu(data_1, data_2, alternative='less')
-                p_val_scores.append([src_cell, dst_name, p_val])
+                    if stars:
+                        if significance_2 < p_val < significance_1:
+                            ax.scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
+                        elif p_val < significance_2:
+                            ax.scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
+                                       s=star_size)
+                            ax.scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
+                                       s=star_size)
 
-                if stars:
-                    if significance_2 < p_val < significance_1:
-                        ax.scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
-                    elif p_val < significance_2:
-                        ax.scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black', s=star_size)
-                        ax.scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black', s=star_size)
+                _, p_adj, _, _ = multipletests([x[2] for x in p_val_scores], method='fdr_bh')
+                adjusted_log10 = np.log10(p_adj)
 
-            _, p_adj, _, _ = multipletests([x[2] for x in p_val_scores], method='fdr_bh')
-            adjusted_log10 = np.log10(p_adj)
+                for dst_cell_idx, dst_name in enumerate(names):
+                    fdr_scores.append([src_cell, dst_name, adjusted_log10[dst_cell_idx]])
+                    sig_text = f"{adjusted_log10[dst_cell_idx]:.0f}"
+                    ax.text(dst_cell_idx + 1, 1.01, sig_text, color='black', fontsize=30, ha='center')
 
-            for dst_cell_idx, dst_name in enumerate(names):
-                fdr_scores.append([src_cell, dst_name, adjusted_log10[dst_cell_idx]])
-                sig_text = f"{adjusted_log10[dst_cell_idx]:.0f}"
-                ax.text(dst_cell_idx + 1, 1.01, sig_text, color='black', fontsize=30, ha='center')
+                if values:
+                    if len(names) < interaction_limit:
+                        missing = cell_types[~cell_types.isin(names)].to_list()
+                        names.extend(missing)
 
-            if values:
-                if len(names) < interaction_limit:
-                    missing = cell_types[~cell_types.isin(names)].to_list()
-                    names.extend(missing)
+                    ax.set_xticks(np.arange(1, len(values) + 1))
+                    ax.set_xticklabels(names[:len(values)], rotation=90)
 
-                ax.set_xticks(np.arange(1, len(values) + 1))
-                ax.set_xticklabels(names[:len(values)], rotation=90)
+                ax.grid(True, axis='y')
 
-            ax.grid(True, axis='y')
+                full_data = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
+                median = np.median(full_data)
+                q1, q3 = np.quantile(full_data, [0.25, 0.75])
+                ax.axhspan(q1, q3, facecolor='green', alpha=0.2)
+                ax.axhline(y=median, color='red', linestyle='--', linewidth=line_width)
 
-            full_data = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
-            median = np.median(full_data)
-            q1, q3 = np.quantile(full_data, [0.25, 0.75])
-            ax.axhspan(q1, q3, facecolor='green', alpha=0.2)
-            ax.axhline(y=median, color='red', linestyle='--', linewidth=line_width)
-
-            if log_y:
-                ax.set_yscale('log')
+                if log_y:
+                    ax.set_yscale('log')
 
     # Build and export p-value matrix
     log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
@@ -747,8 +758,6 @@ def plot_pct_vs_mean(
             for i, row in df.iterrows():
                 ha, va, offset = placements[i % len(placements)]
 
-                # ax.text(row["percentage"] + dx, row["mean"], str(row["interaction"]),
-                #        fontsize=25, ha=ha, va="center")
                 plt.annotate(break_title(str(row["interaction"]), max_len=10),
                              (row["percentage"], row["mean"]),
                              fontsize=12, rotation=0, ha=ha, va=va,
@@ -765,7 +774,7 @@ def plot_pct_vs_mean(
         # Save per cell type if requested
         if save_dir is not None:
             safe_cell = re.sub(r"[^A-Za-z0-9._-]+", "_", str(cell_type))
-            fig.savefig(save_dir / f"pct_vs_mean__{safe_cell}.png", dpi=150, bbox_inches="tight")
+            fig.savefig(save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight")
 
         plt.show()
 
@@ -843,5 +852,7 @@ def plot_top_k_log_p_values_per_row(
         # plt.show()
 
         if save_path is not None:
-            plt.savefig(save_path.with_name(save_path.stem + f'{src_labels[row]}.png'), dpi=250)
+            safe_cell = re.sub(r'[<>:"/\\|?*]+', "_", str(src_labels[row]))
+            safe_cell = safe_cell.strip(" ._")
+            plt.savefig(save_path.with_name(save_path.stem + f'{safe_cell}.png'), dpi=250)
         plt.close(fig)
