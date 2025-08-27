@@ -7,11 +7,65 @@ import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader
 
-from . import model_utils
+from . import model_utils, data_class
 
 from typing import List, Tuple, Union, Dict
 import torch_geometric
 import optuna
+
+
+def load_data_loader(model_type: str, path_to_graphs: Path, split_number: int,
+                     requirements: Dict, fix_nodeSize: int = 132):
+    train_folds = requirements['number_validation_splits'].copy()
+    train_folds.remove(split_number)
+    if model_type == 'GNN' or model_type == 'GAT':
+        from torch_geometric.loader import DataLoader
+        data_loader_train = DataLoader(
+            data_class.graph_dataset(
+                root=str(path_to_graphs / 'train' / 'graphs'),
+                path_to_graphs=path_to_graphs,
+                fold_ids=train_folds,
+                requirements_dict=requirements,
+                graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl',
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+
+        data_loader_validation = DataLoader(
+            data_class.graph_dataset(
+                root=str(path_to_graphs / 'train' / 'graphs'),
+                path_to_graphs=path_to_graphs,
+                fold_ids=[split_number],
+                requirements_dict=requirements,
+                graph_file_names=f'validation_validation_split_{split_number}_file_names.pkl',
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+    else:
+        from torch.utils.data import DataLoader
+        data_loader_train = DataLoader(
+            data_class.fixed_dataset(
+                root=str(path_to_graphs / 'train' / 'graphs'),
+                path_to_graphs=path_to_graphs,
+                fold_ids=train_folds,
+                requirements_dict=requirements,
+                graph_file_names=f'train_set_validation_split_{split_number}_file_names.pkl',
+                fix_nodeSize=fix_nodeSize
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+        data_loader_validation = DataLoader(
+            data_class.fixed_dataset(
+                root=str(path_to_graphs / 'train' / 'graphs'),
+                path_to_graphs=path_to_graphs,
+                fold_ids=[split_number],
+                requirements_dict=requirements,
+                graph_file_names=f'validation_validation_split_{split_number}_file_names.pkl',
+                fix_nodeSize=fix_nodeSize
+            ),
+            batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
+        )
+    return data_loader_train, data_loader_validation
 
 
 def load_model(model_type: str, params: Dict[str, Union[str, float, int, List]]) -> nn.Module:
@@ -110,6 +164,7 @@ def get_eval_metrics(target_y, pred_y):
 
 
 def eval_model_optuna(
+        model_type:str,
         model: torch.nn.Module, data_loader: Union[torch.utils.data.DataLoader, torch_geometric.data.DataLoader],
         device: str = 'cpu',
 
@@ -147,13 +202,21 @@ def eval_model_optuna(
     target_val = []
 
     with torch.no_grad():
-        for data in data_loader:
-            data = data.to(device)
-            predictions = model(data)
-            predicted_labels = predictions.argmax(dim=1)
+        if model_type == 'MLP':
+            for x_batch, y_batch in data_loader:
+                predictions = model(x_batch.to(device))
+                predicted_labels = predictions.argmax(dim=1)
+                
+                pred_val.extend(predicted_labels.cpu().numpy())
+                target_val.extend(y_batch.flatten().cpu().numpy())
+        else:
+            for data in data_loader:
+                data = data.to(device)
+                predictions = model(data)
+                predicted_labels = predictions.argmax(dim=1)
 
-            pred_val.extend(predicted_labels.cpu().numpy())
-            target_val.extend(data.y.cpu().numpy())
+                pred_val.extend(predicted_labels.cpu().numpy())
+                target_val.extend(data.y.cpu().numpy())
 
     return np.array(target_val), np.array(pred_val)
 
@@ -162,6 +225,7 @@ def train_loop_optuna(config_file: Dict, model,
                       data_loader: Union[torch.utils.data.DataLoader, torch_geometric.data.DataLoader],
                       optimizer: torch.optim.Optimizer,
                       criterion: torch.nn.Module,
+                      model_type,
                       device='cpu') -> Tuple[torch.nn.Module, List]:
     '''
     Function to train a model with early stopping criteria based on training loss plateau.
@@ -184,13 +248,21 @@ def train_loop_optuna(config_file: Dict, model,
     while train_stop is False:
         model.train()
         epoch_losses = []
-        for data in data_loader:
-            y_batch = data.y.to(device)
-            optimizer.zero_grad()
-            loss = criterion(model(data.to(device)), y_batch)
-            loss.backward()
-            optimizer.step()
-            epoch_losses.append(loss.item())
+        if model_type == 'MLP':
+            for x_batch, y_batch in data_loader:
+                optimizer.zero_grad()
+                loss = criterion(model(x_batch.to(device)), y_batch.flatten().to(device))
+                loss.backward()
+                optimizer.step()
+                epoch_losses.append(loss.item())
+        else:
+            for data in data_loader:
+                y_batch = data.y.to(device)
+                optimizer.zero_grad()
+                loss = criterion(model(data.to(device)), y_batch)
+                loss.backward()
+                optimizer.step()
+                epoch_losses.append(loss.item())
 
         avg_loss = np.mean(epoch_losses)
         train_losses.append(avg_loss)
@@ -290,6 +362,7 @@ def objective(
         optimizer=optimizer,
         criterion=criterion,
         device=device,
+        model_type=model_type,
     )
 
     print("Validating:")
@@ -298,7 +371,8 @@ def objective(
     target_val, pred_val = eval_model_optuna(
         data_loader=data_loader_test,
         model=model,
-        device=device
+        device=device,
+        model_type = model_type
     )
 
     # --- Evaluation Metrics ---

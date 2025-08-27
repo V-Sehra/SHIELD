@@ -316,7 +316,7 @@ class fixed_dataset(Dataset):
             if 'global_std' in self.normalize:
                 data.x = (data.x - self.total_mean) / self.sig
 
-        x = pad_or_repeat_rows(x=data.x, fix_nodeSize=self.fix_nodeSize)
+        x = pad_or_repeat_rows(x=data.x, fix_nodeSize=self.fix_nodeSize).flatten()
         y = data.y
 
         return x, y

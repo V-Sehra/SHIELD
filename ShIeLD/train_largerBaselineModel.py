@@ -3,7 +3,6 @@ import pickle
 from utils import optuna_utils
 from pathlib import Path
 
-from utils.data_class import graph_dataset
 import torch
 import optuna
 
@@ -20,7 +19,7 @@ parser.add_argument("-model_type", "--model_type", type=str, default='GAT',
                     choices=['GAT', 'GNN', 'MLP']
                     )
 parser.add_argument("-val_split", "--validationSplit", default=1)
-
+parser.add_argument("-fix_nodeSize", "--fix_nodeSize", default=132)
 parser.add_argument("-scoring", "--scoring", type=str, default='f1_weighted',
                     choices=['f1_weighted', 'balanced_accuracy', 'accuracy'])
 
@@ -47,35 +46,11 @@ def main():
                           f"min_cells_{requirements['minimum_number_cells']}" /
                           f"{best_config_dict['fussy_limit']}" /
                           f"radius_{best_config_dict['radius_distance']}")
-
-    train_folds = requirements['number_validation_splits'].copy()
-    train_folds.remove(val_split)
-    if args.model_type == 'GNN' or args.model_type == 'GAT':
-        from torch_geometric.loader import DataLoader
-    else:
-        from torch.utils.data import DataLoader
-
-    data_loader_train = DataLoader(
-        graph_dataset(
-            root=str(path_to_graphs / 'train' / 'graphs'),
-            path_to_graphs=path_to_graphs,
-            fold_ids=train_folds,
-            requirements_dict=requirements,
-            graph_file_names=f'train_set_validation_split_{val_split}_file_names.pkl',
-        ),
-        batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
-    )
-
-    data_loader_validation = DataLoader(
-        graph_dataset(
-            root=str(path_to_graphs / 'train' / 'graphs'),
-            path_to_graphs=path_to_graphs,
-            fold_ids=[val_split],
-            requirements_dict=requirements,
-            graph_file_names=f'validation_validation_split_{val_split}_file_names.pkl',
-        ),
-        batch_size=requirements['batch_size'], shuffle=True, num_workers=8, prefetch_factor=50
-    )
+    data_loader_train, data_loader_validation = optuna_utils.load_data_loader(model_type=args.model_type,
+                                                                              path_to_graphs=path_to_graphs,
+                                                                              split_number=val_split,
+                                                                              requirements=requirements,
+                                                                              fix_nodeSize=args.fix_nodeSize)
 
     requirements['path_training_results'].mkdir(parents=True, exist_ok=True)
     db_path = Path(
@@ -88,8 +63,12 @@ def main():
         direction="maximize",
         load_if_exists=True
     )
-
+    
     input_dim = requirements['input_layer']
+    if args.model_type == 'MLP':
+        input_dim = input_dim * 132
+
+        
     output_dim = requirements['output_layer']
 
     # hypersearch:
