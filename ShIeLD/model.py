@@ -23,10 +23,19 @@ class ShIeLD(nn.Module):
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
-    def __init__(self, num_of_feat: int, layer_1: int, dp: float,
-                 layer_final: int = 2, edge_dim: int = 1, similarity_typ: str = 'euclide',
-                 self_att: bool = True, attr_bool: bool = True, norm_type: str = 'No_norm',
-                 noisy_edge: Union[bool, str] = False):
+    def __init__(
+        self,
+        num_of_feat: int,
+        layer_1: int,
+        dp: float,
+        layer_final: int = 2,
+        edge_dim: int = 1,
+        similarity_typ: str = "euclide",
+        self_att: bool = True,
+        attr_bool: bool = True,
+        norm_type: str = "No_norm",
+        noisy_edge: Union[bool, str] = False,
+    ):
         """
         Initializes the ShIeLD model.
 
@@ -46,13 +55,16 @@ class ShIeLD(nn.Module):
         # if needed the edges can be varied by the selection of edge_type
         self.noisy_edge = noisy_edge
         if self.noisy_edge != False:
-            if self.noisy_edge != 'sameCon' and self.noisy_edge != 'percent':
-                raise ValueError(f'Noisy edge type {self.noisy_edge} not supported. '
-                                 f'Please use False, "sameCon" or "percent".')
+            if self.noisy_edge != "sameCon" and self.noisy_edge != "percent":
+                raise ValueError(
+                    f"Noisy edge type {self.noisy_edge} not supported. "
+                    f'Please use False, "sameCon" or "percent".'
+                )
 
         # Single GAT layer with optional self-loops
-        self.conv1 = GATv2Conv(num_of_feat, layer_1, edge_dim=edge_dim,
-                               add_self_loops=self_att)
+        self.conv1 = GATv2Conv(
+            num_of_feat, layer_1, edge_dim=edge_dim, add_self_loops=self_att
+        )
 
         self.lin = Linear(layer_1, layer_final)  # Linear output layer
         self.attr_bool = attr_bool  # Determines if edge attributes are used
@@ -63,18 +75,19 @@ class ShIeLD(nn.Module):
         self.norm_type = norm_type  # Type of normalization to apply
 
         # Determine what normalization is used and needs to be loaded
-        if ('batch_norm'.lower() in self.norm_type.lower()) or \
-                ('sample_norm'.lower() in self.norm_type):
+        if ("batch_norm".lower() in self.norm_type.lower()) or (
+            "sample_norm".lower() in self.norm_type
+        ):
             # Batch normalization layer for the output of the GAT layer
             self.norm = BatchNorm1d(layer_1, affine=False)
-        elif 'layer_norm'.lower() in self.norm_type.lower():
+        elif "layer_norm".lower() in self.norm_type.lower():
             # Layer normalization layer for the output of the GAT layer
             self.norm = nn.LayerNorm(layer_1, elementwise_affine=False)
         else:
             # If batch normalization is not used, set it to None
             self.norm = None
 
-        if 'forceTrain'.lower() in self.norm_type.lower():
+        if "forceTrain".lower() in self.norm_type.lower():
             self.force_norm_train = True
         else:
             self.force_norm_train = False
@@ -102,45 +115,56 @@ class ShIeLD(nn.Module):
         prediction = []  # List to store predictions for each graph
         attention = []  # List to store attention weights
 
-        if 'batch_norm' in self.norm_type.lower():
+        if "batch_norm" in self.norm_type.lower():
             whole_batch = Batch.from_data_list(data_list)
             x_normed = self.norm(whole_batch.x.float())
 
         sample_number = len(data_list)  # Number of graphs in the batch
 
         for idx in range(sample_number):
-
-            if 'batch_norm' in self.norm_type.lower():
-                x = x_normed[whole_batch.ptr[idx]:whole_batch.ptr[idx + 1]]
-            elif 'sample_norm'.lower() in self.norm_type:
+            if "batch_norm" in self.norm_type.lower():
+                x = x_normed[whole_batch.ptr[idx] : whole_batch.ptr[idx + 1]]
+            elif "sample_norm".lower() in self.norm_type:
                 x = self.norm(data_list[idx].x.float())
             else:
                 x = data_list[idx].x.float()  # Convert node features to float
 
             if self.noisy_edge == False:
-                edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+                edge_index = data_list[
+                    idx
+                ].edge_index_plate.long()  # Convert edge indices to long tensor
             else:
                 edge_index = data_list[idx][
-                    f'edge_index_plate_{self.noisy_edge}'].long()
+                    f"edge_index_plate_{self.noisy_edge}"
+                ].long()
             # Apply GAT convolution, with or without edge attributes
             if self.attr_bool:
                 edge_attr = data_list[idx].edge_att.float()
-                x, att = self.conv1(x=x, edge_index=edge_index,
-                                    edge_attr=edge_attr, return_attention_weights=True)
+                x, att = self.conv1(
+                    x=x,
+                    edge_index=edge_index,
+                    edge_attr=edge_attr,
+                    return_attention_weights=True,
+                )
             else:
-                x, att = self.conv1(x=x, edge_index=edge_index,
-                                    return_attention_weights=True)
+                x, att = self.conv1(
+                    x=x, edge_index=edge_index, return_attention_weights=True
+                )
 
-            if 'layer_norm' in self.norm_type.lower():
+            if "layer_norm" in self.norm_type.lower():
                 x = self.norm(x)
 
             x = F.relu(x)  # Apply ReLU activation
             x = F.dropout(x, p=self.dp, training=self.training)  # Apply dropout
 
-            x = self.Mean_agg(x, dim=0)  # Aggregate node embeddings into a graph representation
+            x = self.Mean_agg(
+                x, dim=0
+            )  # Aggregate node embeddings into a graph representation
             x = self.lin(x)  # Final linear transformation
 
-            prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
+            prediction.append(
+                F.softmax(x, dim=1)
+            )  # Softmax activation for classification
             attention.append(att)  # Store attention scores
 
         return prediction, attention
