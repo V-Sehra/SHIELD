@@ -20,7 +20,9 @@ from typing import Optional, List, Union
 from pathlib import Path, PosixPath
 
 
-def get_random_edges(original_edge_mat: np.ndarray, number_nodes: int, percent_number_cells: float = 0.1):
+def get_random_edges(
+    original_edge_mat: np.ndarray, number_nodes: int, percent_number_cells: float = 0.1
+):
     """
     Generate synthetic edge matrices with controlled connectivity and randomness.
 
@@ -56,44 +58,63 @@ def get_random_edges(original_edge_mat: np.ndarray, number_nodes: int, percent_n
     # Generate a synthetic edge matrix with random edges based on percentage of nodes
     random_repeats = round(number_nodes * percent_number_cells)
     src_random_percentage = np.repeat(np.arange(number_nodes), random_repeats)
-    dst_random_percentage = np.random.choice(number_nodes, size=len(src_random_percentage))
-    edge_mat_random_percentage = np.array([src_random_percentage, dst_random_percentage])
+    dst_random_percentage = np.random.choice(
+        number_nodes, size=len(src_random_percentage)
+    )
+    edge_mat_random_percentage = np.array(
+        [src_random_percentage, dst_random_percentage]
+    )
 
     return edge_mat_same_connectivity, edge_mat_random_percentage
 
 
-def assign_label_from_distribution(labels_in_graph: pd.Series,
-                                   node_prob: Union[str, bool] = False) -> str:
-    '''
+def assign_label_from_distribution(
+    labels_in_graph: pd.Series, node_prob: Union[str, bool] = False
+) -> str:
+    """
 
     labels_in_graph(pd.Series): labels_in_graph:
     node_prob(bool):
     :return: str with label type
-    '''
+    """
     labels = labels_in_graph.index.tolist()
 
-    if node_prob == False or node_prob == 'even':
+    if node_prob == False or node_prob == "even":
         probs = [1 / len(labels_in_graph) for _ in range(len(labels_in_graph))]
 
         return rnd.choices(labels, weights=probs, k=1)[0]
 
-    elif node_prob == True or node_prob == 'prob':
+    elif node_prob == True or node_prob == "prob":
         probs = (labels_in_graph / labels_in_graph.sum()).tolist()
         return rnd.choices(labels, weights=probs, k=1)[0]
-    elif node_prob == 'both':
+    elif node_prob == "both":
         probs = (labels_in_graph / labels_in_graph.sum()).tolist()
         even_probs = [1 / len(labels_in_graph) for _ in range(len(labels_in_graph))]
-        return rnd.choices(labels, weights=probs, k=1)[0], rnd.choices(labels, weights=even_probs, k=1)[0]
+        return rnd.choices(labels, weights=probs, k=1)[0], rnd.choices(
+            labels, weights=even_probs, k=1
+        )[0]
 
 
 def bool_passer(argument):
-    if argument == 'True' or argument == 'true' or argument == '1' or argument == 1 or argument == True:
+    if (
+        argument == "True"
+        or argument == "true"
+        or argument == "1"
+        or argument == 1
+        or argument == True
+    ):
         value = True
-    elif argument == 'False' or argument == 'false' or argument == '0' or argument == 0 or argument == False:
+    elif (
+        argument == "False"
+        or argument == "false"
+        or argument == "0"
+        or argument == 0
+        or argument == False
+    ):
         value = False
     else:
         value = argument
-    return (value)
+    return value
 
 
 def compute_connection_matrix(src, dst, phenotype_names, absolute_bool):
@@ -132,30 +153,43 @@ def compute_connection_matrix(src, dst, phenotype_names, absolute_bool):
     phenotypes = sorted(set(phenotype_names))
 
     # Create a DataFrame from source-destination pairings
-    df_conn = pd.DataFrame({'src': src, 'dst': dst})
+    df_conn = pd.DataFrame({"src": src, "dst": dst})
 
     # Count how often each (src, dst) pair occurs; pivot into a square matrix
-    conn_counts = df_conn.groupby(['src', 'dst']).size().unstack(fill_value=0)
+    conn_counts = df_conn.groupby(["src", "dst"]).size().unstack(fill_value=0)
 
     # Ensure all phenotype combinations are represented, even if absent in the data
-    conn_counts = conn_counts.reindex(index=phenotypes, columns=phenotypes, fill_value=0)
+    conn_counts = conn_counts.reindex(
+        index=phenotypes, columns=phenotypes, fill_value=0
+    )
 
     if absolute_bool:
         # Return raw counts of connections
         return conn_counts
     else:
         # Normalize each row to percentage (conditional on source phenotype)
-        conn_percent = conn_counts.div(conn_counts.sum(axis=1).replace(0, 1), axis=0) * 100
+        conn_percent = (
+            conn_counts.div(conn_counts.sum(axis=1).replace(0, 1), axis=0) * 100
+        )
         return conn_percent
-    
 
-def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
-                          whole_data: pd.DataFrame, voronoi_list: List, sub_sample: str,
-                          requiremets_dict: dict, save_path_folder: Union[str, PosixPath],
-                          repeat_id: int, skip_existing: bool = False,
-                          noisy_labeling: bool = False, node_prob: Union[str, bool] = False,
-                          randomise_edges: bool = False, percent_number_cells: float = 0.1,
-                          segmentation: str = 'voronoi'):
+
+def create_graph_and_save(
+    vornoi_id: int,
+    radius_neibourhood: float,
+    whole_data: pd.DataFrame,
+    voronoi_list: List,
+    sub_sample: str,
+    requiremets_dict: dict,
+    save_path_folder: Union[str, PosixPath],
+    repeat_id: int,
+    skip_existing: bool = False,
+    noisy_labeling: bool = False,
+    node_prob: Union[str, bool] = False,
+    randomise_edges: bool = False,
+    percent_number_cells: float = 0.1,
+    segmentation: str = "voronoi",
+):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
@@ -179,47 +213,51 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         None
     """
 
-    tissue_dict = requiremets_dict['label_dict']
+    tissue_dict = requiremets_dict["label_dict"]
     # List of evaluation column names.
-    eval_col_name = requiremets_dict['eval_columns']
+    eval_col_name = requiremets_dict["eval_columns"]
     # Column names for gene expression features.
-    gene_col_name = requiremets_dict['markers']
+    gene_col_name = requiremets_dict["markers"]
 
     cosine = torch.nn.CosineSimilarity(dim=1)
 
     # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
-    if segmentation == 'voronoi':
+    if segmentation == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
         number_samples = len(voronoi_list)
-    elif segmentation == 'random':
+    elif segmentation == "random":
         if type(whole_data) != list:
-            raise ValueError(f"if segmentation is random then the provided whole set must be a list of DataFrames")
+            raise ValueError(
+                f"if segmentation is random then the provided whole set must be a list of DataFrames"
+            )
 
         graph_data = whole_data[vornoi_id].copy()
         number_samples = len(whole_data)
 
     # Determine the most frequent tissue type in this region
-    count_tissue_type = graph_data[requiremets_dict['label_column']].value_counts()
+    count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
 
-    file_name = f'graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(number_samples * repeat_id) + vornoi_id}.pt'
+    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(number_samples * repeat_id) + vornoi_id}.pt"
 
     if skip_existing:
-        if Path(f'{save_path_folder}', file_name).exists():
-            print(f'Skipping existing file: {file_name}')
+        if Path(f"{save_path_folder}", file_name).exists():
+            print(f"Skipping existing file: {file_name}")
             return
 
     # Convert gene expression features into a tensor
     node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
 
     # Extract spatial coordinates (X, Y)
-    coord = graph_data[[requiremets_dict['X_col_name'], requiremets_dict['Y_col_name']]]
+    coord = graph_data[[requiremets_dict["X_col_name"], requiremets_dict["Y_col_name"]]]
 
     # Compute the edge index using a utility function
     edge_mat = get_edge_index(mat=coord, dist_bool=True, radius=radius_neibourhood)
 
     # Compute cosine similarity between connected nodes
-    plate_cosine_sim = cosine(node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]).cpu()
+    plate_cosine_sim = cosine(
+        node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
+    ).cpu()
 
     # Create a PyTorch Geometric data object
     data = Data(
@@ -227,55 +265,62 @@ def create_graph_and_save(vornoi_id: int, radius_neibourhood: float,
         edge_index_plate=torch.tensor(edge_mat[0]).long(),
         plate_euc=torch.tensor(1 / edge_mat[1]),  # Inverse of Euclidean distance
         plate_cosine_sim=plate_cosine_sim,
-        fold_id=graph_data[requiremets_dict['validation_split_column']].unique(),
+        fold_id=graph_data[requiremets_dict["validation_split_column"]].unique(),
         orginal_cord=torch.tensor(coord.to_numpy()),
-        eval=graph_data[eval_col_name].to_numpy(dtype=np.dtype('str')),
+        eval=graph_data[eval_col_name].to_numpy(dtype=np.dtype("str")),
         eval_col_names=eval_col_name,
         sub_sample=sub_sample,
         y=torch.tensor(tissue_dict[count_tissue_type.idxmax()]).flatten(),
     ).cpu()
 
     if noisy_labeling and (len(count_tissue_type) > 1):
-
-        if node_prob == False or node_prob == 'even':
-            even_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
-                                                        node_prob=node_prob)
+        if node_prob == False or node_prob == "even":
+            even_label = assign_label_from_distribution(
+                labels_in_graph=count_tissue_type, node_prob=node_prob
+            )
             data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
 
-        elif node_prob == True or node_prob == 'prob':
-            prob_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
-                                                        node_prob=node_prob)
+        elif node_prob == True or node_prob == "prob":
+            prob_label = assign_label_from_distribution(
+                labels_in_graph=count_tissue_type, node_prob=node_prob
+            )
             data.y_noise_prob = torch.tensor(tissue_dict[prob_label]).flatten()
 
-        elif node_prob == 'both':
-            prob_label, even_label = assign_label_from_distribution(labels_in_graph=count_tissue_type,
-                                                                    node_prob=node_prob)
+        elif node_prob == "both":
+            prob_label, even_label = assign_label_from_distribution(
+                labels_in_graph=count_tissue_type, node_prob=node_prob
+            )
             data.y_noise_prob = torch.tensor(tissue_dict[prob_label]).flatten()
             data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
 
     if randomise_edges:
-        edge_mat_same_connectivity, edge_mat_random_percentage = get_random_edges(original_edge_mat=edge_mat[0],
-                                                                                  percent_number_cells=percent_number_cells,
-                                                                                  number_nodes=node_data.shape[0])
+        edge_mat_same_connectivity, edge_mat_random_percentage = get_random_edges(
+            original_edge_mat=edge_mat[0],
+            percent_number_cells=percent_number_cells,
+            number_nodes=node_data.shape[0],
+        )
 
         data.edge_index_plate_sameCon = torch.tensor(edge_mat_same_connectivity).long()
         data.edge_index_plate_percent = torch.tensor(edge_mat_random_percentage).long()
 
     # Save the processed graph data
-    torch.save(data, Path(f'{save_path_folder}', file_name))
+    torch.save(data, Path(f"{save_path_folder}", file_name))
 
     return
 
 
-def reducePopulation(df: pd.DataFrame, columnName: str, cellTypeName: str, downsampleRatio: float = 0.3):
-    '''
+def reducePopulation(
+    df: pd.DataFrame, columnName: str, cellTypeName: str, downsampleRatio: float = 0.3
+):
+    """
     This function reduces the population of a specific cell type in a DataFrame by downsampling it.
     df (pd.DataFrame): original sample
     columnName (str): which column name contrains the phenotypes
     cellTypeName (str): which cell type should be reduced
     downsampleRatio (float): the ratio of the cell type to be kept in the sample, default is 0.3 (30%)
     :return df (pd.DataFrame): DataFrame with reduced population of the specified cell type
-    '''
+    """
+    print(f"Start population: {df[columnName].value_counts()}")
     # Example filter mask
     mask = df[columnName].str.contains(cellTypeName, case=False, na=False)
 
@@ -286,15 +331,22 @@ def reducePopulation(df: pd.DataFrame, columnName: str, cellTypeName: str, downs
     non_cellTypeName_rows = df[~mask]
 
     # Subsample 30% of the "Macrophages" rows
-    cellTypeName_subsample = cellTypeName_rows.sample(frac=downsampleRatio, random_state=42)
+    cellTypeName_subsample = cellTypeName_rows.sample(
+        frac=downsampleRatio, random_state=42
+    )
 
     # Combine them back
     df = pd.concat([non_cellTypeName_rows, cellTypeName_subsample]).sort_index()
-
+    print(
+        f"Reduced {cellTypeName} from {len(cellTypeName_rows)} to {len(cellTypeName_subsample)}"
+    )
+    print(f"Now: {df[columnName].value_counts()}")
     return df
 
 
-def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names: np.array) -> pd.DataFrame:
+def fill_missing_row_and_col_withNaN(
+    data_frame: pd.DataFrame, cell_types_names: np.array
+) -> pd.DataFrame:
     """
     This function fills missing rows and columns in a given DataFrame with NaN values.
 
@@ -316,10 +368,16 @@ def fill_missing_row_and_col_withNaN(data_frame: pd.DataFrame, cell_types_names:
     missing_rows = cell_types_names[~np.isin(cell_types_names, data_frame.index)]
 
     # Concatenate the DataFrame with a new DataFrame that contains the missing rows filled with NaN values
-    data_frame = pd.concat([data_frame,
-                            pd.DataFrame(np.full((len(missing_rows), data_frame.shape[1]), np.nan),
-                                         columns=data_frame.columns,
-                                         index=cell_types_names[~np.isin(cell_types_names, data_frame.index)])])
+    data_frame = pd.concat(
+        [
+            data_frame,
+            pd.DataFrame(
+                np.full((len(missing_rows), data_frame.shape[1]), np.nan),
+                columns=data_frame.columns,
+                index=cell_types_names[~np.isin(cell_types_names, data_frame.index)],
+            ),
+        ]
+    )
 
     # Sort the DataFrame by index and columns
     data_frame = data_frame.sort_index()[sorted(data_frame.columns)]
@@ -351,9 +409,12 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     total_number_connections = [len(connections) for connections in neighours_per_cell]
 
     # Create the source node indices based on the number of connections each node has
-    edge_src = np.concatenate([
-        np.repeat(idx, total_number_connections[idx]) for idx in range(len(total_number_connections))
-    ])
+    edge_src = np.concatenate(
+        [
+            np.repeat(idx, total_number_connections[idx])
+            for idx in range(len(total_number_connections))
+        ]
+    )
 
     # Flatten the neighbor indices to get the destination nodes
     edge_dest = np.concatenate(neighours_per_cell)
@@ -376,18 +437,22 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
         return edge
 
 
-def get_median_with_threshold(series: pd.Series, threshold: float) -> Optional[pd.Series]:
+def get_median_with_threshold(
+    series: pd.Series, threshold: float
+) -> Optional[pd.Series]:
     if series.count() >= threshold:
         return series.median()
     else:
         return np.nan
 
 
-def get_voronoi_id(data_set: DataFrame,
-                   requiremets_dict: dict,
-                   anker_cell: DataFrame,
-                   fussy_limit: Optional[float] = None,
-                   centroid_bool: bool = False) -> np.array:
+def get_voronoi_id(
+    data_set: DataFrame,
+    requiremets_dict: dict,
+    anker_cell: DataFrame,
+    fussy_limit: Optional[float] = None,
+    centroid_bool: bool = False,
+) -> np.array:
     """
     Function to assign each data point to a Voronoi cell.
 
@@ -402,9 +467,9 @@ def get_voronoi_id(data_set: DataFrame,
     Returns:
     ndarray: List of Voronoi cells with assigned data points or array of nearest anchor indices.
     """
-    boarder_number = requiremets_dict['voro_neighbours']
-    x_col_name = requiremets_dict['X_col_name']
-    y_col_name = requiremets_dict['Y_col_name']
+    boarder_number = requiremets_dict["voro_neighbours"]
+    x_col_name = requiremets_dict["X_col_name"]
+    y_col_name = requiremets_dict["Y_col_name"]
 
     # Create a KDTree for efficient nearest neighbor search
     tree = cKDTree(anker_cell[[x_col_name, y_col_name]])
@@ -414,18 +479,27 @@ def get_voronoi_id(data_set: DataFrame,
 
     # If 'fussy_limit' is specified, adjust the assignment of data points to Voronoi cells
     if fussy_limit is not None:
-
         # If 'centroid_bool' is True, use the centroid of Voronoi cells for assignment
         if centroid_bool:
             copy_data = data_set.copy()
-            copy_data['voronoi_id'] = indices[:, 0]
-            centroid_data = copy_data.groupby('voronoi_id')[[x_col_name, y_col_name]].mean().reset_index()
+            copy_data["voronoi_id"] = indices[:, 0]
+            centroid_data = (
+                copy_data.groupby("voronoi_id")[[x_col_name, y_col_name]]
+                .mean()
+                .reset_index()
+            )
             tree_centroid = cKDTree(centroid_data[[x_col_name, y_col_name]])
-            dist_centroid, _ = tree_centroid.query(data_set[[x_col_name, y_col_name]], k=boarder_number)
-            proximity_to_border = [dist_centroid[:, 0] / dist_centroid[:, i] for i in range(0, boarder_number)]
+            dist_centroid, _ = tree_centroid.query(
+                data_set[[x_col_name, y_col_name]], k=boarder_number
+            )
+            proximity_to_border = [
+                dist_centroid[:, 0] / dist_centroid[:, i]
+                for i in range(0, boarder_number)
+            ]
         else:
-
-            proximity_to_border = [dist[:, 0] / dist[:, i] for i in range(0, boarder_number)]
+            proximity_to_border = [
+                dist[:, 0] / dist[:, i] for i in range(0, boarder_number)
+            ]
 
         first_assignment = indices[:, 0].copy()
         voronoi_collection = []
@@ -436,8 +510,12 @@ def get_voronoi_id(data_set: DataFrame,
             for next_anker in range(1, len(proximity_to_border)):
                 included_cells = proximity_to_border[next_anker] > fussy_limit
                 if any(included_cells):
-                    bordering_cells = (indices[:, next_anker].copy() == idx_voro) & (included_cells)
-                    voronois_list = np.append(voronois_list, np.where(bordering_cells)[0])
+                    bordering_cells = (indices[:, next_anker].copy() == idx_voro) & (
+                        included_cells
+                    )
+                    voronois_list = np.append(
+                        voronois_list, np.where(bordering_cells)[0]
+                    )
             voronoi_collection.append(np.unique(voronois_list))
 
         return np.array(voronoi_collection, dtype=object)
@@ -467,29 +545,33 @@ def create_test_train_split(args):
     raw_data = turn_raw_csv_to_graph_csv(pd.read_csv(args.path_to_raw_csv))
 
     # Get a list of unique patient IDs from the raw data
-    patent_list = raw_data['Patient'].unique()
+    patent_list = raw_data["Patient"].unique()
 
     # If the 'new_test_split_bool' argument is True, shuffle the patient list and split it into training and testing sets
     # Otherwise, use a predefined list of patient IDs for the testing set
     if bool_passer(args.new_test_split_bool):
         rnd.shuffle(patent_list)
-        train_patients = patent_list[0:int(len(patent_list) * 0.8)]
-        test_patients = patent_list[int(len(patent_list) * 0.8):]
+        train_patients = patent_list[0 : int(len(patent_list) * 0.8)]
+        test_patients = patent_list[int(len(patent_list) * 0.8) :]
 
-        train_csv = raw_data[raw_data['Patient'].isin(train_patients)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patients)]
+        train_csv = raw_data[raw_data["Patient"].isin(train_patients)]
+        test_csv = raw_data[raw_data["Patient"].isin(test_patients)]
     else:
-        test_patient_ids = ['LHCC51', 'LHCC53', 'Pat53', 'LHCC45', 'Pat52']
-        train_csv = raw_data[~raw_data['Patient'].isin(test_patient_ids)]
-        test_csv = raw_data[raw_data['Patient'].isin(test_patient_ids)]
+        test_patient_ids = ["LHCC51", "LHCC53", "Pat53", "LHCC45", "Pat52"]
+        train_csv = raw_data[~raw_data["Patient"].isin(test_patient_ids)]
+        test_csv = raw_data[raw_data["Patient"].isin(test_patient_ids)]
 
     # Create directories for saving the training and testing sets
-    os.system(f'mkdir -p {args.path_to_save_data}/train_set')
-    os.system(f'mkdir -p {args.path_to_save_data}/test_set')
+    os.system(f"mkdir -p {args.path_to_save_data}/train_set")
+    os.system(f"mkdir -p {args.path_to_save_data}/test_set")
 
     # Save the training and testing sets as CSV files
-    train_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'train_set', 'train_cells.csv'))
-    test_csv.to_csv(os.path.join(f'{args.path_to_save_data}', 'test_set', 'test_cells.csv'))
+    train_csv.to_csv(
+        os.path.join(f"{args.path_to_save_data}", "train_set", "train_cells.csv")
+    )
+    test_csv.to_csv(
+        os.path.join(f"{args.path_to_save_data}", "test_set", "test_cells.csv")
+    )
 
     return
 
@@ -520,19 +602,23 @@ def turn_raw_csv_to_graph_csv(raw_csv):
     """
 
     # Calculate the X and Y values as the average of 'XMax' and 'XMin', and 'YMax' and 'YMin', respectively
-    raw_csv['X_value'] = (raw_csv['XMax'] + raw_csv['XMin']) / 2
-    raw_csv['Y_value'] = (raw_csv['YMax'] + raw_csv['YMin']) / 2
+    raw_csv["X_value"] = (raw_csv["XMax"] + raw_csv["XMin"]) / 2
+    raw_csv["Y_value"] = (raw_csv["YMax"] + raw_csv["YMin"]) / 2
 
     # Filter the columns of the DataFrame to only include those that contain certain substrings
-    raw_csv = raw_csv.loc[:, raw_csv.columns.str.contains(
-        'Tissue|Patient|X_value|Y_value|.Intensity|Class|Class0|CD45.Positive.Classification|Celltype',
-        na=False)]
+    raw_csv = raw_csv.loc[
+        :,
+        raw_csv.columns.str.contains(
+            "Tissue|Patient|X_value|Y_value|.Intensity|Class|Class0|CD45.Positive.Classification|Celltype",
+            na=False,
+        ),
+    ]
     return raw_csv
 
 
 def turn_pixel_to_meter(pixel_radius):
     pixel_to_miliMeter_factor = 2649.291339
-    mycro_meter_radius = pixel_radius * (10 ** 3 / pixel_to_miliMeter_factor)
+    mycro_meter_radius = pixel_radius * (10**3 / pixel_to_miliMeter_factor)
     return round(mycro_meter_radius)
 
 
@@ -553,13 +639,16 @@ def combine_cell_types(original_array, string_list, retrun_adj_matrix=False):
 
     for substring_to_replace in string_list:
         # Find indices where the substring occurs
-        indices = np.core.defchararray.find(adjusted_array.astype(str), substring_to_replace)
+        indices = np.core.defchararray.find(
+            adjusted_array.astype(str), substring_to_replace
+        )
 
         # Replace words containing the substring with 'substring_to_replace'
         adjusted_array[indices != -1] = substring_to_replace
 
-    unique_elements, unique_indices, inverse_indices = np.unique(adjusted_array, return_index=True,
-                                                                 return_inverse=True)
+    unique_elements, unique_indices, inverse_indices = np.unique(
+        adjusted_array, return_index=True, return_inverse=True
+    )
 
     if retrun_adj_matrix:
         return unique_elements, adjusted_array

@@ -29,24 +29,24 @@ import matplotlib.pyplot as plt
 
 
 def break_title(title, max_len=10):
-    if title == 'M2 Macrophages PD-L1+' or title == 'M2 Macrophages PD-L1-':
-        return f'MAC {title[-1]}'
-    if title == 'Mixed Immune CD45+':
-        return 'Mixed Immune'
+    if title == "M2 Macrophages PD-L1+" or title == "M2 Macrophages PD-L1-":
+        return f"MAC {title[-1]}"
+    if title == "Mixed Immune CD45+":
+        return "Mixed Immune"
 
-    if len(title) > 12 and 'T cells' in title:
+    if len(title) > 12 and "T cells" in title:
         # Shorten titles with 'T cells' to 'T cells'
         # return title[len('T cells '):]
-        title = title[len('T cells '):]
+        title = title[len("T cells ") :]
     if len(title) <= max_len:
         return title
     # Find the last space before the max_len limit
-    break_idx = title.rfind(' ', 0, max_len)
+    break_idx = title.rfind(" ", 0, max_len)
     if break_idx == -1:
         # No space found before max_len, try finding the next one
-        break_idx = title.find(' ', max_len)
+        break_idx = title.find(" ", max_len)
     if break_idx != -1:
-        return title[:break_idx] + '\n' + title[break_idx + 1:]
+        return title[:break_idx] + "\n" + title[break_idx + 1 :]
     return title  # No space found, return as is
 
 
@@ -61,12 +61,21 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
     Returns:
     - dict: The best configuration dictionary.
     """
-    if 'sampleing' in requirements_dict.keys():
-        if requirements_dict['sampleing'] == 'random':
-            requirements_dict['fussy_limit'] = 'random_sampling'
+    if "sampleing" in requirements_dict.keys():
+        if requirements_dict["sampleing"] == "random":
+            requirements_dict["fussy_limit"] = "random_sampling"
 
-    must_have_columns = ['layer_1', 'input_layer', 'droupout_rate', 'output_layer', 'comment_norm',
-                         'attr_bool', 'anker_value', 'radius_distance', 'fussy_limit']
+    must_have_columns = [
+        "layer_1",
+        "input_layer",
+        "droupout_rate",
+        "output_layer",
+        "comment_norm",
+        "attr_bool",
+        "anker_value",
+        "radius_distance",
+        "fussy_limit",
+    ]
 
     # Sort the results by balanced accuracy and select the top entry
     best_config_dict = {}
@@ -80,19 +89,19 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
             best_config_dict[key] = requirements_dict[key][0]
         else:
             best_config_dict[key] = requirements_dict[key]
-    best_config_dict['output_layer'] = requirements_dict['output_layer']
+    best_config_dict["output_layer"] = requirements_dict["output_layer"]
 
     return best_config_dict
 
 
 def get_cell_to_cell_interaction_dict(
-        requirements_dict: Dict,
-        data_loader: DataLoader,
-        model: torch.nn.Module,
-        device: str,
-        save_dict_path: Optional[PosixPath] = None,
-        column_celltype_name: str = 'CellType',
-        edge_noise: Union[bool, str] = False,
+    requirements_dict: Dict,
+    data_loader: DataLoader,
+    model: torch.nn.Module,
+    device: str,
+    save_dict_path: Optional[PosixPath] = None,
+    column_celltype_name: str = "CellType",
+    edge_noise: Union[bool, str] = False,
 ) -> Dict:
     """
     Computes cell-to-cell interaction metrics from a trained model's predictions and attention scores.
@@ -134,33 +143,37 @@ def get_cell_to_cell_interaction_dict(
     shorten_celltypeNames = False
 
     # Extract cell type information from requirements_dict
-    if 'combine_cellPhenotypes' in requirements_dict.keys():
-        if requirements_dict['combine_cellPhenotypes'] is not None:
-            cell_types = data_utils.combine_cell_types(original_array=np.array(requirements_dict['cell_type_names']),
-                                                       string_list=requirements_dict['combine_cellPhenotypes'],
-                                                       retrun_adj_matrix=False)
+    if "combine_cellPhenotypes" in requirements_dict.keys():
+        if requirements_dict["combine_cellPhenotypes"] is not None:
+            cell_types = data_utils.combine_cell_types(
+                original_array=np.array(requirements_dict["cell_type_names"]),
+                string_list=requirements_dict["combine_cellPhenotypes"],
+                retrun_adj_matrix=False,
+            )
             shorten_celltypeNames = True
         else:
-            print(f'cannot use {requirements_dict["combine_cellPhenotypes"]} to combine the cell types will use all')
+            print(
+                f"cannot use {requirements_dict['combine_cellPhenotypes']} to combine the cell types will use all"
+            )
     else:
-        cell_types = np.array(requirements_dict['cell_type_names'])
+        cell_types = np.array(requirements_dict["cell_type_names"])
 
     # Find the index of the 'CellType' column in the evaluation data
     try:
         cell_type_eval_index = np.where(
-            np.char.lower(np.array(requirements_dict['eval_columns'])) == column_celltype_name.lower()
+            np.char.lower(np.array(requirements_dict["eval_columns"]))
+            == column_celltype_name.lower()
         )[0][0]
     except IndexError:
-        raise ValueError(f"Column {column_celltype_name} not found in {requirements_dict['eval_columns']}.")
+        raise ValueError(
+            f"Column {column_celltype_name} not found in {requirements_dict['eval_columns']}."
+        )
 
     # Iterate over all samples in the data loader
     for data_sample in tqdm(data_loader, desc="Processing samples"):
         # Run a prediction step using the model
         prediction, attention, output, y, sample_ids = model_utils.prediction_step(
-            batch_sample=data_sample,
-            model=model,
-            device=device,
-            per_patient=False
+            batch_sample=data_sample, model=model, device=device, per_patient=False
         )
 
         # Get predicted class labels
@@ -176,18 +189,25 @@ def get_cell_to_cell_interaction_dict(
         sub_sample_list.extend([sample.sub_sample for sample in data_sample])
 
         # Extract node-level attention scores
-        node_level_attention_scores = [att_val[1].cpu().detach().numpy() for att_val in attention]
+        node_level_attention_scores = [
+            att_val[1].cpu().detach().numpy() for att_val in attention
+        ]
 
         # Extract cell type information for the given sample
         if shorten_celltypeNames:
             cell_type_names = []
             for sample in data_sample:
-                cell_type_names.append(data_utils.combine_cell_types(
-                    original_array=sample.eval[:, cell_type_eval_index],
-                    string_list=requirements_dict['combine_cellPhenotypes'],
-                    retrun_adj_matrix=True)[1])
+                cell_type_names.append(
+                    data_utils.combine_cell_types(
+                        original_array=sample.eval[:, cell_type_eval_index],
+                        string_list=requirements_dict["combine_cellPhenotypes"],
+                        retrun_adj_matrix=True,
+                    )[1]
+                )
         else:
-            cell_type_names = [sample.eval[:, cell_type_eval_index] for sample in data_sample]
+            cell_type_names = [
+                sample.eval[:, cell_type_eval_index] for sample in data_sample
+            ]
 
         # Compute phenotype-to-phenotype attention scores
         phenotype_attention_matrix = get_p2p_att_score(
@@ -195,7 +215,7 @@ def get_cell_to_cell_interaction_dict(
             cell_phenotypes_sample=cell_type_names,
             all_phenotypes=cell_types,
             node_attention_scores=node_level_attention_scores,
-            edge_noise=edge_noise
+            edge_noise=edge_noise,
         )
 
         # Store phenotype attention metrics
@@ -205,19 +225,19 @@ def get_cell_to_cell_interaction_dict(
 
     # Compile all collected information into a dictionary
     dict_all_info = {
-        'false_pred': np.array(fals_pred),
-        'correct_predicted': np.array(correct_predicted),
-        'original_prediction': np.array(prediction_model),
-        'true_labels': np.array(true_labels),
-        'sub_sample_list': np.array(sub_sample_list),
-        'normed_p2p': normed_p2p,
-        'raw_att_p2p': raw_att_p2p,
-        'normalisation_factor_edge_number': normalisation_factor_edge_number,
+        "false_pred": np.array(fals_pred),
+        "correct_predicted": np.array(correct_predicted),
+        "original_prediction": np.array(prediction_model),
+        "true_labels": np.array(true_labels),
+        "sub_sample_list": np.array(sub_sample_list),
+        "normed_p2p": normed_p2p,
+        "raw_att_p2p": raw_att_p2p,
+        "normalisation_factor_edge_number": normalisation_factor_edge_number,
     }
 
     # If a save path is provided, save the dictionary to a file
     if save_dict_path is not None:
-        with open(save_dict_path, 'wb') as f:
+        with open(save_dict_path, "wb") as f:
             pickle.dump(dict_all_info, f)
 
     return dict_all_info
@@ -236,33 +256,49 @@ def get_hypersear_results(requirements_dict: dict):
     """
 
     # Retrieve hyperparameter search results from training utilities.
-    hyper_search_results, csv_file_path = train_utils.get_train_results_csv(requirement_dict=requirements_dict)
+    hyper_search_results, csv_file_path = train_utils.get_train_results_csv(
+        requirement_dict=requirements_dict
+    )
 
     # First-level grouping: Aggregate mean balanced accuracy per col_of_interest
-    model_grouped = hyper_search_results.groupby(requirements_dict['col_of_interest']).agg(
-        total_acc_balanced_mean=('bal_acc_validation', 'mean')  # Compute mean validation accuracy
-    ).reset_index()
+    model_grouped = (
+        hyper_search_results.groupby(requirements_dict["col_of_interest"])
+        .agg(
+            total_acc_balanced_mean=(
+                "bal_acc_validation",
+                "mean",
+            )  # Compute mean validation accuracy
+        )
+        .reset_index()
+    )
 
     col_of_variables = []
-    for column in requirements_dict['col_of_variables']:
+    for column in requirements_dict["col_of_variables"]:
         if len(model_grouped[column].unique()) > 1:
             col_of_variables.append(column)
         else:
             print(
-                f'will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}')
+                f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
+            )
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
-    hyper_grouped = model_grouped.groupby(col_of_variables).agg(
-        total_acc_balanced_mean=('total_acc_balanced_mean', 'mean'),  # Mean across models in col_of_variables
-        count=('split_number', 'nunique')  # Count unique data splits used
-    ).reset_index()
+    hyper_grouped = (
+        model_grouped.groupby(col_of_variables)
+        .agg(
+            total_acc_balanced_mean=(
+                "total_acc_balanced_mean",
+                "mean",
+            ),  # Mean across models in col_of_variables
+            count=("split_number", "nunique"),  # Count unique data splits used
+        )
+        .reset_index()
+    )
 
     return hyper_grouped
 
 
 def get_interaction_DataFrame(
-        tissue_id: str,
-        interaction_dict: Dict[str, any]
+    tissue_id: str, interaction_dict: Dict[str, any]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Extracts and processes interaction data for a given tissue.
@@ -280,11 +316,14 @@ def get_interaction_DataFrame(
     """
 
     # Select samples corresponding to the given tissue_id
-    sample_mask = interaction_dict['true_labels'] == tissue_id
-    selected_dfs = list(compress(interaction_dict['normed_p2p'], sample_mask))
+    sample_mask = interaction_dict["true_labels"] == tissue_id
+    selected_dfs = list(compress(interaction_dict["normed_p2p"], sample_mask))
 
-    edge_values = pd.concat(list(compress(interaction_dict['normalisation_factor_edge_number'],
-                                          sample_mask)))
+    edge_values = pd.concat(
+        list(
+            compress(interaction_dict["normalisation_factor_edge_number"], sample_mask)
+        )
+    )
 
     # Define threshold for filtering interactions
     threshold = len(selected_dfs) * 0.01
@@ -294,8 +333,7 @@ def get_interaction_DataFrame(
 
     # Compute median values with threshold filtering and sort columns
     mean_interaction_df = (
-        interaction_df
-        .groupby(interaction_df.index)
+        interaction_df.groupby(interaction_df.index)
         .agg(lambda x: data_utils.get_median_with_threshold(x, threshold))
         .sort_index()[sorted(interaction_df.columns)]
     )
@@ -303,10 +341,12 @@ def get_interaction_DataFrame(
     return interaction_df, mean_interaction_df, edge_values
 
 
-def get_top_interaction_per_celltype(interaction_limit: int,
-                                     all_interaction_mean_df: pd.DataFrame,
-                                     all_interaction_df: pd.DataFrame,
-                                     edge_values_df: pd.DataFrame) -> Dict:
+def get_top_interaction_per_celltype(
+    interaction_limit: int,
+    all_interaction_mean_df: pd.DataFrame,
+    all_interaction_df: pd.DataFrame,
+    edge_values_df: pd.DataFrame,
+) -> Dict:
     """
     Identifies the top interactions for each cell type based on interaction strength.
 
@@ -329,8 +369,9 @@ def get_top_interaction_per_celltype(interaction_limit: int,
     for src_cell in cell_types:
         # Get the indices of the top connections for the source cell type
         top_dst_cells = (
-            all_interaction_mean_df[src_cell]
-            [~np.isnan(all_interaction_mean_df[src_cell])]  # Remove NaN values
+            all_interaction_mean_df[src_cell][
+                ~np.isnan(all_interaction_mean_df[src_cell])
+            ]  # Remove NaN values
             .sort_values(ascending=False)[:interaction_limit]  # Select top interactions
             .index
         )
@@ -350,8 +391,13 @@ def get_top_interaction_per_celltype(interaction_limit: int,
     return top_connections, top_connections_edge_values
 
 
-def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenotypes: np.array,
-                      node_attention_scores: list, edge_noise: Union[bool, str]) -> Tuple[list, list, list]:
+def get_p2p_att_score(
+    sample: list,
+    cell_phenotypes_sample: np.array,
+    all_phenotypes: np.array,
+    node_attention_scores: list,
+    edge_noise: Union[bool, str],
+) -> Tuple[list, list, list]:
     """
     This function calculates the attention score for each cell phenotype to all other phenotypes.
     It uses the end attention score p2p (phenotype to phenotype).
@@ -375,34 +421,48 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
     normalised_p2p = []
 
     if edge_noise is False:
-        edge_index_name = 'edge_index_plate'
+        edge_index_name = "edge_index_plate"
     else:
-        edge_index_name = f'edge_index_plate_{edge_noise}'
+        edge_index_name = f"edge_index_plate_{edge_noise}"
 
     # Find the cell type (phenotype) for each cell/node
-    scr_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][0].cpu()] for sample_idx in
-                range(len(sample))]
-    dst_node = [cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][1].cpu()] for sample_idx in
-                range(len(sample))]
+    scr_node = [
+        cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][0].cpu()]
+        for sample_idx in range(len(sample))
+    ]
+    dst_node = [
+        cell_phenotypes_sample[sample_idx][sample[sample_idx][edge_index_name][1].cpu()]
+        for sample_idx in range(len(sample))
+    ]
 
     for sample_idx in range(len(scr_node)):
-        df_att = pd.DataFrame(data={'src': scr_node[sample_idx],
-                                    'dst': dst_node[sample_idx],
-                                    'att': node_attention_scores[sample_idx].flatten()})
+        df_att = pd.DataFrame(
+            data={
+                "src": scr_node[sample_idx],
+                "dst": dst_node[sample_idx],
+                "att": node_attention_scores[sample_idx].flatten(),
+            }
+        )
         # Have the same DataFrame containing all phenotypes
         # If a connection is not present in the sample, fill it with NaN
         att_df = data_utils.fill_missing_row_and_col_withNaN(
-            data_frame=df_att.groupby(['src', 'dst'])['att'].sum().reset_index().pivot(index='src', columns='dst',
-                                                                                       values='att'),
-            cell_types_names=all_phenotypes)
+            data_frame=df_att.groupby(["src", "dst"])["att"]
+            .sum()
+            .reset_index()
+            .pivot(index="src", columns="dst", values="att"),
+            cell_types_names=all_phenotypes,
+        )
 
         # Unnormalized attention score
         raw_att_p2p.append(att_df)
 
         edge_df = data_utils.fill_missing_row_and_col_withNaN(
-            data_frame=df_att.groupby(['src', 'dst']).count().reset_index().pivot(index='src', columns='dst',
-                                                                                  values='att'),
-            cell_types_names=all_phenotypes)
+            data_frame=df_att.groupby(["src", "dst"])
+            .count()
+            .reset_index()
+            .pivot(index="src", columns="dst", values="att"),
+            cell_types_names=all_phenotypes,
+        )
 
         # Normalize the p2p based on the raw count of edges between these two phenotypes
         normalisation_factor_edge_number.append(edge_df)
@@ -411,8 +471,13 @@ def get_p2p_att_score(sample: list, cell_phenotypes_sample: np.array, all_phenot
     return raw_att_p2p, normalisation_factor_edge_number, normalised_p2p
 
 
-def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: list,
-                            title='Mean Confusion Matrix ± STD (%)', save_path: Optional[PosixPath] = None):
+def plot_confusion_with_std(
+    mean_cm: np.array,
+    std_cm: np.array,
+    class_names: list,
+    title="Mean Confusion Matrix ± STD (%)",
+    save_path: Optional[PosixPath] = None,
+):
     """
 
     Plots a confusion matrix with values shown as mean ± std in each cell.
@@ -427,11 +492,11 @@ def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: li
 
     fig, ax = plt.subplots(figsize=(8, 6))
     cmap = plt.cm.Blues
-    im = ax.imshow(mean_cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=1)
+    im = ax.imshow(mean_cm, interpolation="nearest", cmap=cmap, vmin=0, vmax=1)
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.set_ylabel('%', rotation=270, labelpad=15)
+    cbar.ax.set_ylabel("%", rotation=270, labelpad=15)
 
     # Set ticks and labels
     ax.set(
@@ -439,25 +504,29 @@ def plot_confusion_with_std(mean_cm: np.array, std_cm: np.array, class_names: li
         yticks=np.arange(len(class_names)),
         xticklabels=class_names,
         yticklabels=class_names,
-        ylabel='True label',
-        xlabel='Predicted label',
-        title=title
+        ylabel="True label",
+        xlabel="Predicted label",
+        title=title,
     )
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     # Annotate each cell with "mean±std"
     for i in range(mean_cm.shape[0]):
         for j in range(mean_cm.shape[1]):
             cell_text = f"{mean_cm[i, j]:.2f}±{std_cm[i, j]:.2f}"
-            ax.text(j, i, cell_text, ha='center', va='center', color='black', fontsize=15)
+            ax.text(
+                j, i, cell_text, ha="center", va="center", color="black", fontsize=15
+            )
 
     plt.tight_layout()
     plt.show()
     if save_path is not None:
-        fig.savefig(save_path, bbox_inches='tight', dpi=300)
+        fig.savefig(save_path, bbox_inches="tight", dpi=300)
 
 
-def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, save_path: Optional[PosixPath] = None):
+def create_parameter_influence_plots(
+    df: pd.DataFrame, observed_variable: str, save_path: Optional[PosixPath] = None
+):
     """
     Creates and displays a boxplot to visualize the influence of a specific hyperparameter
     on model accuracy.
@@ -475,16 +544,16 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, s
     plt.figure(figsize=(10, 6))
 
     # Filter dataset to only include rows where 'hyperparameter' matches the observed variable
-    data_filtered = df[df['hyperparameter'] == observed_variable]
+    data_filtered = df[df["hyperparameter"] == observed_variable]
 
     # Create a boxplot showing the distribution of accuracy scores for different hyperparameter values
     data_filtered = data_filtered.fillna(0)
-    sns.boxplot(x='value', y='total_acc_balanced_mean', data=data_filtered)
+    sns.boxplot(x="value", y="total_acc_balanced_mean", data=data_filtered)
 
     # Set plot title and axis labels
-    plt.title(f'Effect of {observed_variable} on Accuracy')
-    plt.xlabel('Hyperparameter Value')
-    plt.ylabel('Balanced Accuracy')
+    plt.title(f"Effect of {observed_variable} on Accuracy")
+    plt.xlabel("Hyperparameter Value")
+    plt.ylabel("Balanced Accuracy")
 
     # Rotate x-axis labels for better readability
     plt.xticks(rotation=45)
@@ -501,20 +570,20 @@ def create_parameter_influence_plots(df: pd.DataFrame, observed_variable: str, s
 
 
 def plot_cell_cell_interaction_boxplots(
-        interaction_limit: int,
-        all_interaction_mean_df: pd.DataFrame,
-        top_connections: dict,
-        save_path: Optional[PosixPath] = None,
-        *,
-        log_y: bool = False,
-        star_size: int = 2000,
-        line_width: int = 5,
-        custom_fig_size: Optional[Tuple[int, int]] = None,
-        custom_star_shift: Optional[float] = None,
-        nan_to_zero: bool = False,
-        stars: bool = False,
-        significance_1: Optional[float] = None,
-        significance_2: Optional[float] = None,
+    interaction_limit: int,
+    all_interaction_mean_df: pd.DataFrame,
+    top_connections: dict,
+    save_path: Optional[PosixPath] = None,
+    *,
+    log_y: bool = False,
+    star_size: int = 2000,
+    line_width: int = 5,
+    custom_fig_size: Optional[Tuple[int, int]] = None,
+    custom_star_shift: Optional[float] = None,
+    nan_to_zero: bool = False,
+    stars: bool = False,
+    significance_1: Optional[float] = None,
+    significance_2: Optional[float] = None,
 ):
     """
     Plots boxplots of cell-cell interactions with optional statistical testing and significance annotations.
@@ -535,18 +604,29 @@ def plot_cell_cell_interaction_boxplots(
         significance_2: Threshold for double-star significance.
     """
     if stars and (significance_1 is None or significance_2 is None):
-        raise ValueError("Both significance_1 and significance_2 must be set when stars=True")
+        raise ValueError(
+            "Both significance_1 and significance_2 must be set when stars=True"
+        )
 
-    plt.rcParams.update({'font.size': 50})
+    plt.rcParams.update({"font.size": 50})
 
     cell_types = all_interaction_mean_df.columns
     num_cells = len(cell_types)
 
     fig_size = custom_fig_size or ((170, 60) if interaction_limit > 16 else (130, 60))
-    double_star_shift = custom_star_shift if custom_star_shift is not None else (
-        0.16 if interaction_limit > 16 else 0.1)
+    double_star_shift = (
+        custom_star_shift
+        if custom_star_shift is not None
+        else (0.16 if interaction_limit > 16 else 0.1)
+    )
 
-    fig, axs = plt.subplots(nrows=2, ncols=num_cells // 2, figsize=fig_size, sharey=True, layout='constrained')
+    fig, axs = plt.subplots(
+        nrows=2,
+        ncols=num_cells // 2,
+        figsize=fig_size,
+        sharey=True,
+        layout="constrained",
+    )
 
     p_val_scores = []
     fdr_scores = []
@@ -557,7 +637,11 @@ def plot_cell_cell_interaction_boxplots(
             top_conns = top_connections.get(src_cell, [])
 
             names = [dst_cell[0] for dst_cell in top_conns]
-            values = [dst_cell[1][~np.isnan(dst_cell[1])] for dst_cell in top_conns if len(dst_cell[1]) > 2]
+            values = [
+                dst_cell[1][~np.isnan(dst_cell[1])]
+                for dst_cell in top_conns
+                if len(dst_cell[1]) > 2
+            ]
             if len(values) != 0:
                 ax.set_title(src_cell)
                 ax.grid(True, linewidth=line_width)
@@ -565,11 +649,11 @@ def plot_cell_cell_interaction_boxplots(
                 box = ax.boxplot(values, patch_artist=True)
 
                 # Make boxplots white (opaque)
-                for patch in box['boxes']:
-                    patch.set_facecolor('white')
+                for patch in box["boxes"]:
+                    patch.set_facecolor("white")
 
                 # Line styling
-                for element in ['boxes', 'whiskers', 'caps', 'medians', 'fliers']:
+                for element in ["boxes", "whiskers", "caps", "medians", "fliers"]:
                     plt.setp(box[element], linewidth=line_width)
 
                 for spine in ax.spines.values():
@@ -577,7 +661,9 @@ def plot_cell_cell_interaction_boxplots(
 
                 for dst_cell_idx, dst_name in enumerate(names):
                     if nan_to_zero:
-                        data_1 = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
+                        data_1 = np.nan_to_num(
+                            all_interaction_mean_df[src_cell].to_numpy()
+                        )
                         data_2 = np.nan_to_num(values[dst_cell_idx])
                     else:
                         d1 = all_interaction_mean_df[src_cell].to_numpy()
@@ -585,25 +671,52 @@ def plot_cell_cell_interaction_boxplots(
                         data_1 = d1[~np.isnan(d1)]
                         data_2 = d2[~np.isnan(d2)]
 
-                    _, p_val = mannwhitneyu(data_1, data_2, alternative='less')
+                    _, p_val = mannwhitneyu(data_1, data_2, alternative="less")
                     p_val_scores.append([src_cell, dst_name, p_val])
 
                     if stars:
                         if significance_2 < p_val < significance_1:
-                            ax.scatter(dst_cell_idx + 1, 1.05, marker='*', color='black', s=star_size)
+                            ax.scatter(
+                                dst_cell_idx + 1,
+                                1.05,
+                                marker="*",
+                                color="black",
+                                s=star_size,
+                            )
                         elif p_val < significance_2:
-                            ax.scatter(dst_cell_idx + 1 + double_star_shift, 1.05, marker='*', color='black',
-                                       s=star_size)
-                            ax.scatter(dst_cell_idx + 1 - double_star_shift, 1.05, marker='*', color='black',
-                                       s=star_size)
+                            ax.scatter(
+                                dst_cell_idx + 1 + double_star_shift,
+                                1.05,
+                                marker="*",
+                                color="black",
+                                s=star_size,
+                            )
+                            ax.scatter(
+                                dst_cell_idx + 1 - double_star_shift,
+                                1.05,
+                                marker="*",
+                                color="black",
+                                s=star_size,
+                            )
 
-                _, p_adj, _, _ = multipletests([x[2] for x in p_val_scores], method='fdr_bh')
+                _, p_adj, _, _ = multipletests(
+                    [x[2] for x in p_val_scores], method="fdr_bh"
+                )
                 adjusted_log10 = np.log10(p_adj)
 
                 for dst_cell_idx, dst_name in enumerate(names):
-                    fdr_scores.append([src_cell, dst_name, adjusted_log10[dst_cell_idx]])
+                    fdr_scores.append(
+                        [src_cell, dst_name, adjusted_log10[dst_cell_idx]]
+                    )
                     sig_text = f"{adjusted_log10[dst_cell_idx]:.0f}"
-                    ax.text(dst_cell_idx + 1, 1.01, sig_text, color='black', fontsize=30, ha='center')
+                    ax.text(
+                        dst_cell_idx + 1,
+                        1.01,
+                        sig_text,
+                        color="black",
+                        fontsize=30,
+                        ha="center",
+                    )
 
                 if values:
                     if len(names) < interaction_limit:
@@ -611,48 +724,62 @@ def plot_cell_cell_interaction_boxplots(
                         names.extend(missing)
 
                     ax.set_xticks(np.arange(1, len(values) + 1))
-                    ax.set_xticklabels(names[:len(values)], rotation=90)
+                    ax.set_xticklabels(names[: len(values)], rotation=90)
 
-                ax.grid(True, axis='y')
+                ax.grid(True, axis="y")
 
                 full_data = np.nan_to_num(all_interaction_mean_df[src_cell].to_numpy())
                 median = np.median(full_data)
                 q1, q3 = np.quantile(full_data, [0.25, 0.75])
-                ax.axhspan(q1, q3, facecolor='green', alpha=0.2)
-                ax.axhline(y=median, color='red', linestyle='--', linewidth=line_width)
+                ax.axhspan(q1, q3, facecolor="green", alpha=0.2)
+                ax.axhline(y=median, color="red", linestyle="--", linewidth=line_width)
 
                 if log_y:
-                    ax.set_yscale('log')
+                    ax.set_yscale("log")
 
     # Build and export p-value matrix
-    log_p_matrix = pd.DataFrame(p_val_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
-    log_FDR_matrix = pd.DataFrame(fdr_scores, columns=['src', 'dst', 'p']).pivot(index='src', columns='dst', values='p')
+    log_p_matrix = pd.DataFrame(p_val_scores, columns=["src", "dst", "p"]).pivot(
+        index="src", columns="dst", values="p"
+    )
+    log_FDR_matrix = pd.DataFrame(fdr_scores, columns=["src", "dst", "p"]).pivot(
+        index="src", columns="dst", values="p"
+    )
 
     if save_path is not None:
-        plot_path = save_path.with_name(save_path.stem + ('_log' if log_y else '') + save_path.suffix)
-        log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + '_p_values.csv'))
-        log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + '_FDR_values.csv'))
+        plot_path = save_path.with_name(
+            save_path.stem + ("_log" if log_y else "") + save_path.suffix
+        )
+        log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + "_p_values.csv"))
+        log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + "_FDR_values.csv"))
         plt.savefig(plot_path, dpi=250)
         plt.show()
-        plot_top_k_log_p_values_per_row(log_pval_matrix_path=plot_path.with_name(plot_path.stem + '_FDR_values.csv'),
-                                        k=interaction_limit,
-                                        font_size=12,
-                                        figsize=(8, 6),
-                                        rename_labels=True,
-                                        save_path=plot_path.with_name(plot_path.stem + '_FDR_values_per_row.png'))
+        plot_top_k_log_p_values_per_row(
+            log_pval_matrix_path=plot_path.with_name(
+                plot_path.stem + "_FDR_values.csv"
+            ),
+            k=interaction_limit,
+            font_size=12,
+            figsize=(8, 6),
+            rename_labels=True,
+            save_path=plot_path.with_name(plot_path.stem + "_FDR_values_per_row.png"),
+        )
     else:
         plt.show()
 
 
 def plot_pct_vs_mean(
-        cell_types: Iterable[str],
-        top_connections_attentionScore: Dict[str, List],  # [(interaction_name, pd.Series), ...] or [pd.Series,...]
-        top_connections_edge_values: Dict[str, List],  # same structure; used to compute % occurrence
-        *,
-        save_dir: Optional[Union[str, PosixPath]] = None,
-        annotate: bool = True,
-        min_len: int = 3,
-        figsize: Tuple[int, int] = (10, 7),
+    cell_types: Iterable[str],
+    top_connections_attentionScore: Dict[
+        str, List
+    ],  # [(interaction_name, pd.Series), ...] or [pd.Series,...]
+    top_connections_edge_values: Dict[
+        str, List
+    ],  # same structure; used to compute % occurrence
+    *,
+    save_dir: Optional[Union[str, PosixPath]] = None,
+    annotate: bool = True,
+    min_len: int = 3,
+    figsize: Tuple[int, int] = (10, 7),
 ) -> None:
     """
     Plot, for each cell type, a scatter of:
@@ -727,13 +854,18 @@ def plot_pct_vs_mean(
         pct_by_interaction = counts / counts.sum() * 100.0
 
         # Merge X & Y
-        df = pd.concat(
-            [
-                pd.Series(pct_by_interaction, name="percentage"),
-                pd.Series(mean_by_interaction, name="mean"),
-            ],
-            axis=1,
-        ).dropna().reset_index().rename(columns={"index": "interaction"})
+        df = (
+            pd.concat(
+                [
+                    pd.Series(pct_by_interaction, name="percentage"),
+                    pd.Series(mean_by_interaction, name="mean"),
+                ],
+                axis=1,
+            )
+            .dropna()
+            .reset_index()
+            .rename(columns={"index": "interaction"})
+        )
 
         if df.empty:
             continue
@@ -758,10 +890,17 @@ def plot_pct_vs_mean(
             for i, row in df.iterrows():
                 ha, va, offset = placements[i % len(placements)]
 
-                plt.annotate(break_title(str(row["interaction"]), max_len=10),
-                             (row["percentage"], row["mean"]),
-                             fontsize=12, rotation=0, ha=ha, va=va,
-                             clip_on=False, xytext=offset, textcoords='offset points')
+                plt.annotate(
+                    break_title(str(row["interaction"]), max_len=10),
+                    (row["percentage"], row["mean"]),
+                    fontsize=12,
+                    rotation=0,
+                    ha=ha,
+                    va=va,
+                    clip_on=False,
+                    xytext=offset,
+                    textcoords="offset points",
+                )
         # Dotted crosshairs (median thresholds)
         ax.axvline(x_med, linestyle="--", linewidth=1)
         ax.axhline(y_med, linestyle="--", linewidth=1)
@@ -774,18 +913,20 @@ def plot_pct_vs_mean(
         # Save per cell type if requested
         if save_dir is not None:
             safe_cell = re.sub(r"[^A-Za-z0-9._-]+", "_", str(cell_type))
-            fig.savefig(save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight")
+            fig.savefig(
+                save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight"
+            )
 
         plt.show()
 
 
 def plot_top_k_log_p_values_per_row(
-        log_pval_matrix_path: PosixPath,
-        k: int = 8,
-        font_size: int = 12,
-        figsize: tuple = (8, 6),
-        rename_labels: bool = True,
-        save_path: Optional[PosixPath] = None
+    log_pval_matrix_path: PosixPath,
+    k: int = 8,
+    font_size: int = 12,
+    figsize: tuple = (8, 6),
+    rename_labels: bool = True,
+    save_path: Optional[PosixPath] = None,
 ):
     """
     Plots the top-k -log10(p) values for each row in a p-value matrix (e.g., FDR-corrected p-values).
@@ -804,16 +945,17 @@ def plot_top_k_log_p_values_per_row(
     """
     # Extract row labels and clean data matrix
     log_pval_matrix = pd.read_csv(log_pval_matrix_path)
-    src_labels = log_pval_matrix['src']
+    src_labels = log_pval_matrix["src"]
     df_values = log_pval_matrix.drop(columns=log_pval_matrix.columns[0])  # Drop 'src'
 
-    plt.rcParams.update({'font.size': font_size})
+    plt.rcParams.update({"font.size": font_size})
 
     # Loop through each row (i.e., each source cell type)
     for row in range(len(df_values)):
         values = df_values.iloc[row]
         mask = ~values.isna()  # Only keep non-NaN values
         vals_clean = values[mask]
+        vals_clean = vals_clean.replace(-np.inf, -300)
         labels_clean = np.array(values.index)[mask]
 
         # Compute -log10(p) from log10(p)
@@ -828,23 +970,31 @@ def plot_top_k_log_p_values_per_row(
 
         # Create the plot
         fig = plt.figure(figsize=figsize)
-        plt.scatter(x_vals, top_vals, color='tab:blue', s=10)
+        plt.scatter(x_vals, top_vals, color="tab:blue", s=10)
 
         # Annotate points with cell type names
         for j, txt in enumerate(top_labels):
             if rename_labels:
-                if txt == 'M2 Macrophages PD-L1+':
-                    txt = 'MAC +'
-                elif txt == 'M2 Macrophages PD-L1-':
-                    txt = 'MAC -'
+                if txt == "M2 Macrophages PD-L1+":
+                    txt = "MAC +"
+                elif txt == "M2 Macrophages PD-L1-":
+                    txt = "MAC -"
 
-            plt.annotate(break_title(txt, max_len=10), (x_vals[j], top_vals.iloc[j]),
-                         fontsize=10, rotation=90, ha='left', va='bottom',
-                         clip_on=False, xytext=(0, 2), textcoords='offset points')
+            plt.annotate(
+                break_title(txt, max_len=10),
+                (x_vals[j], top_vals.iloc[j]),
+                fontsize=10,
+                rotation=90,
+                ha="left",
+                va="bottom",
+                clip_on=False,
+                xytext=(0, 2),
+                textcoords="offset points",
+            )
 
         # Plot configuration
         plt.title(src_labels[row], fontsize=font_size)
-        plt.ylabel('-log10(p)', fontsize=font_size)
+        plt.ylabel("-log10(p)", fontsize=font_size)
         plt.xticks([])
         plt.ylim([0, max(neg_log_vals) * 1.2])
         plt.grid(True)
@@ -854,5 +1004,7 @@ def plot_top_k_log_p_values_per_row(
         if save_path is not None:
             safe_cell = re.sub(r'[<>:"/\\|?*]+', "_", str(src_labels[row]))
             safe_cell = safe_cell.strip(" ._")
-            plt.savefig(save_path.with_name(save_path.stem + f'{safe_cell}.png'), dpi=250)
+            plt.savefig(
+                save_path.with_name(save_path.stem + f"{safe_cell}.png"), dpi=250
+            )
         plt.close(fig)
