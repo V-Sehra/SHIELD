@@ -20,13 +20,13 @@ parser.add_argument(
     "-noisy_edge",
     "--noisy_edge",
     default=False,
-    choices=["percent", "sameCon", "False"],
+    choices=["percent", "sameCon", "False", False],
 )
 parser.add_argument(
     "-noise_yLabel",
     "--noise_yLabel",
     default=False,
-    choices=["prob", "even", "False", "True"],
+    choices=["prob", "even", "False", "True", False],
 )
 parser.add_argument("-c", "--comment", default=False)
 

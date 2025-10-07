@@ -320,7 +320,7 @@ def reducePopulation(
     downsampleRatio (float): the ratio of the cell type to be kept in the sample, default is 0.3 (30%)
     :return df (pd.DataFrame): DataFrame with reduced population of the specified cell type
     """
-    print(f"Start population: {df[columnName].value_counts()}")
+    # print("reduceing population of cell type:", cellTypeName)
     # Example filter mask
     mask = df[columnName].str.contains(cellTypeName, case=False, na=False)
 
@@ -337,10 +337,7 @@ def reducePopulation(
 
     # Combine them back
     df = pd.concat([non_cellTypeName_rows, cellTypeName_subsample]).sort_index()
-    print(
-        f"Reduced {cellTypeName} from {len(cellTypeName_rows)} to {len(cellTypeName_subsample)}"
-    )
-    print(f"Now: {df[columnName].value_counts()}")
+
     return df
 
 
