@@ -74,7 +74,7 @@ def main():
     # Load the raw dataset from CSV
     input_data = pd.read_csv(requirements["path_raw_data"])
 
-    if requirements["filter_cells"] != False:
+    if requirements["filter_cells"] != False:  # noqa: E712
         input_data = input_data[
             input_data[requirements["filter_column"][0]] == requirements["filter_value"]
         ]
@@ -203,7 +203,7 @@ def main():
 
                             # Use multiprocessing to create and save graphs in parallel
                             pool = mp.Pool(mp.cpu_count() - 2)
-                            graphs = pool.map(
+                            pool.map(
                                 functools.partial(
                                     data_utils.create_graph_and_save,
                                     whole_data=single_sample,
@@ -274,7 +274,7 @@ def main():
 
                         # Use multiprocessing to create and save graphs in parallel
                         pool = mp.Pool(mp.cpu_count() - 2)
-                        graphs = pool.map(
+                        pool.map(
                             functools.partial(
                                 data_utils.create_graph_and_save,
                                 whole_data=sample_collection,

@@ -127,7 +127,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=requirements["number_validation_splits"],
                 requirements_dict=requirements,
-                graph_file_names=f"train_set_file_names.pkl",
+                graph_file_names="train_set_file_names.pkl",
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
@@ -141,7 +141,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=requirements["test_set_fold_number"],
                 requirements_dict=requirements,
-                graph_file_names=f"test_set_file_names.pkl",
+                graph_file_names="test_set_file_names.pkl",
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
@@ -153,7 +153,7 @@ def main():
         best_model_f1score = 0
         for num in tqdm(range(args.number_of_training_repeats)):
             loss_fkt = train_utils.initiaize_loss(
-                path=Path(path_to_graphs / f"train_set_file_names.pkl"),
+                path=Path(path_to_graphs / "train_set_file_names.pkl"),
                 tissue_dict=requirements["label_dict"],
                 device=device,
             )
@@ -202,7 +202,7 @@ def main():
                 print(f"train scores: bal= {train_bal_acc} f1= {train_f1_score}")
                 # Save the best model
 
-                model_save_path = Path(requirements["path_to_model"] / f"best_model.pt")
+                model_save_path = Path(requirements["path_to_model"] / "best_model.pt")
                 torch.save(model.state_dict(), model_save_path)
 
                 best_config_dict["version"] = num
