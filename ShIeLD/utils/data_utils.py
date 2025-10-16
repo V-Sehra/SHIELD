@@ -79,12 +79,12 @@ def assign_label_from_distribution(
     """
     labels = labels_in_graph.index.tolist()
 
-    if node_prob == False or node_prob == "even":
+    if node_prob == False or node_prob == "even":  # noqa: E712
         probs = [1 / len(labels_in_graph) for _ in range(len(labels_in_graph))]
 
         return rnd.choices(labels, weights=probs, k=1)[0]
 
-    elif node_prob == True or node_prob == "prob":
+    elif node_prob == True or node_prob == "prob":  # noqa: E712
         probs = (labels_in_graph / labels_in_graph.sum()).tolist()
         return rnd.choices(labels, weights=probs, k=1)[0]
     elif node_prob == "both":
@@ -96,6 +96,16 @@ def assign_label_from_distribution(
 
 
 def bool_passer(argument):
+    """Convert various representations of truth values to a boolean.
+    Parameters
+    ----------
+    argument : str, int, bool
+        The input value to be converted to a boolean.
+        Acceptable string values are "True", "true", "1" for True,
+        and "False", "false", "0" for False.
+        Integer values 1 and 0 are also accepted.
+        Boolean values True and False are returned as is.
+    """
     if (
         argument == "True"
         or argument == "true"
@@ -223,13 +233,13 @@ def create_graph_and_save(
 
     # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
-    if segmentation == "voronoi":
+    if segmentation.lower() == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
         number_samples = len(voronoi_list)
-    elif segmentation == "random":
-        if type(whole_data) != list:
+    elif segmentation.lower() == "random":
+        if not isinstance(whole_data, list):
             raise ValueError(
-                f"if segmentation is random then the provided whole set must be a list of DataFrames"
+                "if segmentation is random then the provided whole set must be a list of DataFrames"
             )
 
         graph_data = whole_data[vornoi_id].copy()
@@ -274,13 +284,13 @@ def create_graph_and_save(
     ).cpu()
 
     if noisy_labeling and (len(count_tissue_type) > 1):
-        if node_prob == False or node_prob == "even":
+        if node_prob == False or node_prob == "even":  # noqa: E712
             even_label = assign_label_from_distribution(
                 labels_in_graph=count_tissue_type, node_prob=node_prob
             )
             data.y_noise_even = torch.tensor(tissue_dict[even_label]).flatten()
 
-        elif node_prob == True or node_prob == "prob":
+        elif node_prob == True or node_prob == "prob":  # noqa: E712
             prob_label = assign_label_from_distribution(
                 labels_in_graph=count_tissue_type, node_prob=node_prob
             )
