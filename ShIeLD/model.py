@@ -163,7 +163,7 @@ class ShIeLD(nn.Module):
             x = self.lin(x)  # Final linear transformation
 
             prediction.append(
-                F.softmax(x, dim=1)
+                F.log_softmax(x, dim=1)
             )  # Softmax activation for classification
             attention.append(att)  # Store attention scores
 
