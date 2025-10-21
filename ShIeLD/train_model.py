@@ -157,10 +157,120 @@ def main():
             num_workers=8,
             prefetch_factor=50,
         )
+        for dp, num in tqdm(
+            product(
+                requirements["droupout_rate"],
+                range(int(args.number_of_training_repeats)),
+            ),
+            total=len(requirements["droupout_rate"])
+            * int(args.number_of_training_repeats),
+        ):
+            row_values = [
+                anker_number,
+                radius_distance,
+                fussy_limit,
+                dp,
+                args.comment,
+                requirements["comment_norm"],
+                num,
+                split_number,
+            ]
 
-        for dp in requirements["droupout_rate"]:
-            for num in tqdm(range(int(args.number_of_training_repeats))):
-                row_values = [
+            filter_match = (training_results_csv[meta_columns] == row_values).all(
+                axis=1
+            )
+
+            if not filter_match.any():
+                loss_init_path = (
+                    path_to_graphs / "train" / "graphs"
+                    if args.noise_yLabel is not False
+                    else path_to_graphs
+                    / f"train_set_validation_split_{split_number}_file_names.pkl"
+                )
+                loss_fkt = train_utils.initiaize_loss(
+                    path=Path(loss_init_path),
+                    tissue_dict=requirements["label_dict"],
+                    device=device,
+                    noise_yLabel=args.noise_yLabel,
+                )
+
+                model = ShIeLD(
+                    num_of_feat=int(requirements["input_layer"]),
+                    layer_1=requirements["layer_1"],
+                    layer_final=requirements["output_layer"],
+                    dp=dp,
+                    self_att=False,
+                    attr_bool=requirements["attr_bool"],
+                    norm_type=requirements["comment_norm"],
+                    noisy_edge=args.noisy_edge,
+                ).to(device)
+
+                model.train()
+
+                model, train_loss = train_utils.train_loop_shield(
+                    optimizer=torch.optim.Adam(
+                        model.parameters(), lr=requirements["learning_rate"]
+                    ),
+                    model=model,
+                    data_loader=data_loader_train,
+                    loss_fkt=loss_fkt,
+                    attr_bool=requirements["attr_bool"],
+                    device=device,
+                    patience=patience,
+                    noise_yLabel=args.noise_yLabel,
+                )
+
+                model.eval()
+                print("start validation")
+                train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
+                    model=model,
+                    data_loader=data_loader_train,
+                    device=device,
+                )
+
+                val_bal_acc, val_f1_score, test_cm = model_utils.get_acc_metrics(
+                    model=model,
+                    data_loader=data_loader_validation,
+                    device=device,
+                )
+                model_csv = pd.DataFrame(
+                    [
+                        [
+                            anker_number,
+                            radius_distance,
+                            fussy_limit,
+                            dp,
+                            args.comment,
+                            requirements["comment_norm"],
+                            num,
+                            train_bal_acc,
+                            train_f1_score,
+                            val_bal_acc,
+                            val_f1_score,
+                            split_number,
+                        ]
+                    ],
+                    columns=training_results_csv.columns,
+                )
+
+                print("train_bal_acc", "train_f1_score")
+                print(train_bal_acc, train_f1_score)
+                print("val_bal_acc", "val_f1_score")
+                print(val_bal_acc, val_f1_score)
+
+                training_results_csv, csv_file_path = train_utils.get_train_results_csv(
+                    requirement_dict=requirements
+                )
+
+                training_results_csv = pd.concat(
+                    [model_csv, training_results_csv], ignore_index=True
+                )
+                training_results_csv.to_csv(csv_file_path, index=False)
+
+                torch.cuda.empty_cache()
+            else:
+                print(
+                    "Model already trained:",
                     anker_number,
                     radius_distance,
                     fussy_limit,
@@ -168,114 +278,7 @@ def main():
                     args.comment,
                     requirements["comment_norm"],
                     num,
-                    split_number,
-                ]
-
-                filter_match = (training_results_csv[meta_columns] == row_values).all(
-                    axis=1
                 )
-
-                if not filter_match.any():
-                    loss_init_path = (
-                        path_to_graphs / "train" / "graphs"
-                        if args.noise_yLabel is not False
-                        else path_to_graphs
-                        / f"train_set_validation_split_{split_number}_file_names.pkl"
-                    )
-                    loss_fkt = train_utils.initiaize_loss(
-                        path=Path(loss_init_path),
-                        tissue_dict=requirements["label_dict"],
-                        device=device,
-                        noise_yLabel=args.noise_yLabel,
-                    )
-
-                    model = ShIeLD(
-                        num_of_feat=int(requirements["input_layer"]),
-                        layer_1=requirements["layer_1"],
-                        layer_final=requirements["output_layer"],
-                        dp=dp,
-                        self_att=False,
-                        attr_bool=requirements["attr_bool"],
-                        norm_type=requirements["comment_norm"],
-                        noisy_edge=args.noisy_edge,
-                    ).to(device)
-
-                    model.train()
-
-                    model, train_loss = train_utils.train_loop_shield(
-                        optimizer=torch.optim.Adam(
-                            model.parameters(), lr=requirements["learning_rate"]
-                        ),
-                        model=model,
-                        data_loader=data_loader_train,
-                        loss_fkt=loss_fkt,
-                        attr_bool=requirements["attr_bool"],
-                        device=device,
-                        patience=patience,
-                        noise_yLabel=args.noise_yLabel,
-                    )
-
-                    model.eval()
-                    print("start validation")
-                    train_bal_acc, train_f1_score, train_cm = (
-                        model_utils.get_acc_metrics(
-                            model=model,
-                            data_loader=data_loader_train,
-                            device=device,
-                        )
-                    )
-
-                    val_bal_acc, val_f1_score, test_cm = model_utils.get_acc_metrics(
-                        model=model,
-                        data_loader=data_loader_validation,
-                        device=device,
-                    )
-                    model_csv = pd.DataFrame(
-                        [
-                            [
-                                anker_number,
-                                radius_distance,
-                                fussy_limit,
-                                dp,
-                                args.comment,
-                                requirements["comment_norm"],
-                                num,
-                                train_bal_acc,
-                                train_f1_score,
-                                val_bal_acc,
-                                val_f1_score,
-                                split_number,
-                            ]
-                        ],
-                        columns=training_results_csv.columns,
-                    )
-
-                    print("train_bal_acc", "train_f1_score")
-                    print(train_bal_acc, train_f1_score)
-                    print("val_bal_acc", "val_f1_score")
-                    print(val_bal_acc, val_f1_score)
-
-                    training_results_csv, csv_file_path = (
-                        train_utils.get_train_results_csv(requirement_dict=requirements)
-                    )
-
-                    training_results_csv = pd.concat(
-                        [model_csv, training_results_csv], ignore_index=True
-                    )
-                    training_results_csv.to_csv(csv_file_path, index=False)
-
-                    torch.cuda.empty_cache()
-                else:
-                    print(
-                        "Model already trained:",
-                        anker_number,
-                        radius_distance,
-                        fussy_limit,
-                        dp,
-                        args.comment,
-                        requirements["comment_norm"],
-                        num,
-                    )
 
 
 if __name__ == "__main__":
