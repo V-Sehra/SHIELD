@@ -21,8 +21,12 @@ from torch_geometric.nn import global_mean_pool, GraphNorm
 from torch.nn import BatchNorm1d
 
 
-def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
-                    device: Union[torch.device, str], noise_yLabel: Union[bool, str] = False) -> Tuple[float, float]:
+def get_acc_metrics(
+    model: torch.nn.Module,
+    data_loader: DataLoader,
+    device: Union[torch.device, str],
+    noise_yLabel: Union[bool, str] = False,
+) -> Tuple[float, float]:
     """
     Computes the balanced accuracy and weighted F1 score for a model on the given dataset.
 
@@ -47,7 +51,7 @@ def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
             model=model,
             device=device,
             per_patient=False,  # Whether to track patient-level predictions
-            noise_yLabel=noise_yLabel
+            noise_yLabel=noise_yLabel,
         )
 
         _, value_pred = torch.max(output, dim=1)
@@ -55,9 +59,11 @@ def get_acc_metrics(model: torch.nn.Module, data_loader: DataLoader,
         model_prediction.extend(value_pred.cpu())
         true_label.extend(y.cpu())
 
-    return balanced_accuracy_score(true_label, model_prediction), f1_score(true_label, model_prediction,
-                                                                           average='weighted'), confusion_matrix(
-        y_true=true_label, y_pred=model_prediction, normalize='true')
+    return (
+        balanced_accuracy_score(true_label, model_prediction),
+        f1_score(true_label, model_prediction, average="weighted"),
+        confusion_matrix(y_true=true_label, y_pred=model_prediction, normalize="true"),
+    )
 
 
 def move_to_device(data: Union[torch.tensor, List], device: Union[torch.device, str]):
@@ -79,12 +85,13 @@ def move_to_device(data: Union[torch.tensor, List], device: Union[torch.device, 
         raise TypeError("Unsupported data type for moving to device.")
 
 
-def prediction_step(batch_sample: List,
-                    model: torch.nn.Module,
-                    device: str,
-                    per_patient: bool = False,
-                    noise_yLabel: Union[bool, str] = False) -> Tuple[
-    List, List, torch.Tensor, torch.Tensor, Optional[List]]:
+def prediction_step(
+    batch_sample: List,
+    model: torch.nn.Module,
+    device: str,
+    per_patient: bool = False,
+    noise_yLabel: Union[bool, str] = False,
+) -> Tuple[List, List, torch.Tensor, torch.Tensor, Optional[List]]:
     """
     Performs a prediction step using a given model on a batch of samples.
 
@@ -113,15 +120,17 @@ def prediction_step(batch_sample: List,
     if noise_yLabel == False or noise_yLabel == True:
         y = torch.tensor([sample.y for sample in batch_sample]).to(output.device)
     else:
-        if noise_yLabel != 'even' and noise_yLabel != 'prob':
-            raise ValueError(f"Invalid noise_yLabel: {noise_yLabel}. Must be 'even' or 'prob'.")
+        if noise_yLabel != "even" and noise_yLabel != "prob":
+            raise ValueError(
+                f"Invalid noise_yLabel: {noise_yLabel}. Must be 'even' or 'prob'."
+            )
 
         y = []
         for sample in batch_sample:
-            if f'y_noise_{noise_yLabel}' in sample:
-                y.append(sample[f'y_noise_{noise_yLabel}'])
+            if f"y_noise_{noise_yLabel}" in sample:
+                y.append(sample[f"y_noise_{noise_yLabel}"])
             else:
-                y.append(sample[f'y'])
+                y.append(sample[f"y"])
         y = torch.tensor(y).long().to(output.device)
     # Retrieve sample IDs if per_patient is True
     if per_patient:
@@ -137,16 +146,25 @@ def prediction_step(batch_sample: List,
 
 # Baseline Models
 
+
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, dropout, activation_function,
-                 batch_norm_bool, layer_norm_bool):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dims,
+        output_dim,
+        dropout,
+        activation_function,
+        batch_norm_bool,
+        layer_norm_bool,
+    ):
         super().__init__()
 
         self.activation_function = {
-            'relu': nn.ReLU(),
-            'tanh': nn.Tanh(),
-            'leaky_relu': nn.LeakyReLU(),
-            'gelu': nn.GELU()
+            "relu": nn.ReLU(),
+            "tanh": nn.Tanh(),
+            "leaky_relu": nn.LeakyReLU(),
+            "gelu": nn.GELU(),
         }[activation_function]
 
         self.layers = nn.ModuleList()
@@ -185,15 +203,26 @@ class MLP(nn.Module):
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, dropout, activation_function,
-                 batch_norm_bool, layer_norm_bool, graph_norm_bool, similarity_typ):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dims,
+        output_dim,
+        dropout,
+        activation_function,
+        batch_norm_bool,
+        layer_norm_bool,
+        graph_norm_bool,
+        similarity_typ,
+    ):
         super().__init__()
 
-        self.activation_function = {'relu': nn.ReLU(),
-                                    'tanh': nn.Tanh(),
-                                    'leaky_relu': nn.LeakyReLU(),
-                                    'gelu': nn.GELU()
-                                    }[activation_function]
+        self.activation_function = {
+            "relu": nn.ReLU(),
+            "tanh": nn.Tanh(),
+            "leaky_relu": nn.LeakyReLU(),
+            "gelu": nn.GELU(),
+        }[activation_function]
 
         self.convs = torch.nn.ModuleList()
         self.layer_norm_list = torch.nn.ModuleList()
@@ -224,11 +253,11 @@ class GCN(torch.nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index_plate, data.batch
 
-        if self.similarity_typ == 'euc_dist':
+        if self.similarity_typ == "euc_dist":
             edge_attr = data.plate_euc.float()
-        elif self.similarity_typ == 'cosine':
+        elif self.similarity_typ == "cosine":
             edge_attr = data.plate_cosine_sim.float()
-        elif self.similarity_typ == 'inv_euc_dist':
+        elif self.similarity_typ == "inv_euc_dist":
             edge_attr = 1 / data.plate_euc.float()
         elif self.similarity_typ is None:
             edge_attr = None
@@ -252,15 +281,27 @@ class GCN(torch.nn.Module):
 
 # Example GNN model
 class GAT(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, dropout, activation_function,
-                 batch_norm_bool, layer_norm_bool, graph_norm_bool, similarity_typ, edge_dim=1):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dims,
+        output_dim,
+        dropout,
+        activation_function,
+        batch_norm_bool,
+        layer_norm_bool,
+        graph_norm_bool,
+        similarity_typ,
+        edge_dim=1,
+    ):
         super().__init__()
 
-        self.activation_function = {'relu': nn.ReLU(),
-                                    'tanh': nn.Tanh(),
-                                    'leaky_relu': nn.LeakyReLU(),
-                                    'gelu': nn.GELU()
-                                    }[activation_function]
+        self.activation_function = {
+            "relu": nn.ReLU(),
+            "tanh": nn.Tanh(),
+            "leaky_relu": nn.LeakyReLU(),
+            "gelu": nn.GELU(),
+        }[activation_function]
 
         self.convs = torch.nn.ModuleList()
         self.layer_norm_list = torch.nn.ModuleList()
@@ -271,7 +312,9 @@ class GAT(torch.nn.Module):
 
         self.layer_norm_list.append(GraphNorm(hidden_dims[0]))
         for i in range(1, len(hidden_dims)):
-            self.convs.append(GATv2Conv(hidden_dims[i - 1], hidden_dims[i], edge_dim=edge_dim))
+            self.convs.append(
+                GATv2Conv(hidden_dims[i - 1], hidden_dims[i], edge_dim=edge_dim)
+            )
             self.layer_norm_list.append(GraphNorm(hidden_dims[i]))
 
         # Final classifier
@@ -291,11 +334,11 @@ class GAT(torch.nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index_plate, data.batch
 
-        if self.similarity_typ == 'euc_dist':
+        if self.similarity_typ == "euc_dist":
             edge_attr = data.plate_euc.float()
-        elif self.similarity_typ == 'cosine':
+        elif self.similarity_typ == "cosine":
             edge_attr = data.plate_cosine_sim.float()
-        elif self.similarity_typ == 'inv_euc_dist':
+        elif self.similarity_typ == "inv_euc_dist":
             edge_attr = 1 / data.plate_euc.float()
         elif self.similarity_typ is None:
             edge_attr = None
@@ -306,7 +349,9 @@ class GAT(torch.nn.Module):
             x = self.batch_norm(x)
 
         for conv, layer_norm in zip(self.convs, self.layer_norm_list):
-            x = self.activation_function(conv(x=x, edge_index=edge_index, edge_attr=edge_attr))
+            x = self.activation_function(
+                conv(x=x, edge_index=edge_index, edge_attr=edge_attr)
+            )
 
             if self.layer_norm_bool:
                 x = layer_norm(x, batch)
@@ -329,7 +374,9 @@ class simple_1l_GNN(nn.Module):
         Mean_agg (MeanAggregation): Aggregation function for node embeddings.
     """
 
-    def __init__(self, num_of_feat, f_3, dp, noisy_edge: Union[bool, str] = False, f_final=2):
+    def __init__(
+        self, num_of_feat, f_3, dp, noisy_edge: Union[bool, str] = False, f_final=2
+    ):
         """
         Initializes the GNN model.
 
@@ -347,7 +394,9 @@ class simple_1l_GNN(nn.Module):
         self.lin = Linear(f_3, f_final)
 
         self.dp = dp
-        self.Mean_agg = MeanAggregation()  # Aggregates node embeddings into a graph representation
+        self.Mean_agg = (
+            MeanAggregation()
+        )  # Aggregates node embeddings into a graph representation
         self.noisy_edge = noisy_edge
 
     def forward(self, data_list):
@@ -374,10 +423,13 @@ class simple_1l_GNN(nn.Module):
             x = data_list[idx].x.float()  # Convert node features to float
 
             if self.noisy_edge == False:
-                edge_index = data_list[idx].edge_index_plate.long()  # Convert edge indices to long tensor
+                edge_index = data_list[
+                    idx
+                ].edge_index_plate.long()  # Convert edge indices to long tensor
             else:
                 edge_index = data_list[idx][
-                    f'edge_index_plate_{self.noisy_edge}'].long()
+                    f"edge_index_plate_{self.noisy_edge}"
+                ].long()
 
             # Apply GAT convolution, with or without edge attributes
             x = self.conv1(x=x, edge_index=edge_index)
@@ -385,9 +437,13 @@ class simple_1l_GNN(nn.Module):
             x = F.relu(x)  # Apply ReLU activation
             x = F.dropout(x, p=self.dp, training=self.training)  # Apply dropout
 
-            x = self.Mean_agg(x, dim=0)  # Aggregate node embeddings into a graph representation
+            x = self.Mean_agg(
+                x, dim=0
+            )  # Aggregate node embeddings into a graph representation
             x = self.lin(x)  # Final linear transformation
 
-            prediction.append(F.softmax(x, dim=1))  # Softmax activation for classification
+            prediction.append(
+                F.softmax(x, dim=1)
+            )  # Softmax activation for classification
 
         return prediction, []

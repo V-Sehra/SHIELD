@@ -63,9 +63,7 @@ def get_train_results_csv(requirement_dict: dict) -> Tuple[DataFrame, PosixPath]
     path_save_csv_models.mkdir(parents=True, exist_ok=True)
 
     # Define the expected CSV file path based on the split number
-    csv_file_path = Path(
-        path_save_csv_models / f"validation_split_results_training.csv"
-    )
+    csv_file_path = Path(path_save_csv_models / "validation_split_results_training.csv")
 
     # If the file exists, load it; otherwise, create an empty DataFrame with predefined columns
     if csv_file_path.exists():
