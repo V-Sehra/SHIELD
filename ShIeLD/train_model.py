@@ -21,7 +21,7 @@ import utils.model_utils as model_utils
 import utils.data_utils as data_utils
 
 from tests import input_test
-
+from itertools import product
 from model import ShIeLD
 
 torch.multiprocessing.set_start_method("fork", force=True)
@@ -92,186 +92,147 @@ def main():
     if args.reverse_sampling:
         radii = radii[::-1]
 
-    for radius_distance in radii:
-        for fussy_limit in fussy_vector:
-            for anker_number in requirements["anker_value_all"]:
-                if fussy_folder_name is True:
-                    path_to_graphs = Path(
-                        requirements["path_to_data_set"]
-                        / f"anker_value_{anker_number}".replace(".", "_")
-                        / f"min_cells_{requirements['minimum_number_cells']}"
-                        / f"fussy_limit_{fussy_limit}".replace(".", "_")
-                        / f"radius_{radius_distance}"
-                    )
-                else:
-                    path_to_graphs = Path(
-                        requirements["path_to_data_set"]
-                        / f"anker_value_{anker_number}".replace(".", "_")
-                        / f"min_cells_{requirements['minimum_number_cells']}"
-                        / f"{fussy_folder_name}"
-                        / f"radius_{radius_distance}"
-                    )
+    for radius_distance, fussy_limit, anker_number in product(
+        radii, fussy_vector, requirements["anker_value_all"]
+    ):
+        if fussy_folder_name is True:
+            path_to_graphs = Path(
+                requirements["path_to_data_set"]
+                / f"anker_value_{anker_number}".replace(".", "_")
+                / f"min_cells_{requirements['minimum_number_cells']}"
+                / f"fussy_limit_{fussy_limit}".replace(".", "_")
+                / f"radius_{radius_distance}"
+            )
+        else:
+            path_to_graphs = Path(
+                requirements["path_to_data_set"]
+                / f"anker_value_{anker_number}".replace(".", "_")
+                / f"min_cells_{requirements['minimum_number_cells']}"
+                / f"{fussy_folder_name}"
+                / f"radius_{radius_distance}"
+            )
 
-                torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
 
-                train_folds = requirements["number_validation_splits"].copy()
-                train_folds.remove(split_number)
+        train_folds = requirements["number_validation_splits"].copy()
+        train_folds.remove(split_number)
 
-                if requirements["databased_norm"] is not None:
-                    databased_norm = requirements["databased_norm"]
-                    file_name_data_norm = (
-                        f"train_set_validation_split_{split_number}_standadizer.pkl"
-                    )
-                else:
-                    databased_norm = None
-                    file_name_data_norm = None
+        if requirements["databased_norm"] is not None:
+            databased_norm = requirements["databased_norm"]
+            file_name_data_norm = (
+                f"train_set_validation_split_{split_number}_standadizer.pkl"
+            )
+        else:
+            databased_norm = None
+            file_name_data_norm = None
 
-                data_loader_train = DataListLoader(
-                    graph_dataset(
-                        root=str(path_to_graphs / "train" / "graphs"),
-                        path_to_graphs=path_to_graphs,
-                        fold_ids=train_folds,
-                        requirements_dict=requirements,
-                        graph_file_names=f"train_set_validation_split_{split_number}_file_names.pkl",
-                        normalize=databased_norm,
-                        normalizer_filename=file_name_data_norm,
-                    ),
-                    batch_size=requirements["batch_size"],
-                    shuffle=True,
-                    num_workers=8,
-                    prefetch_factor=50,
+        data_loader_train = DataListLoader(
+            graph_dataset(
+                root=str(path_to_graphs / "train" / "graphs"),
+                path_to_graphs=path_to_graphs,
+                fold_ids=train_folds,
+                requirements_dict=requirements,
+                graph_file_names=f"train_set_validation_split_{split_number}_file_names.pkl",
+                normalize=databased_norm,
+                normalizer_filename=file_name_data_norm,
+            ),
+            batch_size=requirements["batch_size"],
+            shuffle=True,
+            num_workers=8,
+            prefetch_factor=50,
+        )
+
+        data_loader_validation = DataListLoader(
+            graph_dataset(
+                root=str(path_to_graphs / "train" / "graphs"),
+                path_to_graphs=path_to_graphs,
+                fold_ids=[split_number],
+                requirements_dict=requirements,
+                graph_file_names=f"validation_validation_split_{split_number}_file_names.pkl",
+                normalize=databased_norm,
+                normalizer_filename=file_name_data_norm,
+            ),
+            batch_size=requirements["batch_size"],
+            shuffle=True,
+            num_workers=8,
+            prefetch_factor=50,
+        )
+
+        for dp in requirements["droupout_rate"]:
+            for num in tqdm(range(int(args.number_of_training_repeats))):
+                row_values = [
+                    anker_number,
+                    radius_distance,
+                    fussy_limit,
+                    dp,
+                    args.comment,
+                    requirements["comment_norm"],
+                    num,
+                    split_number,
+                ]
+
+                filter_match = (training_results_csv[meta_columns] == row_values).all(
+                    axis=1
                 )
 
-                data_loader_validation = DataListLoader(
-                    graph_dataset(
-                        root=str(path_to_graphs / "train" / "graphs"),
-                        path_to_graphs=path_to_graphs,
-                        fold_ids=[split_number],
-                        requirements_dict=requirements,
-                        graph_file_names=f"validation_validation_split_{split_number}_file_names.pkl",
-                        normalize=databased_norm,
-                        normalizer_filename=file_name_data_norm,
-                    ),
-                    batch_size=requirements["batch_size"],
-                    shuffle=True,
-                    num_workers=8,
-                    prefetch_factor=50,
-                )
+                if not filter_match.any():
+                    loss_init_path = (
+                        path_to_graphs / "train" / "graphs"
+                        if args.noise_yLabel is not False
+                        else path_to_graphs
+                        / f"train_set_validation_split_{split_number}_file_names.pkl"
+                    )
+                    loss_fkt = train_utils.initiaize_loss(
+                        path=Path(loss_init_path),
+                        tissue_dict=requirements["label_dict"],
+                        device=device,
+                        noise_yLabel=args.noise_yLabel,
+                    )
 
-                for dp in requirements["droupout_rate"]:
-                    for num in tqdm(range(int(args.number_of_training_repeats))):
-                        row_values = [
-                            anker_number,
-                            radius_distance,
-                            fussy_limit,
-                            dp,
-                            args.comment,
-                            requirements["comment_norm"],
-                            num,
-                            split_number,
-                        ]
+                    model = ShIeLD(
+                        num_of_feat=int(requirements["input_layer"]),
+                        layer_1=requirements["layer_1"],
+                        layer_final=requirements["output_layer"],
+                        dp=dp,
+                        self_att=False,
+                        attr_bool=requirements["attr_bool"],
+                        norm_type=requirements["comment_norm"],
+                        noisy_edge=args.noisy_edge,
+                    ).to(device)
 
-                        filter_match = (
-                            training_results_csv[meta_columns] == row_values
-                        ).all(axis=1)
+                    model.train()
 
-                        if not filter_match.any():
-                            loss_init_path = (
-                                path_to_graphs / "train" / "graphs"
-                                if args.noise_yLabel is not False
-                                else path_to_graphs
-                                / f"train_set_validation_split_{split_number}_file_names.pkl"
-                            )
-                            loss_fkt = train_utils.initiaize_loss(
-                                path=Path(loss_init_path),
-                                tissue_dict=requirements["label_dict"],
-                                device=device,
-                                noise_yLabel=args.noise_yLabel,
-                            )
+                    model, train_loss = train_utils.train_loop_shield(
+                        optimizer=torch.optim.Adam(
+                            model.parameters(), lr=requirements["learning_rate"]
+                        ),
+                        model=model,
+                        data_loader=data_loader_train,
+                        loss_fkt=loss_fkt,
+                        attr_bool=requirements["attr_bool"],
+                        device=device,
+                        patience=patience,
+                        noise_yLabel=args.noise_yLabel,
+                    )
 
-                            model = ShIeLD(
-                                num_of_feat=int(requirements["input_layer"]),
-                                layer_1=requirements["layer_1"],
-                                layer_final=requirements["output_layer"],
-                                dp=dp,
-                                self_att=False,
-                                attr_bool=requirements["attr_bool"],
-                                norm_type=requirements["comment_norm"],
-                                noisy_edge=args.noisy_edge,
-                            ).to(device)
+                    model.eval()
+                    print("start validation")
+                    train_bal_acc, train_f1_score, train_cm = (
+                        model_utils.get_acc_metrics(
+                            model=model,
+                            data_loader=data_loader_train,
+                            device=device,
+                        )
+                    )
 
-                            model.train()
-
-                            model, train_loss = train_utils.train_loop_shield(
-                                optimizer=torch.optim.Adam(
-                                    model.parameters(), lr=requirements["learning_rate"]
-                                ),
-                                model=model,
-                                data_loader=data_loader_train,
-                                loss_fkt=loss_fkt,
-                                attr_bool=requirements["attr_bool"],
-                                device=device,
-                                patience=patience,
-                                noise_yLabel=args.noise_yLabel,
-                            )
-
-                            model.eval()
-                            print("start validation")
-                            train_bal_acc, train_f1_score, train_cm = (
-                                model_utils.get_acc_metrics(
-                                    model=model,
-                                    data_loader=data_loader_train,
-                                    device=device,
-                                )
-                            )
-
-                            val_bal_acc, val_f1_score, test_cm = (
-                                model_utils.get_acc_metrics(
-                                    model=model,
-                                    data_loader=data_loader_validation,
-                                    device=device,
-                                )
-                            )
-                            model_csv = pd.DataFrame(
-                                [
-                                    [
-                                        anker_number,
-                                        radius_distance,
-                                        fussy_limit,
-                                        dp,
-                                        args.comment,
-                                        requirements["comment_norm"],
-                                        num,
-                                        train_bal_acc,
-                                        train_f1_score,
-                                        val_bal_acc,
-                                        val_f1_score,
-                                        split_number,
-                                    ]
-                                ],
-                                columns=training_results_csv.columns,
-                            )
-
-                            print("train_bal_acc", "train_f1_score")
-                            print(train_bal_acc, train_f1_score)
-                            print("val_bal_acc", "val_f1_score")
-                            print(val_bal_acc, val_f1_score)
-
-                            training_results_csv, csv_file_path = (
-                                train_utils.get_train_results_csv(
-                                    requirement_dict=requirements
-                                )
-                            )
-
-                            training_results_csv = pd.concat(
-                                [model_csv, training_results_csv], ignore_index=True
-                            )
-                            training_results_csv.to_csv(csv_file_path, index=False)
-
-                            torch.cuda.empty_cache()
-                        else:
-                            print(
-                                "Model already trained:",
+                    val_bal_acc, val_f1_score, test_cm = model_utils.get_acc_metrics(
+                        model=model,
+                        data_loader=data_loader_validation,
+                        device=device,
+                    )
+                    model_csv = pd.DataFrame(
+                        [
+                            [
                                 anker_number,
                                 radius_distance,
                                 fussy_limit,
@@ -279,7 +240,42 @@ def main():
                                 args.comment,
                                 requirements["comment_norm"],
                                 num,
-                            )
+                                train_bal_acc,
+                                train_f1_score,
+                                val_bal_acc,
+                                val_f1_score,
+                                split_number,
+                            ]
+                        ],
+                        columns=training_results_csv.columns,
+                    )
+
+                    print("train_bal_acc", "train_f1_score")
+                    print(train_bal_acc, train_f1_score)
+                    print("val_bal_acc", "val_f1_score")
+                    print(val_bal_acc, val_f1_score)
+
+                    training_results_csv, csv_file_path = (
+                        train_utils.get_train_results_csv(requirement_dict=requirements)
+                    )
+
+                    training_results_csv = pd.concat(
+                        [model_csv, training_results_csv], ignore_index=True
+                    )
+                    training_results_csv.to_csv(csv_file_path, index=False)
+
+                    torch.cuda.empty_cache()
+                else:
+                    print(
+                        "Model already trained:",
+                        anker_number,
+                        radius_distance,
+                        fussy_limit,
+                        dp,
+                        args.comment,
+                        requirements["comment_norm"],
+                        num,
+                    )
 
 
 if __name__ == "__main__":
