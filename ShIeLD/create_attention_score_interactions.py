@@ -12,13 +12,13 @@ from torch_geometric.loader import DataListLoader
 import argparse
 import pickle
 from pathlib import Path
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 from utils.data_class import graph_dataset
 from model import ShIeLD
 import utils.evaluation_utils as evaluation_utils
 import tests.input_test as input_test
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
