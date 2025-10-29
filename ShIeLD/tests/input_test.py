@@ -3,6 +3,200 @@ import pickle
 from pathlib import Path
 import numpy as np
 
+"""
+SHIELD test suite — configuration contract and validation rules
+================================================================
+
+This test module validates the *configuration objects* used by SHIELD
+(Spatially-enHanced ImmunE Landscape Decoding), a weakly-supervised, 
+graph-attention–based pipeline for interpretable cell–cell interaction
+modeling. The tests ensure that experiment configs are complete, well-typed,
+and self-consistent **before** any training/evaluation runs.
+
+What these tests check
+----------------------
+1) ``test_all_keys_in_req``:
+   - Loads a *requirements* object (dict or pickle file) and verifies that all
+     **mandatory** fields exist and have the correct types.
+   - Fills in any **optional** fields with sensible defaults (see
+     ``default_dict``) and re-validates types/values.
+   - Enforces consistent types for paths, integers, strings, lists of strings,
+     lists of numbers, and booleans used by the SHIELD data/loader/training
+     pipeline.
+
+2) ``test_best_config``:
+   - Loads a *best configuration* object (dict or pickle file) produced by a
+     hyperparameter search and verifies that all **required** model/feature
+     selections are present and correctly typed.
+
+Mandatory keys in the *requirements* object
+-------------------------------------------
+The following keys **must** be present (see ``must_have_keys``). Types and
+semantics are enforced by ``test_all_keys_in_req``:
+
+- ``path_raw_data`` (str | pathlib.Path)
+    Filesystem location of the raw per-cell/per-sample data used to build graphs.
+
+All of the following keys need to be the column names within the raw data file:
+
+- ``cell_type_names`` (list[str])
+    Canonical cell type labels present in the dataset (e.g., from annotation).
+
+- ``markers`` (list[str])
+    Marker/features used to build node attributes (e.g., protein channels).
+
+- ``label_column`` (str)
+    Column name containing the target label(s) used for supervision.
+
+- ``label_dict`` (dict-like)
+    Mapping from raw labels to canonical/encoded labels used by the model.
+    i.e. {cancer: 1, normal: 0}
+
+- ``eval_columns`` (list[str])
+    Names of evaluation metrics/columns expected downstream (patient ID, Cell type etc.).
+    must contain at least one of the following: CellType
+
+- ``validation_split_column`` (str)
+    Column that denotes the split identifier (e.g., CV fold or patient group).
+
+- ``number_validation_splits`` (list[int|float])
+    Provides a List of the fold identifiers used for validation splits.
+    Therefore, if 5-fold cross-validation is used, this should be [1,2,3,4], with [5] for testing
+
+- ``test_set_fold_number`` (list[int|float])
+    Identifier(s) for the held-out test fold(s).
+    Therefore, if 5-fold cross-validation is used, this should be [5].
+
+- ``measument_sample_name`` (str)
+    Name of the sample identifier column. **Note:** spelled exactly as
+    ``measument_sample_name``.
+    Sample can be a patient ID, biopsy ID, or other grouping variable.
+
+- ``X_col_name`` (str)
+    Column name for the x-coordinate (used for spatial graph construction).
+
+- ``Y_col_name`` (str)
+    Column name for the y-coordinate.
+
+The Following key defines model architecture:
+
+- ``sampleing`` (list[float|int] or config-like)
+    Sampling definition for sub-samples/tiles (kept as provided; validated as list
+    of numbers if applicable). **Note:** the key name is spelled *exactly* as
+    ``sampleing``.
+- ``output_layer`` (int)
+    Size of the model’s output layer (e.g., number of classes).
+
+Optional keys and default behavior
+----------------------------------
+If any of the following are omitted, the test injects defaults from
+``default_dict`` and logs a message:
+
+- Paths:
+  - ``path_to_data_set`` (Path): dataset root (default: ``cwd/data_sets/running_example``)
+  - ``path_training_results`` (Path): where training outputs are written
+  - ``path_to_model`` (Path): where the trained model is saved
+  - ``path_to_interaction_plots`` (Path): where SHIELD interaction plots are saved
+
+- Experiment bookkeeping:
+  - ``col_of_interest`` (list[str]): columns kept in result tracking
+  - ``col_of_variables`` (list[str]): tunable variables recorded per run
+
+- Data/graph building:
+  - ``minimum_number_cells`` (int): minimum cells per (sub)sample (graph)
+  - ``radius_distance_all`` (list[number]): candidate neighborhood radii
+  - ``anker_value_all`` (list[number]): candidate anchor distances
+  - ``anker_cell_selction_type`` (str): either ``"%"`` or ``"absolut"`` (exact spelling)
+  - ``multiple_labels_per_subSample`` (bool): allow multi-label subsamples
+  - ``voro_neighbours`` (int): Voronoi-based neighbor cap (if used)
+
+- Training:
+  - ``batch_size`` (int)
+  - ``learning_rate`` (float)
+  - ``layer_1`` (int): hidden layer width for the SHIELD baseline/ablation models
+  - ``comment_norm`` (str)
+  - ``databased_norm`` (str|None)
+  - ``droupout_rate`` (list[number] or float): dropout range/value (**key name intentionally ``droupout_rate``**)
+  - ``augmentation_number`` (int): number of augmentations
+  - ``attr_bool`` (bool): whether to compute attribution/interaction maps
+
+Type rules enforced by the tests
+--------------------------------
+- **Paths**: any key whose name starts with ``"path"`` must be ``str`` or
+  ``pathlib.Path``.
+- **Integers**: ``minimum_number_cells``, ``batch_size``, ``input_layer``,
+  ``layer_1``, ``output_layer``, ``augmentation_number`` must be integer types.
+- **Strings**: ``label_column``, ``anker_cell_selction_type``,
+  ``validation_split_column``, ``X_col_name``, ``Y_col_name``,
+  ``measument_sample_name`` must be strings.
+- **List[str]**: ``cell_type_names``, ``markers``, ``eval_columns``,
+  ``col_of_interest``, ``col_of_variables``.
+- **List[number]**: ``radius_distance_all``, ``anker_value_all``,
+  ``droupout_rate``, ``number_validation_splits``, ``test_set_fold_number``.
+- **Booleans**: ``filter_cells``, ``multiple_labels_per_subSample``, ``attr_bool``.
+- **Conditional**: if ``filter_cells`` is ``True``, both
+  ``filter_column`` (list) and ``filter_value`` (int|float|bool) must be present.
+
+Required keys in the *best_config* object
+-----------------------------------------
+``test_best_config`` enforces the following fields (and types) for a selected
+hyperparameter setting:
+
+- **Integers**: ``layer_1``, ``input_layer``, ``output_layer``, ``version``
+- **Floats**: ``droupout_rate`` (note the intentional spelling)
+- **Booleans**: ``attr_bool``
+- **Numbers (float or int)**: ``anker_value``, ``radius_distance``
+
+These correspond to the minimal model specification needed to re-instantiate the
+trained SHIELD variant and reproduce the reported performance/interaction maps.
+
+Notes & pitfalls
+----------------
+- Several key names preserve historical spellings (e.g., ``droupout_rate``,
+  ``sampleing``, ``measument_sample_name``). The tests expect these **exact**
+  strings to avoid breaking existing experiment artifacts.
+- Paths can be provided as strings or ``Path`` objects; they are not resolved
+  here, only type-checked.
+- Lists that represent folds/splits (``number_validation_splits``,
+  ``test_set_fold_number``) are validated as lists of numbers to allow explicit
+  identifiers, not just counts.
+
+Minimal examples
+----------------
+**Requirements (dict)**:
+    requirements = {
+        "path_raw_data": "/data/IMC/raw.parquet",
+        "cell_type_names": ["T cells", "B cells", "Macrophages"],
+        "markers": ["CD3", "CD8", "CD68"],
+        "sampleing": [0.5],  # kept as provided; validated if numeric
+        "label_column": "response_label",
+        "label_dict": {"R": 1, "NR": 0},
+        "eval_columns": ["f1", "bacc", "auc"],
+        "validation_split_column": "cv_fold",
+        "number_validation_splits": [0,1,2,3,4],
+        "test_set_fold_number": [4],
+        "measument_sample_name": "sample_id",
+        "X_col_name": "x",
+        "Y_col_name": "y",
+        "output_layer": 2,
+        # optional keys may be omitted and will be filled from default_dict
+    }
+
+**Best config (dict)**:
+    best_config = {
+        "layer_1": 32,
+        "input_layer": 24,
+        "droupout_rate": 0.3,
+        "output_layer": 2,
+        "attr_bool": False,
+        "anker_value": 200,
+        "radius_distance": 250,
+        "version": 1,
+    }
+
+Place this docstring at the top of the test module so contributors know exactly
+what the configuration contract is and why the assertions exist.
+"""
 must_have_keys = set(
     [
         "path_raw_data",
