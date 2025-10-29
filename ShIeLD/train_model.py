@@ -49,7 +49,7 @@ def main():
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
 
     requirements = pickle.load(open(Path.cwd() / args.requirements_file_path, "rb"))
-    input_test.test_all_keys_in_req(req_file=requirements)
+    requirements = input_test.test_all_keys_in_req(req_file=requirements)
 
     print(args, flush=True)
 

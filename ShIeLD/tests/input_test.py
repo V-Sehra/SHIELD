@@ -172,6 +172,8 @@ def test_all_keys_in_req(req_file):
         ):
             raise AssertionError("filter_value should be an int, float or bool.")
 
+    return requirements
+
 
 def test_best_config(config_file):
     """

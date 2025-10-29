@@ -63,7 +63,7 @@ def main():
     # Load dataset requirements from a pickle file
     requirements = pickle.load(open(args.requirements_file_path, "rb"))
 
-    input_test.test_all_keys_in_req(req_file=requirements)
+    requirements = input_test.test_all_keys_in_req(req_file=requirements)
     # Determine the correct fold column based on dataset type
     fold_ids = [
         requirements["number_validation_splits"]

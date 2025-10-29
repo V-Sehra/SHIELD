@@ -7,6 +7,7 @@ from torch_geometric.loader import DataListLoader
 from utils import train_utils, model_utils, data_utils
 from utils.data_class import graph_dataset
 from model import ShIeLD
+from tests import input_test
 
 import torch
 
@@ -50,7 +51,7 @@ if args.requirements_file_path is None:
         Path.cwd() / "rebuttle" / f"req_HCC_{args.augmentation}.pt"
     )
 requirements = pickle.load(open(args.requirements_file_path, "rb"))
-
+requirements = input_test.test_all_keys_in_req(req_file=requirements)
 # need to overwrite the batch size:
 requirements["batch_size"] = 32
 
