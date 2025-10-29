@@ -159,33 +159,51 @@ def main():
     for number_interactions in [4, len(requirements["cell_type_names"])]:
         print(f"creating the interactions for top {number_interactions}:")
         for observed_tissue in observed_tissues:
-            interaction_dataFrame, mean_interaction_dataFrame = (
+            save_path_interaction = Path(
+                requirements["path_to_interaction_plots"]
+                / "occurance_vs_IS"
+                / f"{observed_tissue}"
+                / f"Top_{number_interactions}"
+            )
+            save_path_interaction.mkdir(parents=True, exist_ok=True)
+
+            save_path_boxplots = Path(
+                requirements["path_to_interaction_plots"]
+                / "boxplots"
+                / f"{observed_tissue}"
+                / f"Top_{number_interactions}"
+            )
+            save_path_boxplots.mkdir(parents=True, exist_ok=True)
+
+            interaction_dataFrame, mean_interaction_dataFrame, edge_values = (
                 evaluation_utils.get_interaction_DataFrame(
                     tissue_id=requirements["label_dict"][observed_tissue],
                     interaction_dict=cell_to_cell_interaction_dict,
                 )
             )
 
-            top_connections = evaluation_utils.get_top_interaction_per_celltype(
-                interaction_limit=number_interactions,
-                all_interaction_mean_df=mean_interaction_dataFrame,
-                all_interaction_df=interaction_dataFrame,
-            )
-
-            save_path_boxplots = Path(
-                requirements["path_to_interaction_plots"]
-                / "boxplots"
-                / f"{observed_tissue}_topInteractions_{number_interactions}_{args.data_set_type}.png"
+            top_connections, top_connections_edge_values = (
+                evaluation_utils.get_top_interaction_per_celltype(
+                    interaction_limit=number_interactions,
+                    all_interaction_mean_df=mean_interaction_dataFrame,
+                    all_interaction_df=interaction_dataFrame,
+                    edge_values_df=edge_values,
+                )
             )
 
             evaluation_utils.plot_cell_cell_interaction_boxplots(
-                significance_1=args.significance_threshold_1,
-                significance_2=args.significance_threshold_2,
                 interaction_limit=number_interactions,
                 all_interaction_mean_df=interaction_dataFrame,
                 top_connections=top_connections,
-                save_path=save_path_boxplots,
-                stars=args.stars,
+                save_path=save_path_boxplots
+                / f"{observed_tissue}_topInteractions_{number_interactions}.png",
+            )
+
+            evaluation_utils.plot_pct_vs_mean(
+                cell_types=mean_interaction_dataFrame.columns,
+                top_connections_attentionScore=top_connections,  # your "values"
+                top_connections_edge_values=top_connections_edge_values,  # your "values_edge"
+                save_dir=save_path_interaction,
             )
 
 
