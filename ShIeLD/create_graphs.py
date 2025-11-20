@@ -19,6 +19,17 @@ from utils import data_utils
 from tests import input_test
 
 
+# Multiprocessing helper
+def safe_wrapper(func, arg):
+    try:
+        return func(arg)
+    except Exception as e:
+        import traceback
+        print("ERROR in worker for arg:", arg)
+        traceback.print_exc()
+        return None
+
+
 # Main function to process dataset and generate graphs
 def main():
     # Define command-line arguments for input data paths
@@ -59,6 +70,13 @@ def main():
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
 
     print(args)
+
+    # Set to spawn not fork
+    try:
+        mp.set_start_method('spawn', force=True)
+    except RuntimeError:
+        # if method is already set
+        pass
 
     # Load dataset requirements from a pickle file
     requirements = pickle.load(open(args.requirements_file_path, "rb"))
@@ -202,9 +220,7 @@ def main():
                             print(anker_value, radius_distance, fussy_limit, sub_sample)
 
                             # Use multiprocessing to create and save graphs in parallel
-                            pool = mp.Pool(mp.cpu_count() - 2)
-                            pool.map(
-                                functools.partial(
+                            run1 = functools.partial(
                                     data_utils.create_graph_and_save,
                                     whole_data=single_sample,
                                     save_path_folder=save_path_folder_graphs,
@@ -219,10 +235,15 @@ def main():
                                     randomise_edges=args.randomise_edges,
                                     percent_number_cells=args.percent_number_cells,
                                     segmentation=args.segmentation,
-                                ),
-                                vornoi_id,
-                            )
-                            pool.close()
+                                )
+                            
+                            with mp.Pool(mp.cpu_count() - 2) as pool:
+                                for _ in pool.imap_unordered(
+                                    functools.partial(safe_wrapper, run1),
+                                    vornoi_id,
+                                    chunksize=1
+                                ):
+                                    pass
 
                 elif args.segmentation == "random":
                     if requirements["multiple_labels_per_subSample"]:
@@ -273,9 +294,7 @@ def main():
                         print(anker_value, radius_distance, sub_sample)
 
                         # Use multiprocessing to create and save graphs in parallel
-                        pool = mp.Pool(mp.cpu_count() - 2)
-                        pool.map(
-                            functools.partial(
+                        run2 = functools.partial(
                                 data_utils.create_graph_and_save,
                                 whole_data=sample_collection,
                                 save_path_folder=save_path_folder_graphs,
@@ -284,16 +303,21 @@ def main():
                                 voronoi_list=voroni_id_fussy,
                                 sub_sample=sub_sample,
                                 repeat_id=augment_id,
-                                skip_existing=True,
+                                skip_existing=False,
                                 noisy_labeling=args.noisy_labeling,
                                 node_prob=args.node_prob,
                                 randomise_edges=args.randomise_edges,
                                 percent_number_cells=args.percent_number_cells,
                                 segmentation=args.segmentation,
-                            ),
-                            subsection_id,
-                        )
-                        pool.close()
+                            )
+                        
+                        with mp.Pool(mp.cpu_count() - 2) as pool:
+                            for _ in pool.imap_unordered(
+                                functools.partial(safe_wrapper, run2),
+                                subsection_id,
+                                chunksize=1
+                            ):
+                                pass
 
 
 # Ensure the script runs only when executed directly
