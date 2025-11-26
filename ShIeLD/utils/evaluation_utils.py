@@ -243,7 +243,9 @@ def get_cell_to_cell_interaction_dict(
     return dict_all_info
 
 
-def get_hypersear_results(requirements_dict: dict):
+def get_hypersearch_results(
+    requirements_dict: dict, column_names: Optional[List[str]] = None
+) -> pd.DataFrame:
     """
     Runs a hyperparameter search analysis by aggregating model performance metrics.
 
@@ -257,7 +259,7 @@ def get_hypersear_results(requirements_dict: dict):
 
     # Retrieve hyperparameter search results from training utilities.
     hyper_search_results, csv_file_path = train_utils.get_train_results_csv(
-        requirement_dict=requirements_dict
+        requirement_dict=requirements_dict, column_names=column_names
     )
 
     # First-level grouping: Aggregate mean balanced accuracy per col_of_interest

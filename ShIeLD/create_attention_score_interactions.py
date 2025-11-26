@@ -152,29 +152,10 @@ def main():
             cell_to_cell_interaction_dict = pickle.load(f)
 
     observed_tissues = list(requirements["label_dict"].keys())
-    Path(requirements["path_to_interaction_plots"] / "boxplots").mkdir(
-        parents=True, exist_ok=True
-    )
 
     for number_interactions in [4, len(requirements["cell_type_names"])]:
         print(f"creating the interactions for top {number_interactions}:")
         for observed_tissue in observed_tissues:
-            save_path_interaction = Path(
-                requirements["path_to_interaction_plots"]
-                / "occurance_vs_IS"
-                / f"{observed_tissue}"
-                / f"Top_{number_interactions}"
-            )
-            save_path_interaction.mkdir(parents=True, exist_ok=True)
-
-            save_path_boxplots = Path(
-                requirements["path_to_interaction_plots"]
-                / "boxplots"
-                / f"{observed_tissue}"
-                / f"Top_{number_interactions}"
-            )
-            save_path_boxplots.mkdir(parents=True, exist_ok=True)
-
             interaction_dataFrame, mean_interaction_dataFrame, edge_values = (
                 evaluation_utils.get_interaction_DataFrame(
                     tissue_id=requirements["label_dict"][observed_tissue],
@@ -190,7 +171,15 @@ def main():
                     edge_values_df=edge_values,
                 )
             )
+            save_path_boxplots = Path(
+                requirements["path_to_interaction_plots"]
+                / f"{args.data_set_type}"
+                / "boxplots"
+                / f"{observed_tissue}"
+                / f"Top_{number_interactions}"
+            )
 
+            save_path_boxplots.mkdir(parents=True, exist_ok=True)
             evaluation_utils.plot_cell_cell_interaction_boxplots(
                 interaction_limit=number_interactions,
                 all_interaction_mean_df=interaction_dataFrame,
@@ -199,6 +188,14 @@ def main():
                 / f"{observed_tissue}_topInteractions_{number_interactions}.png",
             )
 
+            save_path_interaction = Path(
+                requirements["path_to_interaction_plots"]
+                / f"{args.data_set_type}"
+                / "occurance_vs_IS"
+                / f"{observed_tissue}"
+                / f"Top_{number_interactions}"
+            )
+            save_path_interaction.mkdir(parents=True, exist_ok=True)
             evaluation_utils.plot_pct_vs_mean(
                 cell_types=mean_interaction_dataFrame.columns,
                 top_connections_attentionScore=top_connections,  # your "values"

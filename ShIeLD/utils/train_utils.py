@@ -16,7 +16,9 @@ from . import model_utils
 from typing import List, Tuple, Optional, Union
 
 
-def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
+def early_stopping(
+    loss_epoch: List, patience: Optional[int] = 15, max_epochs: Optional[int] = None
+) -> bool:
     """
     This function checks if the training process should be stopped early based on the change in loss over epochs.
     If the change in loss between the last two epochs is less than 0.001 and the number of epochs is greater than the patience threshold, the function returns True, indicating that training should be stopped.
@@ -25,37 +27,59 @@ def early_stopping(loss_epoch: List, patience: Optional[int] = 15) -> bool:
     Parameters:
     loss_epoch (list): A list of loss values for each epoch.
     patience (int): The number of epochs to wait before stopping training if the change in loss is less than 0.001. Default is 15.
-
+    max_epochs (int, optional): Maximum number of epochs to train. If None, training continues until early stopping / 2*patience is triggered.
     Returns:
     bool: True if training should be stopped, False otherwise.
     """
     if patience is None:
-        patience = 5
+        patience = 8
+    if max_epochs is None:
+        max_epochs = 2 * patience
 
-    if patience < 2:
-        raise ValueError("Patience should be greater than 1.")
+    if patience < 8:
+        raise ValueError("Patience should be equal to or greater than 8.")
+
+    if len(loss_epoch) >= max_epochs:
+        return True
 
     if len(loss_epoch) >= patience:
-        if (loss_epoch[-2] - loss_epoch[-1]) < 0.001:
+        if (np.mean(loss_epoch[-8:-5]) - np.mean(loss_epoch[-3:])) < 0.001:
             return True
         else:
             return False
-    else:
-        return False
+
+    return False
 
 
-def get_train_results_csv(requirement_dict: dict) -> Tuple[DataFrame, PosixPath]:
+def get_train_results_csv(
+    requirement_dict: dict, column_names: Optional[list]
+) -> Tuple[DataFrame, PosixPath]:
     """
     Retrieves or initializes a CSV file containing training results.
 
     Parameters:
     - requirement_dict (dict): A dictionary containing various requirements, including the path for saving training results.
     - split_number (int): The identifier for the validation split.
+    - column_names (list, optional): A list of column names for the DataFrame. If None, default column names are used.
 
     Returns:
     - pd.DataFrame: A DataFrame containing training results, either loaded from an existing CSV or initialized with default columns.
     """
-
+    if column_names is None:
+        column_names = [
+            "anker_value",  # Percentage of anchor cells used
+            "radius_distance",  # Radius defining the neighborhood
+            "fussy_limit",  # Threshold for fuzzy logic application
+            "droupout_rate",  # Dropout rate
+            "comment",  # General comments
+            "comment_norm",  # Normalized comments
+            "model_no",  # Model number
+            "bal_acc_train",  # Balanced accuracy on the training set
+            "train_f1_score",
+            "bal_acc_validation",  # Balanced accuracy on the validation set
+            "val_f1_score",
+            "split_number",  # Validation split number
+        ]
     # Get the path where the training results CSV should be stored
     path_save_csv_models = requirement_dict["path_training_results"]
 
@@ -70,22 +94,7 @@ def get_train_results_csv(requirement_dict: dict) -> Tuple[DataFrame, PosixPath]
         training_results_csv = pd.read_csv(csv_file_path)
 
     else:
-        training_results_csv = pd.DataFrame(
-            columns=[
-                "anker_value",  # Percentage of anchor cells used
-                "radius_distance",  # Radius defining the neighborhood
-                "fussy_limit",  # Threshold for fuzzy logic application
-                "droupout_rate",  # Dropout rate
-                "comment",  # General comments
-                "comment_norm",  # Normalized comments
-                "model_no",  # Model number
-                "bal_acc_train",  # Balanced accuracy on the training set
-                "train_f1_score",
-                "bal_acc_validation",  # Balanced accuracy on the validation set
-                "val_f1_score",
-                "split_number",  # Validation split number
-            ]
-        )
+        training_results_csv = pd.DataFrame(columns=column_names)
 
     return training_results_csv, csv_file_path  # Return the DataFram
 
@@ -191,9 +200,10 @@ def train_loop_shield(
     device: str,
     patience: Optional[int] = 5,
     noise_yLabel: Union[bool, str] = False,
+    max_epochs: Optional[int] = None,
 ) -> Tuple[torch.nn.Module, List[float]]:
     """
-    Trains the ShIeLD model using the provided optimizer, data loader, and loss function.
+    Trains the SHIELD model using the provided optimizer, data loader, and loss function.
 
     Args:
         optimizer (torch.optim.Optimizer): The optimizer responsible for updating model parameters.
@@ -207,12 +217,16 @@ def train_loop_shield(
                                     CAUTION: needed to be element of the data set
                                     'even': label selected evenly
                                     'prob': label selected according to the accurance of the cell types within a voronoi
+        max_epochs (int, optional): Maximum number of epochs to train. If None, training continues until early stopping / 2*patience is triggered.
     Returns:
         Tuple[torch.nn.Module, List[float]]: The trained model and a list of training loss values per epoch.
     """
 
     # List to store the loss values for each epoch
     train_loss = []
+
+    if max_epochs is not None:
+        max_epochs = int(max_epochs)
 
     # Flag for early stopping condition
     early_stopping_bool = False
@@ -254,7 +268,9 @@ def train_loop_shield(
         train_loss.append(np.mean(loss_batch))
 
         # Check if early stopping should be triggered based on loss history
-        early_stopping_bool = early_stopping(loss_epoch=train_loss, patience=patience)
+        early_stopping_bool = early_stopping(
+            loss_epoch=train_loss, patience=patience, max_epochs=max_epochs
+        )
 
     # Return the trained model and recorded loss values
     return model, train_loss

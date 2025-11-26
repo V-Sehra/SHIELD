@@ -44,6 +44,7 @@ def main():
         default=Path.cwd() / "examples" / "CRC" / "best_config.pt",
     )
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
+    parser.add_argument("-maxEpoch", "--maxEpoch", default=None)
 
     args = parser.parse_args()
     args.best_config_dict_path = Path(args.best_config_dict_path)
@@ -181,6 +182,7 @@ def main():
                 patience=best_config_dict["patience"]
                 if "patience" in best_config_dict.keys()
                 else 5,
+                max_epochs=args.maxEpoch,
             )
 
             model.eval()
