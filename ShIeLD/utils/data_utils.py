@@ -498,13 +498,37 @@ def get_voronoi_id(
             dist_centroid, _ = tree_centroid.query(
                 data_set[[x_col_name, y_col_name]], k=boarder_number
             )
+            num = np.nan_to_num(
+                dist_centroid[:, 0].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+            )
             proximity_to_border = [
-                dist_centroid[:, 0] / (dist_centroid[:, i] + eps)
-                for i in range(0, boarder_number)
+                num
+                / np.maximum(
+                    np.nan_to_num(
+                        dist_centroid[:, i].astype(float),
+                        nan=0.0,
+                        posinf=0.0,
+                        neginf=0.0,
+                    ),
+                    eps,
+                )
+                for i in range(boarder_number)
             ]
+
         else:
+            num = np.nan_to_num(
+                dist[:, 0].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+            )
+
             proximity_to_border = [
-                dist[:, 0] / (dist[:, i] + eps) for i in range(0, boarder_number)
+                num
+                / np.maximum(
+                    np.nan_to_num(
+                        dist[:, i].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+                    ),
+                    eps,
+                )
+                for i in range(boarder_number)
             ]
 
         first_assignment = indices[:, 0].copy()
