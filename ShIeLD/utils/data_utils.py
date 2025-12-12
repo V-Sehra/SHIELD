@@ -235,7 +235,6 @@ def create_graph_and_save(
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
-        number_samples = len(voronoi_list)
     elif segmentation.lower() == "random":
         if not isinstance(whole_data, list):
             raise ValueError(
@@ -243,12 +242,11 @@ def create_graph_and_save(
             )
 
         graph_data = whole_data[vornoi_id].copy()
-        number_samples = len(whole_data)
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
 
-    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(number_samples * repeat_id) + vornoi_id}.pt"
+    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{vornoi_id}.pt"
 
     if skip_existing:
         if Path(f"{save_path_folder}", file_name).exists():
