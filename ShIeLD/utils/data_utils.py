@@ -457,6 +457,7 @@ def get_voronoi_id(
     anker_cell: DataFrame,
     fussy_limit: Optional[float] = None,
     centroid_bool: bool = False,
+    eps: float = 1e-12,
 ) -> np.array:
     """
     Function to assign each data point to a Voronoi cell.
@@ -468,7 +469,7 @@ def get_voronoi_id(
     boarder_number (int): Number of nearest neighbors to consider for each data point.
     fussy_limit (float): Threshold for fuzzy assignment of data points to Voronoi cells.
     centroid_bool (bool): If True, use the centroid of Voronoi cells for assignment.
-
+    eps (float): Add a small number to prevent div(0)
     Returns:
     ndarray: List of Voronoi cells with assigned data points or array of nearest anchor indices.
     """
@@ -498,12 +499,12 @@ def get_voronoi_id(
                 data_set[[x_col_name, y_col_name]], k=boarder_number
             )
             proximity_to_border = [
-                dist_centroid[:, 0] / dist_centroid[:, i]
+                dist_centroid[:, 0] / (dist_centroid[:, i] + eps)
                 for i in range(0, boarder_number)
             ]
         else:
             proximity_to_border = [
-                dist[:, 0] / dist[:, i] for i in range(0, boarder_number)
+                dist[:, 0] / (dist[:, i] + eps) for i in range(0, boarder_number)
             ]
 
         first_assignment = indices[:, 0].copy()
