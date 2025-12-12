@@ -114,7 +114,7 @@ def main():
         norm_type=requirements["comment_norm"],
     ).to(device)
 
-    model.load_state_dict(torch.load(requirements["path_to_model"] / f"best_model.pt"))
+    model.load_state_dict(torch.load(requirements["path_to_model"] / "best_model.pt"))
     model.eval()
 
     if args.recalculate_cTc_Scroes or (
