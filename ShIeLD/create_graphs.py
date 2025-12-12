@@ -25,6 +25,7 @@ def safe_wrapper(func, arg):
         return func(arg)
     except Exception as e:
         import traceback
+
         print("ERROR in worker for arg:", arg)
         traceback.print_exc()
         return None
@@ -73,7 +74,7 @@ def main():
 
     # Set to spawn not fork
     try:
-        mp.set_start_method('spawn', force=True)
+        mp.set_start_method("spawn", force=True)
     except RuntimeError:
         # if method is already set
         pass
@@ -137,11 +138,11 @@ def main():
                 )
 
             for augment_id in range(requirements["augmentation_number"]):
-                # If one want to baseline the method selection from the Voronoi to random sampleing
+                # If one want to baseline the method selection from the Voronoi to random sampling
                 # change the segmentation to random
                 if args.segmentation == "voronoi":
                     for fussy_limit in requirements["fussy_limit_all"]:
-                        # Randomly select anchor cells based on either the percentage or absulut value
+                        # Randomly select anchor cells based on either the percentage or absolute value
                         if requirements["anker_cell_selction_type"] == "%":
                             anchors = single_sample.sample(
                                 n=int(len(single_sample) * anker_value)
@@ -220,28 +221,28 @@ def main():
                             print(anker_value, radius_distance, fussy_limit, sub_sample)
 
                             # Use multiprocessing to create and save graphs in parallel
-                            run1 = functools.partial(
-                                    data_utils.create_graph_and_save,
-                                    whole_data=single_sample,
-                                    save_path_folder=save_path_folder_graphs,
-                                    radius_neibourhood=radius_distance,
-                                    requiremets_dict=requirements,
-                                    voronoi_list=voroni_id_fussy,
-                                    sub_sample=sub_sample,
-                                    repeat_id=augment_id,
-                                    skip_existing=True,
-                                    noisy_labeling=args.noisy_labeling,
-                                    node_prob=args.node_prob,
-                                    randomise_edges=args.randomise_edges,
-                                    percent_number_cells=args.percent_number_cells,
-                                    segmentation=args.segmentation,
-                                )
-                            
+                            run_saving_routine = functools.partial(
+                                data_utils.create_graph_and_save,
+                                whole_data=single_sample,
+                                save_path_folder=save_path_folder_graphs,
+                                radius_neibourhood=radius_distance,
+                                requiremets_dict=requirements,
+                                voronoi_list=voroni_id_fussy,
+                                sub_sample=sub_sample,
+                                repeat_id=augment_id,
+                                skip_existing=True,
+                                noisy_labeling=args.noisy_labeling,
+                                node_prob=args.node_prob,
+                                randomise_edges=args.randomise_edges,
+                                percent_number_cells=args.percent_number_cells,
+                                segmentation=args.segmentation,
+                            )
+
                             with mp.Pool(mp.cpu_count() - 2) as pool:
                                 for _ in pool.imap_unordered(
-                                    functools.partial(safe_wrapper, run1),
+                                    functools.partial(safe_wrapper, run_saving_routine),
                                     vornoi_id,
-                                    chunksize=1
+                                    chunksize=1,
                                 ):
                                     pass
 
@@ -295,27 +296,27 @@ def main():
 
                         # Use multiprocessing to create and save graphs in parallel
                         run2 = functools.partial(
-                                data_utils.create_graph_and_save,
-                                whole_data=sample_collection,
-                                save_path_folder=save_path_folder_graphs,
-                                radius_neibourhood=radius_distance,
-                                requiremets_dict=requirements,
-                                voronoi_list=voroni_id_fussy,
-                                sub_sample=sub_sample,
-                                repeat_id=augment_id,
-                                skip_existing=False,
-                                noisy_labeling=args.noisy_labeling,
-                                node_prob=args.node_prob,
-                                randomise_edges=args.randomise_edges,
-                                percent_number_cells=args.percent_number_cells,
-                                segmentation=args.segmentation,
-                            )
-                        
+                            data_utils.create_graph_and_save,
+                            whole_data=sample_collection,
+                            save_path_folder=save_path_folder_graphs,
+                            radius_neibourhood=radius_distance,
+                            requiremets_dict=requirements,
+                            voronoi_list=voroni_id_fussy,
+                            sub_sample=sub_sample,
+                            repeat_id=augment_id,
+                            skip_existing=False,
+                            noisy_labeling=args.noisy_labeling,
+                            node_prob=args.node_prob,
+                            randomise_edges=args.randomise_edges,
+                            percent_number_cells=args.percent_number_cells,
+                            segmentation=args.segmentation,
+                        )
+
                         with mp.Pool(mp.cpu_count() - 2) as pool:
                             for _ in pool.imap_unordered(
                                 functools.partial(safe_wrapper, run2),
                                 subsection_id,
-                                chunksize=1
+                                chunksize=1,
                             ):
                                 pass
 
