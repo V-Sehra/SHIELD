@@ -55,18 +55,20 @@ def main():
         default="voronoi",
         choices=["random", "voronoi"],
     )
-    parser.add_argument(
-        "--max_graphs",
-        type=int,
-        default=None,
-        help="If set, cap the total number of graphs created (useful for tests).",
-    )
+
     parser.add_argument("-downSample", "--reduce_population", default=False)
     parser.add_argument(
         "-column_celltype_name", "--column_celltype_name", default="Class0"
     )
     parser.add_argument("-rev", "--reverse_sampling", default=False)
 
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--max_graphs",
+        type=int,
+        default=None,
+        help="If set, cap the total number of graphs created (useful for tests).",
+    )
     # Parse command-line arguments
     args = parser.parse_args()
     args.noisy_labeling = data_utils.bool_passer(args.noisy_labeling)
@@ -220,13 +222,19 @@ def main():
                             save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
                             # Print status updates
-                            print(
-                                "anker_value",
-                                "radius_neibourhood",
-                                "fussy_limit",
-                                "image",
-                            )
-                            print(anker_value, radius_distance, fussy_limit, sub_sample)
+                            if args.verbose:
+                                print(
+                                    "anker_value",
+                                    "radius_neibourhood",
+                                    "fussy_limit",
+                                    "image",
+                                )
+                                print(
+                                    anker_value,
+                                    radius_distance,
+                                    fussy_limit,
+                                    sub_sample,
+                                )
 
                             # Use multiprocessing to create and save graphs in parallel
                             run_saving_routine = functools.partial(
@@ -303,8 +311,9 @@ def main():
                         save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
 
                         # Print status updates
-                        print("anker_value", "radius_neibourhood", "image")
-                        print(anker_value, radius_distance, sub_sample)
+                        if args.verbose:
+                            print("anker_value", "radius_neibourhood", "image")
+                            print(anker_value, radius_distance, sub_sample)
 
                         # Use multiprocessing to create and save graphs in parallel
                         run_saving_routine = functools.partial(
