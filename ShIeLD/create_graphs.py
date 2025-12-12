@@ -199,9 +199,9 @@ def main():
 
                         # Create an array of Voronoi region indices
                         vornoi_id = np.arange(0, len(voroni_id_fussy))
-                        if args.max_left is not None:
-                            args.max_left = int(args.max_left)
-                            vornoi_id = vornoi_id[: args.max_left]
+                        if args.max_graphs is not None:
+                            args.max_graphs = int(args.max_graphs)
+                            vornoi_id = vornoi_id[: args.max_graphs]
 
                         for radius_distance in requirements["radius_distance_all"]:
                             save_path = Path(

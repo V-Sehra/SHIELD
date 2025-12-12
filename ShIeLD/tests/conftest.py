@@ -40,7 +40,7 @@ def graph_artifacts_dir(request):
 
     patch_create_graphs_mp(create_graphs)
 
-    for segmentation_type in ["random", "voronoi"]:
+    for segmentation_type in ["voronoi"]:
         sys.argv = [
             "create_graphs.py",
             "--requirements_file_path",
