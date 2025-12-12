@@ -66,8 +66,8 @@ def main():
         best_config_dict = pickle.load(file)
 
     # Check if the requierments and best_config dict are in the correct format
-    requirements = input_test.test_all_keys_in_req(req_file=requirements)
-    input_test.test_best_config(config_file=best_config_dict)
+    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
+    input_test.validate_best_config(config_file=best_config_dict)
 
     if best_config_dict["fussy_limit"] != "random_sampling":
         path_to_graphs = Path(

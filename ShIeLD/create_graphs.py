@@ -15,8 +15,8 @@ import functools
 from pathlib import Path
 import pickle
 
-from utils import data_utils
-from tests import input_test
+from .utils import data_utils
+from .tests import input_test
 
 
 # Multiprocessing helper
@@ -55,7 +55,12 @@ def main():
         default="voronoi",
         choices=["random", "voronoi"],
     )
-
+    parser.add_argument(
+        "--max_graphs",
+        type=int,
+        default=None,
+        help="If set, cap the total number of graphs created (useful for tests).",
+    )
     parser.add_argument("-downSample", "--reduce_population", default=False)
     parser.add_argument(
         "-column_celltype_name", "--column_celltype_name", default="Class0"
@@ -82,7 +87,7 @@ def main():
     # Load dataset requirements from a pickle file
     requirements = pickle.load(open(args.requirements_file_path, "rb"))
 
-    requirements = input_test.test_all_keys_in_req(req_file=requirements)
+    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
     # Determine the correct fold column based on dataset type
     fold_ids = [
         requirements["number_validation_splits"]
@@ -194,6 +199,9 @@ def main():
 
                         # Create an array of Voronoi region indices
                         vornoi_id = np.arange(0, len(voroni_id_fussy))
+                        if args.max_left is not None:
+                            args.max_left = int(args.max_left)
+                            vornoi_id = vornoi_id[: args.max_left]
 
                         for radius_distance in requirements["radius_distance_all"]:
                             save_path = Path(
@@ -264,6 +272,10 @@ def main():
                             )
 
                     else:
+                        # for testing limit the anker_value (Bucket number to the max_graphs value)
+                        if args.max_graphs is not None:
+                            anker_value = int(args.max_graphs)
+
                         n_chunks = int(int(len(single_sample) * anker_value))
                         sample_collection = np.array_split(
                             single_sample.sample(frac=1, random_state=42), n_chunks
@@ -295,7 +307,7 @@ def main():
                         print(anker_value, radius_distance, sub_sample)
 
                         # Use multiprocessing to create and save graphs in parallel
-                        run2 = functools.partial(
+                        run_saving_routine = functools.partial(
                             data_utils.create_graph_and_save,
                             whole_data=sample_collection,
                             save_path_folder=save_path_folder_graphs,
@@ -314,7 +326,7 @@ def main():
 
                         with mp.Pool(mp.cpu_count() - 2) as pool:
                             for _ in pool.imap_unordered(
-                                functools.partial(safe_wrapper, run2),
+                                functools.partial(safe_wrapper, run_saving_routine),
                                 subsection_id,
                                 chunksize=1,
                             ):

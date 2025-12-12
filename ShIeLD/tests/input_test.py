@@ -248,7 +248,7 @@ default_dict = {
 }
 
 
-def test_all_keys_in_req(req_file):
+def validate_all_keys_in_req(req_file):
     """
     Test to check if the requirements file contains all required keys
     and if the values are in the correct format.
@@ -369,7 +369,7 @@ def test_all_keys_in_req(req_file):
     return requirements
 
 
-def test_best_config(config_file):
+def validate_best_config(config_file):
     """
     Test to check if the best configuration file exists and is in the correct format.
         Args:

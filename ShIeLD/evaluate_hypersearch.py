@@ -56,7 +56,7 @@ def main():
 
     with open(args.requirements_file_path, "rb") as file:
         requirements = pickle.load(file)
-    requirements = input_test.test_all_keys_in_req(req_file=requirements)
+    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
     requirements["path_to_model"].mkdir(parents=True, exist_ok=True)
 
     print("evaluating the training results")

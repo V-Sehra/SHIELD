@@ -111,7 +111,7 @@ def bool_passer(argument):
         or argument == "true"
         or argument == "1"
         or argument == 1
-        or argument == True
+        or argument == True  # noqa: E712
     ):
         value = True
     elif (
@@ -119,7 +119,7 @@ def bool_passer(argument):
         or argument == "false"
         or argument == "0"
         or argument == 0
-        or argument == False
+        or argument == False  # noqa: E712
     ):
         value = False
     else:
