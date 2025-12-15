@@ -120,11 +120,11 @@ def initiaize_loss(
     nn.CrossEntropyLoss: The initialized loss function with class weights.
     """
 
-    if noise_yLabel == False:
-        if type(path) == str or type(path) == PosixPath:
+    if noise_yLabel == False:  # noqa: E712
+        if isinstance(path, str) or isinstance(path, PosixPath):
             with open(path, "rb") as f:
                 all_train_file_names = pickle.load(f)
-        elif type(path) == list:
+        elif isinstance(path, list):
             all_train_file_names = path
 
         class_weights = []
