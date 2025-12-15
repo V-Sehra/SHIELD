@@ -5,6 +5,7 @@ Created Nov 2024
 
 @author: Vivek
 """
+
 import torch
 from torch_geometric.data import Dataset
 from pathlib import Path
@@ -13,6 +14,7 @@ import sys
 import pickle
 import pandas as pd
 from tqdm import tqdm
+import re
 
 cwd = os.getcwd()
 sys.path.append(cwd + "/utils/")
@@ -32,10 +34,18 @@ class graph_dataset(Dataset):
         root (str): Root directory containing graph files.
     """
 
-    def __init__(self, root, fold_ids, requirements_dict, graph_file_names, path_to_graphs,
-                 normalize=None, normalizer_filename=None):
+    def __init__(
+        self,
+        root,
+        fold_ids,
+        requirements_dict,
+        graph_file_names,
+        path_to_graphs,
+        normalize=None,
+        normalizer_filename=None,
+    ):
         """
-        Initializes the diabetis_dataset.
+        Creates the dataset to train/evaluate/test the models.
 
         Args:
             root (str): Path to the directory containing the graph files.
@@ -45,49 +55,74 @@ class graph_dataset(Dataset):
         """
 
         # If the file storing graph filenames does not exist, create it
-        if not Path.exists(path_to_graphs / graph_file_names) or len(
-                pickle.load(open(path_to_graphs / graph_file_names, 'rb'))) == 0:
-            print('Creating file name list:')
+        if (
+            not Path.exists(path_to_graphs / graph_file_names)
+            or len(pickle.load(open(path_to_graphs / graph_file_names, "rb"))) == 0
+        ):
+            print("Creating file name list:")
 
-            csv_file = pd.read_csv(requirements_dict['path_raw_data'])
-            image_ids = csv_file[requirements_dict['measument_sample_name']][
-                csv_file[requirements_dict['validation_split_column']].isin(fold_ids)
+            csv_file = pd.read_csv(requirements_dict["path_raw_data"])
+            image_ids = csv_file[requirements_dict["measument_sample_name"]][
+                csv_file[requirements_dict["validation_split_column"]].isin(fold_ids)
             ].unique()
 
             # List files in root
-            df = pd.DataFrame(os.listdir(root), columns=['file_name'])
 
-            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_(.*?)(?:_[^_]+)?\.pt')[0]
+            df = pd.DataFrame(os.listdir(root), columns=["file_name"])
 
-            filtered_df = df[df['identifier'].isin(image_ids)]
+            df["identifier"] = df["file_name"].str.extract(
+                r"graph_subSample_(.*?)(?:_[^_]+)?\.pt"
+            )[0]
+
+            filtered_df = df[df["identifier"].isin(image_ids)]
+
             # Fallback: If nothing matched, try more general pattern (e.g., LHCC51 or 29_B_anything)
             if filtered_df.empty:
-                df['identifier'] = df['file_name'].str.extract(r'graph_subSample_([A-Za-z0-9]+(?:_[AB])?)')[0]
-                filtered_df = df[df['identifier'].isin(image_ids)]
+                df["identifier"] = df["file_name"].str.extract(
+                    r"graph_subSample_([A-Za-z0-9]+(?:_[AB])?)"
+                )[0]
+                filtered_df = df[df["identifier"].isin(image_ids)]
+            # additional fallBack if the previous did not succeed
+            if filtered_df.empty:
+                image_ids = pd.Series(image_ids, dtype="object").astype(str).tolist()
+                pattern = r"(?:" + "|".join(map(re.escape, image_ids)) + r")"
+                mask = df["file_name"].str.contains(pattern, regex=True, na=False)
+                filtered_df = df[mask]
+            if filtered_df.empty:
+                example_ids = (
+                    image_ids[:10]
+                    if isinstance(image_ids, list)
+                    else list(image_ids)[:10]
+                )
+                example_files = df["file_name"].head(10).tolist()
+                raise FileNotFoundError(
+                    "No graph files matched the requested fold IDs. "
+                    "This means the selected split has zero graphs on disk, or the filename->sample identifier parsing does not match the CSV IDs. "
+                    f"root={root!r}, n_files={len(df)}, n_image_ids={len(image_ids)}, "
+                    f"example_image_ids={example_ids}, example_filenames={example_files}"
+                )
 
-            self.graph_file_names = filtered_df['file_name'].tolist()
-
+            self.graph_file_names = filtered_df["file_name"].tolist()
             # Save the filtered filenames to avoid redundant processing in future runs
-            with open(path_to_graphs / graph_file_names, 'wb') as f:
+            with open(path_to_graphs / graph_file_names, "wb") as f:
                 pickle.dump(self.graph_file_names, f)
 
         else:
-            print('Load the previously stored list of graph filenames')
+            print("Load the previously stored list of graph filenames")
 
             # Load the previously stored list of graph filenames
-            with open(Path(path_to_graphs / graph_file_names), 'rb') as f:
+            with open(Path(path_to_graphs / graph_file_names), "rb") as f:
                 self.graph_file_names = pickle.load(f)
 
         self.normalize = normalize
         if self.normalize is not None:
-
-            if 'global_std' in self.normalize:
+            if "global_std" in self.normalize:
                 if not Path.exists(path_to_graphs / normalizer_filename):
-                    print('need to create the standardizer values')
+                    print("need to create the standardizer values")
                     sum_all = 0
                     total_number = 0
                     for file in tqdm(self.graph_file_names):
-                        data = torch.load(f'{root}/{file}')
+                        data = torch.load(f"{root}/{file}")
                         sum_all += torch.sum(data.x, dim=0)
                         total_number += data.x.shape[0]
 
@@ -95,18 +130,18 @@ class graph_dataset(Dataset):
 
                     sig2 = 0
                     for file in tqdm(self.graph_file_names):
-                        data = torch.load(f'{root}/{file}')
+                        data = torch.load(f"{root}/{file}")
                         sig2 += torch.sum(((data.x - self.total_mean) ** 2), dim=0)
 
                     self.sig = torch.sqrt(sig2 / total_number)
 
                     normalising_factors = [self.total_mean, self.sig]
 
-                    with open(path_to_graphs / normalizer_filename, 'wb') as f:
+                    with open(path_to_graphs / normalizer_filename, "wb") as f:
                         pickle.dump(normalising_factors, f)
                 else:
-                    print('load the standardizer values')
-                    with open(path_to_graphs / normalizer_filename, 'rb') as f:
+                    print("load the standardizer values")
+                    with open(path_to_graphs / normalizer_filename, "rb") as f:
                         self.total_mean, self.sig = pickle.load(f)
 
         super().__init__(root)
@@ -150,14 +185,15 @@ class graph_dataset(Dataset):
         Returns:
             torch_geometric.data.Data: The loaded graph data.
         """
-        data = torch.load(f'{self.processed_dir}/{self.processed_file_names[idx]}')
+        data = torch.load(f"{self.processed_dir}/{self.processed_file_names[idx]}")
         if self.normalize is not None:
-            if 'global_std' in self.normalize:
+            if "global_std" in self.normalize:
                 data.x = (data.x - self.total_mean) / self.sig
         return data
 
 
 # For benchmarking against models with fix input shape:
+
 
 def pad_or_repeat_rows(x: torch.Tensor, fix_nodeSize: int) -> torch.Tensor:
     n = x.shape[0]
@@ -193,8 +229,17 @@ class fixed_dataset(Dataset):
         root (str): Root directory containing graph files.
     """
 
-    def __init__(self, root, fold_ids, requirements_dict, graph_file_names, path_to_graphs,
-                 normalize=None, normalizer_filename=None, fix_nodeSize=132):
+    def __init__(
+        self,
+        root,
+        fold_ids,
+        requirements_dict,
+        graph_file_names,
+        path_to_graphs,
+        normalize=None,
+        normalizer_filename=None,
+        fix_nodeSize=132,
+    ):
         """
         Initializes the diabetis_dataset.
 
@@ -206,49 +251,54 @@ class fixed_dataset(Dataset):
         """
         self.fix_nodeSize = fix_nodeSize
         # If the file storing graph filenames does not exist, create it
-        if not Path.exists(path_to_graphs / graph_file_names) or len(
-                pickle.load(open(path_to_graphs / graph_file_names, 'rb'))) == 0:
-            print('Creating file name list:')
+        if (
+            not Path.exists(path_to_graphs / graph_file_names)
+            or len(pickle.load(open(path_to_graphs / graph_file_names, "rb"))) == 0
+        ):
+            print("Creating file name list:")
 
-            csv_file = pd.read_csv(requirements_dict['path_raw_data'])
-            image_ids = csv_file[requirements_dict['measument_sample_name']][
-                csv_file[requirements_dict['validation_split_column']].isin(fold_ids)
+            csv_file = pd.read_csv(requirements_dict["path_raw_data"])
+            image_ids = csv_file[requirements_dict["measument_sample_name"]][
+                csv_file[requirements_dict["validation_split_column"]].isin(fold_ids)
             ].unique()
 
             # List files in root
-            df = pd.DataFrame(os.listdir(root), columns=['file_name'])
+            df = pd.DataFrame(os.listdir(root), columns=["file_name"])
 
-            df['identifier'] = df['file_name'].str.extract(r'graph_subSample_(.*?)(?:_[^_]+)?\.pt')[0]
+            df["identifier"] = df["file_name"].str.extract(
+                r"graph_subSample_(.*?)(?:_[^_]+)?\.pt"
+            )[0]
 
-            filtered_df = df[df['identifier'].isin(image_ids)]
+            filtered_df = df[df["identifier"].isin(image_ids)]
             # Fallback: If nothing matched, try more general pattern (e.g., LHCC51 or 29_B_anything)
             if filtered_df.empty:
-                df['identifier'] = df['file_name'].str.extract(r'graph_subSample_([A-Za-z0-9]+(?:_[AB])?)')[0]
-                filtered_df = df[df['identifier'].isin(image_ids)]
+                df["identifier"] = df["file_name"].str.extract(
+                    r"graph_subSample_([A-Za-z0-9]+(?:_[AB])?)"
+                )[0]
+                filtered_df = df[df["identifier"].isin(image_ids)]
 
-            self.graph_file_names = filtered_df['file_name'].tolist()
+            self.graph_file_names = filtered_df["file_name"].tolist()
 
             # Save the filtered filenames to avoid redundant processing in future runs
-            with open(path_to_graphs / graph_file_names, 'wb') as f:
+            with open(path_to_graphs / graph_file_names, "wb") as f:
                 pickle.dump(self.graph_file_names, f)
 
         else:
-            print('Load the previously stored list of graph filenames')
+            print("Load the previously stored list of graph filenames")
 
             # Load the previously stored list of graph filenames
-            with open(Path(path_to_graphs / graph_file_names), 'rb') as f:
+            with open(Path(path_to_graphs / graph_file_names), "rb") as f:
                 self.graph_file_names = pickle.load(f)
 
         self.normalize = normalize
         if self.normalize is not None:
-
-            if 'global_std' in self.normalize:
+            if "global_std" in self.normalize:
                 if not Path.exists(path_to_graphs / normalizer_filename):
-                    print('need to create the standardizer values')
+                    print("need to create the standardizer values")
                     sum_all = 0
                     total_number = 0
                     for file in tqdm(self.graph_file_names):
-                        data = torch.load(f'{root}/{file}')
+                        data = torch.load(f"{root}/{file}")
                         sum_all += torch.sum(data.x, dim=0)
                         total_number += data.x.shape[0]
 
@@ -256,18 +306,18 @@ class fixed_dataset(Dataset):
 
                     sig2 = 0
                     for file in tqdm(self.graph_file_names):
-                        data = torch.load(f'{root}/{file}')
+                        data = torch.load(f"{root}/{file}")
                         sig2 += torch.sum(((data.x - self.total_mean) ** 2), dim=0)
 
                     self.sig = torch.sqrt(sig2 / total_number)
 
                     normalising_factors = [self.total_mean, self.sig]
 
-                    with open(path_to_graphs / normalizer_filename, 'wb') as f:
+                    with open(path_to_graphs / normalizer_filename, "wb") as f:
                         pickle.dump(normalising_factors, f)
                 else:
-                    print('load the standardizer values')
-                    with open(path_to_graphs / normalizer_filename, 'rb') as f:
+                    print("load the standardizer values")
+                    with open(path_to_graphs / normalizer_filename, "rb") as f:
                         self.total_mean, self.sig = pickle.load(f)
 
         super().__init__(root)
@@ -311,9 +361,9 @@ class fixed_dataset(Dataset):
         Returns:
             torch_geometric.data.Data: The loaded graph data.
         """
-        data = torch.load(f'{self.processed_dir}/{self.processed_file_names[idx]}')
+        data = torch.load(f"{self.processed_dir}/{self.processed_file_names[idx]}")
         if self.normalize is not None:
-            if 'global_std' in self.normalize:
+            if "global_std" in self.normalize:
                 data.x = (data.x - self.total_mean) / self.sig
 
         x = pad_or_repeat_rows(x=data.x, fix_nodeSize=self.fix_nodeSize).flatten()

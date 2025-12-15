@@ -16,4 +16,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["ShIeLD/tests"]
-markers = ["integration: slow-ish integration tests", "unit: fast tests"]
+markers = [
+  "integration: slow-ish integration tests",
+  "unit: fast tests",
+]

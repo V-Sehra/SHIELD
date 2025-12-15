@@ -52,7 +52,7 @@ def early_stopping(
 
 
 def get_train_results_csv(
-    requirement_dict: dict, column_names: Optional[list]
+    requirement_dict: dict, column_names: Optional[list] = None
 ) -> Tuple[DataFrame, PosixPath]:
     """
     Retrieves or initializes a CSV file containing training results.

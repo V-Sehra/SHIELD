@@ -81,14 +81,14 @@ import pandas as pd
 from tqdm import tqdm
 
 from torch_geometric.loader import DataListLoader
-from utils.data_class import graph_dataset
-import utils.train_utils as train_utils
-import utils.model_utils as model_utils
-import utils.data_utils as data_utils
+from .utils.data_class import graph_dataset
+from .utils import train_utils
+from .utils import model_utils
+from .utils import data_utils
 
-from tests import input_test
+from .tests import input_test
 from itertools import product
-from model import ShIeLD
+from .model import ShIeLD
 
 
 # Configure torch multiprocessing.
@@ -102,7 +102,6 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 # Select compute device (GPU if available).
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
 
 
 def main():
@@ -135,11 +134,17 @@ def main():
     # Convenience option: reverse iteration order over radii (debugging).
     parser.add_argument("-rev", "--reverse_sampling", default=False)
 
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose logging."
+    )
+
     args = parser.parse_args()
 
     # Normalize boolean-like CLI input to a real bool.
-    # (Only reverse_sampling is normalized here; other flags are left as provided.)
+    # (Ensure Bool Parameters are treated as bool:)
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
+    args.noise_yLabel = data_utils.bool_passer(args.noise_yLabel)
+    args.noisy_edge = data_utils.bool_passer(args.noisy_edge)
 
     # -----------------------------
     # Load and validate requirements
@@ -147,9 +152,13 @@ def main():
     requirements = pickle.load(open(Path.cwd() / args.requirements_file_path, "rb"))
 
     # Validate requirements schema/keys expected by the pipeline.
-    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
+    requirements = input_test.validate_all_keys_in_req(
+        req_file=requirements, verbose=args.verbose
+    )
 
-    print(args, flush=True)
+    if args.verbose:
+        print(args, flush=True)
+        print("Device:", device)
 
     # -----------------------------
     # Training patience (early stopping)
@@ -173,10 +182,10 @@ def main():
         elif requirements["sampleing"] == "voronoi":
             # Voronoi sampling: fussy_limit is a real meta-parameter.
             fussy_folder_name = True
-            fussy_vector = ["fussy_limit_all"]
+            fussy_vector = requirements["fussy_limit_all"]
     else:
         # Backwards compatibility: default assumes Voronoi-like layout.
-        fussy_vector = ["fussy_limit_all"]
+        fussy_vector = requirements["fussy_limit_all"]
         fussy_folder_name = True
 
     split_number = int(args.split_number)
@@ -287,6 +296,8 @@ def main():
         # -----------------------------
         # Sweep dropout rates and training repeats
         # -----------------------------
+        if args.verbose:
+            print("started training:")
         for dp, num in tqdm(
             product(
                 requirements["droupout_rate"],
@@ -369,7 +380,8 @@ def main():
                 # Evaluation (train + validation)
                 # -----------------------------------------
                 model.eval()
-                print("start validation")
+                if args.verbose:
+                    print("start validation")
 
                 # Compute metrics on training set.
                 train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
@@ -407,11 +419,11 @@ def main():
                     ],
                     columns=training_results_csv.columns,
                 )
-
-                print("train_bal_acc", "train_f1_score")
-                print(train_bal_acc, train_f1_score)
-                print("val_bal_acc", "val_f1_score")
-                print(val_bal_acc, val_f1_score)
+                if args.verbose:
+                    print("train_bal_acc", "train_f1_score")
+                    print(train_bal_acc, train_f1_score)
+                    print("val_bal_acc", "val_f1_score")
+                    print(val_bal_acc, val_f1_score)
 
                 # Reload CSV (in case other processes appended, or file changed on disk).
                 training_results_csv, csv_file_path = train_utils.get_train_results_csv(
@@ -430,16 +442,17 @@ def main():
                 torch.cuda.empty_cache()
             else:
                 # Skip training if the exact configuration already exists.
-                print(
-                    "Model already trained:",
-                    anker_number,
-                    radius_distance,
-                    fussy_limit,
-                    dp,
-                    args.comment,
-                    requirements["comment_norm"],
-                    num,
-                )
+                if args.verbose:
+                    print(
+                        "Model already trained:",
+                        anker_number,
+                        radius_distance,
+                        fussy_limit,
+                        dp,
+                        args.comment,
+                        requirements["comment_norm"],
+                        num,
+                    )
 
 
 if __name__ == "__main__":

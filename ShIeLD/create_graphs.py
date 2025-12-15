@@ -172,6 +172,13 @@ def main() -> None:
         choices=["train", "test"],
         help="Whether to generate graphs for train folds or test fold(s).",
     )
+    parser.add_argument(
+        "-skip",
+        "--skip_existing",
+        default="True",
+        choices=["True", "False"],
+        help="Skip files if they already exits",
+    )
 
     # Benchmarking / perturbation knobs (forwarded into create_graph_and_save)
     parser.add_argument(
@@ -253,8 +260,10 @@ def main() -> None:
     args.randomise_edges = data_utils.bool_passer(args.randomise_edges)
     args.reduce_population = data_utils.bool_passer(args.reduce_population)
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
+    args.skip_existing = data_utils.bool_passer(args.skip_existing)
 
-    print(args)
+    if args.verbose:
+        print(args)
 
     # -----------------------------
     # Multiprocessing setup
@@ -277,7 +286,9 @@ def main() -> None:
         requirements = pickle.load(f)
 
     # Validate required keys / schema for this pipeline.
-    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
+    requirements = input_test.validate_all_keys_in_req(
+        req_file=requirements, verbose=args.verbose
+    )
 
     # Determine which folds to keep based on the requested dataset type.
     fold_ids = (
@@ -445,7 +456,7 @@ def main() -> None:
                                 voronoi_list=voroni_id_fussy,
                                 sub_sample=sub_sample,
                                 repeat_id=augment_id,
-                                skip_existing=True,
+                                skip_existing=args.skip_existing,
                                 noisy_labeling=args.noisy_labeling,
                                 node_prob=args.node_prob,
                                 randomise_edges=args.randomise_edges,
@@ -550,7 +561,7 @@ def main() -> None:
                             voronoi_list=voroni_id_fussy,
                             sub_sample=sub_sample,
                             repeat_id=augment_id,
-                            skip_existing=False,
+                            skip_existing=args.skip_existing,
                             noisy_labeling=args.noisy_labeling,
                             node_prob=args.node_prob,
                             randomise_edges=args.randomise_edges,

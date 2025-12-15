@@ -5,7 +5,21 @@ import sys
 from pathlib import Path
 
 import pytest
-from ShIeLD.utils.testing import patch_create_graphs_mp
+
+
+class _SerialPool:
+    def __init__(self, *a, **k):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def imap_unordered(self, func, iterable, chunksize=1):
+        for x in iterable:
+            yield func(x)
 
 
 def pytest_addoption(parser):
@@ -38,33 +52,38 @@ def graph_artifacts_dir(request):
 
     from ShIeLD import create_graphs
 
-    patch_create_graphs_mp(create_graphs)
+    create_graphs.mp.Pool = _SerialPool
+    create_graphs.mp.cpu_count = lambda: 2
+    create_graphs.mp.set_start_method = lambda *a, **k: None
 
     for segmentation_type in ["voronoi", "random"]:
-        sys.argv = [
-            "create_graphs.py",
-            "--requirements_file_path",
-            str(req_path),
-            "--data_set_type",
-            "test",
-            "--segmentation",
-            segmentation_type,
-            "--column_celltype_name",
-            "cell_type",
-            "--noisy_labeling",
-            "False",
-            "--node_prob",
-            "False",
-            "--randomise_edges",
-            "False",
-            "--reduce_population",
-            "False",
-            "--reverse_sampling",
-            "False",
-            "--max_graphs",
-            "5",
-        ]
-        create_graphs.main()
+        for data_type in ["train", "test"]:
+            sys.argv = [
+                "create_graphs.py",
+                "--requirements_file_path",
+                str(req_path),
+                "--data_set_type",
+                data_type,
+                "--segmentation",
+                segmentation_type,
+                "--column_celltype_name",
+                "cell_type",
+                "--noisy_labeling",
+                "False",
+                "--node_prob",
+                "False",
+                "--randomise_edges",
+                "False",
+                "--reduce_population",
+                "False",
+                "--reverse_sampling",
+                "False",
+                "--max_graphs",
+                "2",
+                "--skip_existing",
+                "False",
+            ]
+            create_graphs.main()
 
     # global smoke assert (don’t assert every config combo when max_graphs caps output)
     pt_files = list(out_root.rglob("*.pt"))
