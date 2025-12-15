@@ -99,7 +99,7 @@ def get_train_results_csv(
     return training_results_csv, csv_file_path  # Return the DataFram
 
 
-def initiaize_loss(
+def initialize_loss(
     path: str, device: str, tissue_dict: dict, noise_yLabel: Union[bool, str] = False
 ) -> nn.CrossEntropyLoss:
     """

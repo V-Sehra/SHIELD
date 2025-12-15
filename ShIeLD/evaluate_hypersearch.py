@@ -153,7 +153,7 @@ def main():
         # which of the 5 models has the best predictive power
         best_model_f1score = 0
         for num in tqdm(range(args.number_of_training_repeats)):
-            loss_fkt = train_utils.initiaize_loss(
+            loss_fkt = train_utils.initialize_loss(
                 path=Path(path_to_graphs / "train_set_file_names.pkl"),
                 tissue_dict=requirements["label_dict"],
                 device=device,

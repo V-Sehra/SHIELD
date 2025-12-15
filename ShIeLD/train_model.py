@@ -325,7 +325,7 @@ def main():
                     / f"train_set_validation_split_{split_number}_file_names.pkl"
                 )
 
-                loss_fkt = train_utils.initiaize_loss(
+                loss_fkt = train_utils.initialize_loss(
                     path=Path(loss_init_path),
                     tissue_dict=requirements["label_dict"],
                     device=device,
