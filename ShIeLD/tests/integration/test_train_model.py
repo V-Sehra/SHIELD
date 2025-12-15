@@ -1,7 +1,7 @@
 import pickle
 import sys
 from pathlib import Path
-
+import pandas as pd
 import pytest
 
 
@@ -31,22 +31,6 @@ def test_train_model_smoke(graph_artifacts_dir, monkeypatch, tmp_path):
         0
     ]  # .../anker_value_X/min_cells_Y/fussy_limit_Z/radius_R/train/graphs
 
-    radius_dir = graphs_dir.parents[1]  # radius_25
-    fussy_dir = graphs_dir.parents[2]  # fussy_limit_0_2
-    mincells_dir = graphs_dir.parents[3]  # min_cells_50
-    anker_dir = graphs_dir.parents[4]  # anker_value_0_03
-
-    def _parse_float(tag: str, name: str) -> float:
-        return float(name.replace(tag, "").replace("_", "."))
-
-    req["radius_distance_all"] = [int(radius_dir.name.replace("radius_", ""))]
-    req["fussy_limit_all"] = [_parse_float("fussy_limit_", fussy_dir.name)]
-    req["minimum_number_cells"] = int(mincells_dir.name.replace("min_cells_", ""))
-    req["anker_value_all"] = [_parse_float("anker_value_", anker_dir.name)]
-
-    # Make it tiny (1 config, 1 model)
-    if "droupout_rate" in req:
-        req["droupout_rate"] = [req["droupout_rate"][0]]
     req["batch_size"] = 1
 
     # early_stopping enforces patience >= 8
@@ -55,7 +39,6 @@ def test_train_model_smoke(graph_artifacts_dir, monkeypatch, tmp_path):
     # --- Make split selection smoke-test stable ---
     # In some dummy configs, number_validation_splits isn't a list-of-lists.
     # For a smoke test we force a single split that includes all folds present in CSV.
-    import pandas as pd
 
     csv = pd.read_csv(req["path_raw_data"])
     all_folds = sorted(csv[req["validation_split_column"]].unique().tolist())

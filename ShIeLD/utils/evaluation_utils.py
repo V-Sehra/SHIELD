@@ -244,7 +244,9 @@ def get_cell_to_cell_interaction_dict(
 
 
 def get_hypersearch_results(
-    requirements_dict: dict, column_names: Optional[List[str]] = None
+    requirements_dict: dict,
+    column_names: Optional[List[str]] = None,
+    verbose: bool = True,
 ) -> pd.DataFrame:
     """
     Runs a hyperparameter search analysis by aggregating model performance metrics.
@@ -279,9 +281,10 @@ def get_hypersearch_results(
         if len(model_grouped[column].unique()) > 1:
             col_of_variables.append(column)
         else:
-            print(
-                f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
-            )
+            if verbose:
+                print(
+                    f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
+                )
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
     hyper_grouped = (

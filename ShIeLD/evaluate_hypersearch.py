@@ -14,20 +14,14 @@ from tqdm import tqdm
 import torch
 from torch_geometric.loader import DataListLoader
 
-from model import ShIeLD
-import utils.evaluation_utils as evaluation_utils
-import utils.data_utils as data_utils
-import utils.train_utils as train_utils
-import utils.model_utils as model_utils
-from utils.data_class import graph_dataset
+from .model import ShIeLD
+from .utils import evaluation_utils
+from .utils import data_utils
+from .utils import train_utils
+from .utils import model_utils
+from .utils.data_class import graph_dataset
 
-from tests import input_test
-
-torch.multiprocessing.set_start_method("fork", force=True)
-torch.multiprocessing.set_sharing_strategy("file_system")
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+from .tests import input_test
 
 
 def main():
@@ -45,6 +39,9 @@ def main():
     )
     parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
     parser.add_argument("-maxEpoch", "--maxEpoch", default=None)
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose logging."
+    )
 
     args = parser.parse_args()
     args.best_config_dict_path = Path(args.best_config_dict_path)
@@ -52,16 +49,32 @@ def main():
     args.retrain_best_model_config_bool = data_utils.bool_passer(
         args.retain_best_model_config_bool
     )
-    print(args, flush=True)
+    if args.verbose:
+        print(args, flush=True)
+
+    # Multiprocessing setup (avoid doing this at import time; can be monkeypatched in tests)
+    try:
+        torch.multiprocessing.set_start_method("fork", force=True)
+        torch.multiprocessing.set_sharing_strategy("file_system")
+    except RuntimeError:
+        # already set
+        pass
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.verbose:
+        print(device)
 
     with open(args.requirements_file_path, "rb") as file:
         requirements = pickle.load(file)
-    requirements = input_test.validate_all_keys_in_req(req_file=requirements)
+    requirements = input_test.validate_all_keys_in_req(
+        req_file=requirements, verbose=args.verbose
+    )
     requirements["path_to_model"].mkdir(parents=True, exist_ok=True)
 
-    print("evaluating the training results")
-    hyper_search_results = evaluation_utils.get_hypersear_results(
-        requirements_dict=requirements
+    if args.verbose:
+        print("evaluating the training results")
+    hyper_search_results = evaluation_utils.get_hypersearch_results(
+        requirements_dict=requirements, verbose=args.verbose
     )
     hyper_search_results = hyper_search_results.sort_values(
         "total_acc_balanced_mean", ascending=False
@@ -80,8 +93,8 @@ def main():
         requirements["path_training_results"] / "hyper_search_plots"
     )
     save_path_folder.mkdir(parents=True, exist_ok=True)
-
-    print("creating hyperparameter search plots")
+    if args.verbose:
+        print("creating hyperparameter search plots")
 
     for observable_of_interest in requirements["col_of_variables"]:
         evaluation_utils.create_parameter_influence_plots(
@@ -103,8 +116,9 @@ def main():
             with open(args.best_config_dict_path, "wb") as file:
                 pickle.dump(best_config_dict, file)
 
-        print("best configuration:")
-        print(best_config_dict)
+        if args.verbose:
+            print("best configuration:")
+            print(best_config_dict)
         if best_config_dict["fussy_limit"] != "random_sampling":
             path_to_graphs = Path(
                 requirements["path_to_data_set"]
@@ -129,6 +143,7 @@ def main():
                 fold_ids=requirements["number_validation_splits"],
                 requirements_dict=requirements,
                 graph_file_names="train_set_file_names.pkl",
+                verbose=args.verbose,
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
@@ -143,6 +158,7 @@ def main():
                 fold_ids=requirements["test_set_fold_number"],
                 requirements_dict=requirements,
                 graph_file_names="test_set_file_names.pkl",
+                verbose=args.verbose,
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
@@ -186,7 +202,8 @@ def main():
             )
 
             model.eval()
-            print("start validation")
+            if args.verbose:
+                print("start validation")
             train_bal_acc, train_f1_score, train_cm = model_utils.get_acc_metrics(
                 model=model, data_loader=data_loader_train, device=device
             )
@@ -197,11 +214,11 @@ def main():
 
             if val_f1_score > best_model_f1score:
                 best_model_f1score = val_f1_score
-
-                print(
-                    f"best model so far: VersioNo.{num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}"
-                )
-                print(f"train scores: bal= {train_bal_acc} f1= {train_f1_score}")
+                if args.verbose:
+                    print(
+                        f"best model so far: VersioNo.{num} with test f1 score of {val_f1_score}, balanced accuracy of {val_bal_acc}"
+                    )
+                    print(f"train scores: bal= {train_bal_acc} f1= {train_f1_score}")
                 # Save the best model
 
                 model_save_path = Path(requirements["path_to_model"] / "best_model.pt")

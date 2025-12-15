@@ -43,6 +43,7 @@ class graph_dataset(Dataset):
         path_to_graphs,
         normalize=None,
         normalizer_filename=None,
+        verbose: bool = True,
     ):
         """
         Creates the dataset to train/evaluate/test the models.
@@ -52,6 +53,7 @@ class graph_dataset(Dataset):
             csv_file (str): Path to the CSV file containing image names.
             graph_file_names (str): Path to store/retrieve the list of graph filenames.
             normalize (bool): If True, normalize the graph data.
+            verbose(bool): Print statements yes|no
         """
 
         # If the file storing graph filenames does not exist, create it
@@ -59,7 +61,8 @@ class graph_dataset(Dataset):
             not Path.exists(path_to_graphs / graph_file_names)
             or len(pickle.load(open(path_to_graphs / graph_file_names, "rb"))) == 0
         ):
-            print("Creating file name list:")
+            if verbose:
+                print("Creating file name list:")
 
             csv_file = pd.read_csv(requirements_dict["path_raw_data"])
             image_ids = csv_file[requirements_dict["measument_sample_name"]][
@@ -108,7 +111,8 @@ class graph_dataset(Dataset):
                 pickle.dump(self.graph_file_names, f)
 
         else:
-            print("Load the previously stored list of graph filenames")
+            if verbose:
+                print("Load the previously stored list of graph filenames")
 
             # Load the previously stored list of graph filenames
             with open(Path(path_to_graphs / graph_file_names), "rb") as f:
@@ -118,7 +122,8 @@ class graph_dataset(Dataset):
         if self.normalize is not None:
             if "global_std" in self.normalize:
                 if not Path.exists(path_to_graphs / normalizer_filename):
-                    print("need to create the standardizer values")
+                    if verbose:
+                        print("need to create the standardizer values")
                     sum_all = 0
                     total_number = 0
                     for file in tqdm(self.graph_file_names):
@@ -140,7 +145,8 @@ class graph_dataset(Dataset):
                     with open(path_to_graphs / normalizer_filename, "wb") as f:
                         pickle.dump(normalising_factors, f)
                 else:
-                    print("load the standardizer values")
+                    if verbose:
+                        print("load the standardizer values")
                     with open(path_to_graphs / normalizer_filename, "rb") as f:
                         self.total_mean, self.sig = pickle.load(f)
 
