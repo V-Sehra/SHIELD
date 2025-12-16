@@ -167,7 +167,7 @@ def main():
     if "patience" in requirements.keys():
         patience = requirements["patience"]
     else:
-        patience = 5
+        patience = 9
 
     # -----------------------------
     # Determine sampling mode: Voronoi vs random

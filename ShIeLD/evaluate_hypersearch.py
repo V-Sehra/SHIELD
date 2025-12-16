@@ -108,7 +108,7 @@ def main():
     )
 
     # Number of retraining repeats for best config (select best by test F1).
-    parser.add_argument("-rep", "--number_of_training_repeats", type=int, default=5)
+    parser.add_argument("-rep", "--number_of_training_repeats", default=5)
 
     # Optional max epochs override forwarded to training loop.
     parser.add_argument("-maxEpoch", "--maxEpoch", default=None)
@@ -121,6 +121,7 @@ def main():
     args = parser.parse_args()
 
     # Normalize user-provided paths.
+    args.number_of_training_repeats = int(args.number_of_training_repeats)
     args.best_config_dict_path = Path(args.best_config_dict_path)
     args.requirements_file_path = Path(args.requirements_file_path)
 
@@ -319,7 +320,7 @@ def main():
                 device=device,
                 patience=best_config_dict["patience"]
                 if "patience" in best_config_dict.keys()
-                else 5,
+                else 9,
                 max_epochs=args.maxEpoch,
             )
 

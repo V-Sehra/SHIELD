@@ -231,8 +231,6 @@ def train_loop_shield(
     # Flag for early stopping condition
     early_stopping_bool = False
 
-    print("Start training")
-
     # Continue training until the early stopping condition is met
     while not early_stopping_bool:
         # List to store batch-wise loss values for the current epoch
