@@ -1,4 +1,3 @@
-import pytest
 import pickle
 from pathlib import Path
 import numpy as np
@@ -248,7 +247,7 @@ default_dict = {
 }
 
 
-def test_all_keys_in_req(req_file):
+def validate_all_keys_in_req(req_file, verbose=True):
     """
     Test to check if the requirements file contains all required keys
     and if the values are in the correct format.
@@ -276,9 +275,10 @@ def test_all_keys_in_req(req_file):
     other_keys = optional_keys - key_set
     for opt_key in other_keys:
         requirements[opt_key] = default_dict[opt_key]
-        print(
-            f"{opt_key} not set in requirements, setting to default: {default_dict[opt_key]}"
-        )
+        if verbose:
+            print(
+                f"{opt_key} not set in requirements, setting to default: {default_dict[opt_key]}"
+            )
 
     # Check for correct format of the keys:
     # Paths:
@@ -369,7 +369,7 @@ def test_all_keys_in_req(req_file):
     return requirements
 
 
-def test_best_config(config_file):
+def validate_best_config(config_file):
     """
     Test to check if the best configuration file exists and is in the correct format.
         Args:

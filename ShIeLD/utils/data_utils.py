@@ -111,7 +111,7 @@ def bool_passer(argument):
         or argument == "true"
         or argument == "1"
         or argument == 1
-        or argument == True
+        or argument == True  # noqa: E712
     ):
         value = True
     elif (
@@ -119,7 +119,7 @@ def bool_passer(argument):
         or argument == "false"
         or argument == "0"
         or argument == 0
-        or argument == False
+        or argument == False  # noqa: E712
     ):
         value = False
     else:
@@ -235,7 +235,6 @@ def create_graph_and_save(
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
-        number_samples = len(voronoi_list)
     elif segmentation.lower() == "random":
         if not isinstance(whole_data, list):
             raise ValueError(
@@ -243,12 +242,11 @@ def create_graph_and_save(
             )
 
         graph_data = whole_data[vornoi_id].copy()
-        number_samples = len(whole_data)
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
 
-    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_{(number_samples * repeat_id) + vornoi_id}.pt"
+    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{vornoi_id}.pt"
 
     if skip_existing:
         if Path(f"{save_path_folder}", file_name).exists():
@@ -459,6 +457,7 @@ def get_voronoi_id(
     anker_cell: DataFrame,
     fussy_limit: Optional[float] = None,
     centroid_bool: bool = False,
+    eps: float = 1e-12,
 ) -> np.array:
     """
     Function to assign each data point to a Voronoi cell.
@@ -470,7 +469,7 @@ def get_voronoi_id(
     boarder_number (int): Number of nearest neighbors to consider for each data point.
     fussy_limit (float): Threshold for fuzzy assignment of data points to Voronoi cells.
     centroid_bool (bool): If True, use the centroid of Voronoi cells for assignment.
-
+    eps (float): Add a small number to prevent div(0)
     Returns:
     ndarray: List of Voronoi cells with assigned data points or array of nearest anchor indices.
     """
@@ -499,13 +498,37 @@ def get_voronoi_id(
             dist_centroid, _ = tree_centroid.query(
                 data_set[[x_col_name, y_col_name]], k=boarder_number
             )
+            num = np.nan_to_num(
+                dist_centroid[:, 0].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+            )
             proximity_to_border = [
-                dist_centroid[:, 0] / dist_centroid[:, i]
-                for i in range(0, boarder_number)
+                num
+                / np.maximum(
+                    np.nan_to_num(
+                        dist_centroid[:, i].astype(float),
+                        nan=0.0,
+                        posinf=0.0,
+                        neginf=0.0,
+                    ),
+                    eps,
+                )
+                for i in range(boarder_number)
             ]
+
         else:
+            num = np.nan_to_num(
+                dist[:, 0].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+            )
+
             proximity_to_border = [
-                dist[:, 0] / dist[:, i] for i in range(0, boarder_number)
+                num
+                / np.maximum(
+                    np.nan_to_num(
+                        dist[:, i].astype(float), nan=0.0, posinf=0.0, neginf=0.0
+                    ),
+                    eps,
+                )
+                for i in range(boarder_number)
             ]
 
         first_assignment = indices[:, 0].copy()

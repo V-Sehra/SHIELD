@@ -52,7 +52,7 @@ def early_stopping(
 
 
 def get_train_results_csv(
-    requirement_dict: dict, column_names: Optional[list]
+    requirement_dict: dict, column_names: Optional[list] = None
 ) -> Tuple[DataFrame, PosixPath]:
     """
     Retrieves or initializes a CSV file containing training results.
@@ -99,7 +99,7 @@ def get_train_results_csv(
     return training_results_csv, csv_file_path  # Return the DataFram
 
 
-def initiaize_loss(
+def initialize_loss(
     path: str, device: str, tissue_dict: dict, noise_yLabel: Union[bool, str] = False
 ) -> nn.CrossEntropyLoss:
     """
@@ -120,11 +120,11 @@ def initiaize_loss(
     nn.CrossEntropyLoss: The initialized loss function with class weights.
     """
 
-    if noise_yLabel == False:
-        if type(path) == str or type(path) == PosixPath:
+    if noise_yLabel == False:  # noqa: E712
+        if isinstance(path, str) or isinstance(path, PosixPath):
             with open(path, "rb") as f:
                 all_train_file_names = pickle.load(f)
-        elif type(path) == list:
+        elif isinstance(path, list):
             all_train_file_names = path
 
         class_weights = []
@@ -230,8 +230,6 @@ def train_loop_shield(
 
     # Flag for early stopping condition
     early_stopping_bool = False
-
-    print("Start training")
 
     # Continue training until the early stopping condition is met
     while not early_stopping_bool:

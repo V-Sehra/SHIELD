@@ -244,7 +244,9 @@ def get_cell_to_cell_interaction_dict(
 
 
 def get_hypersearch_results(
-    requirements_dict: dict, column_names: Optional[List[str]] = None
+    requirements_dict: dict,
+    column_names: Optional[List[str]] = None,
+    verbose: bool = True,
 ) -> pd.DataFrame:
     """
     Runs a hyperparameter search analysis by aggregating model performance metrics.
@@ -279,9 +281,10 @@ def get_hypersearch_results(
         if len(model_grouped[column].unique()) > 1:
             col_of_variables.append(column)
         else:
-            print(
-                f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
-            )
+            if verbose:
+                print(
+                    f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
+                )
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
     hyper_grouped = (
@@ -521,7 +524,6 @@ def plot_confusion_with_std(
             )
 
     plt.tight_layout()
-    plt.show()
     if save_path is not None:
         fig.savefig(save_path, bbox_inches="tight", dpi=300)
 
@@ -563,9 +565,6 @@ def create_parameter_influence_plots(
     # Adjust layout to prevent overlapping elements
     plt.tight_layout()
 
-    # Display the plot
-    plt.show()
-
     # Save the plot if a save path is provided
     if save_path is not None:
         plt.savefig(save_path)
@@ -578,14 +577,9 @@ def plot_cell_cell_interaction_boxplots(
     save_path: Optional[PosixPath] = None,
     *,
     log_y: bool = False,
-    star_size: int = 2000,
     line_width: int = 5,
     custom_fig_size: Optional[Tuple[int, int]] = None,
-    custom_star_shift: Optional[float] = None,
     nan_to_zero: bool = False,
-    stars: bool = False,
-    significance_1: Optional[float] = None,
-    significance_2: Optional[float] = None,
 ):
     """
     Plots boxplots of cell-cell interactions with optional statistical testing and significance annotations.
@@ -601,14 +595,7 @@ def plot_cell_cell_interaction_boxplots(
         custom_fig_size: Custom figure size.
         custom_star_shift: Shift distance for double-star placement.
         nan_to_zero: If True, converts NaNs to zeros before statistical testing.
-        stars: Whether to annotate significance with stars.
-        significance_1: Threshold for single-star significance.
-        significance_2: Threshold for double-star significance.
     """
-    if stars and (significance_1 is None or significance_2 is None):
-        raise ValueError(
-            "Both significance_1 and significance_2 must be set when stars=True"
-        )
 
     plt.rcParams.update({"font.size": 50})
 
@@ -616,11 +603,6 @@ def plot_cell_cell_interaction_boxplots(
     num_cells = len(cell_types)
 
     fig_size = custom_fig_size or ((170, 60) if interaction_limit > 16 else (130, 60))
-    double_star_shift = (
-        custom_star_shift
-        if custom_star_shift is not None
-        else (0.16 if interaction_limit > 16 else 0.1)
-    )
 
     fig, axs = plt.subplots(
         nrows=2,
@@ -676,31 +658,6 @@ def plot_cell_cell_interaction_boxplots(
                     _, p_val = mannwhitneyu(data_1, data_2, alternative="less")
                     p_val_scores.append([src_cell, dst_name, p_val])
 
-                    if stars:
-                        if significance_2 < p_val < significance_1:
-                            ax.scatter(
-                                dst_cell_idx + 1,
-                                1.05,
-                                marker="*",
-                                color="black",
-                                s=star_size,
-                            )
-                        elif p_val < significance_2:
-                            ax.scatter(
-                                dst_cell_idx + 1 + double_star_shift,
-                                1.05,
-                                marker="*",
-                                color="black",
-                                s=star_size,
-                            )
-                            ax.scatter(
-                                dst_cell_idx + 1 - double_star_shift,
-                                1.05,
-                                marker="*",
-                                color="black",
-                                s=star_size,
-                            )
-
                 _, p_adj, _, _ = multipletests(
                     [x[2] for x in p_val_scores], method="fdr_bh"
                 )
@@ -754,7 +711,7 @@ def plot_cell_cell_interaction_boxplots(
         log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + "_p_values.csv"))
         log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + "_FDR_values.csv"))
         plt.savefig(plot_path, dpi=250)
-        plt.show()
+
         plot_top_k_log_p_values_per_row(
             log_pval_matrix_path=plot_path.with_name(
                 plot_path.stem + "_FDR_values.csv"
@@ -919,8 +876,6 @@ def plot_pct_vs_mean(
                 save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight"
             )
 
-        plt.show()
-
 
 def plot_top_k_log_p_values_per_row(
     log_pval_matrix_path: PosixPath,
@@ -998,10 +953,9 @@ def plot_top_k_log_p_values_per_row(
         plt.title(src_labels[row], fontsize=font_size)
         plt.ylabel("-log10(p)", fontsize=font_size)
         plt.xticks([])
-        plt.ylim([0, max(neg_log_vals) * 1.2])
+        plt.ylim([0, max(max(neg_log_vals) * 1.2, 1)])
         plt.grid(True)
         plt.tight_layout()
-        # plt.show()
 
         if save_path is not None:
             safe_cell = re.sub(r'[<>:"/\\|?*]+', "_", str(src_labels[row]))
