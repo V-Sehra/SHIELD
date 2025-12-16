@@ -875,6 +875,7 @@ def plot_pct_vs_mean(
             fig.savefig(
                 save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight"
             )
+        plt.close(fig)
 
 
 def plot_top_k_log_p_values_per_row(

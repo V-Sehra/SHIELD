@@ -1,4 +1,3 @@
-# ShIeLD/tests/integration/test_graph_building.py
 from pathlib import Path
 
 
