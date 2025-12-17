@@ -70,7 +70,7 @@ def get_train_results_csv(
             "anker_value",  # Percentage of anchor cells used
             "radius_distance",  # Radius defining the neighborhood
             "fussy_limit",  # Threshold for fuzzy logic application
-            "droupout_rate",  # Dropout rate
+            "dropout_rate",  # Dropout rate
             "comment",  # General comments
             "comment_norm",  # Normalized comments
             "model_no",  # Model number
@@ -145,7 +145,7 @@ def initialize_loss(
             try:
                 g = torch.load(Path(path) / files)
                 class_weights[g["y"]] += 1
-            except:
+            except:  # noqa: E722
                 print(
                     "skipping file: ",
                     files,
@@ -174,7 +174,7 @@ def initialize_loss(
                     class_weights[g[f"y_noise_{noise_yLabel}"]] += 1
                 else:
                     class_weights[g["y"]] += 1
-            except:
+            except:  # noqa: E722
                 print(
                     "skipping file: ",
                     files,

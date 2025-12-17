@@ -14,7 +14,7 @@ It supports two segmentation modes:
    - Builds Voronoi regions (optionally with "fuzzy" boundary constraints).
    - For each region ID, constructs a graph based on a neighborhood radius.
 
-2) **Random sampling** (`--segmentation random`)
+2) **Random sampling** (`--segmentation buckets`)
    - Shuffles the sample and splits it into chunks ("buckets").
    - Each chunk becomes one graph (again using a neighborhood radius).
 
@@ -29,12 +29,12 @@ Inputs
     Must include (at minimum) keys used in this script, e.g.
     - path_raw_data: str/path to CSV
     - path_to_data_set: output base folder
-    - measument_sample_name: column name identifying tissues/ROIs/samples
+    - measurement_sample_name: column name identifying tissues/ROIs/samples
     - validation_split_column: column name defining fold assignment
     - number_validation_splits: list/iterable of train folds
     - test_set_fold_number: list/iterable of test folds
     - anker_value_all: list of anchor selection values (fraction or absolute)
-    - anker_cell_selction_type: "%" or "absolut"
+    - anker_cell_selection_type: "%" or "absolut"
     - fussy_limit_all: list of fuzzy boundary values (voronoi mode)
     - radius_distance_all: list of neighborhood radii
     - minimum_number_cells: int
@@ -59,7 +59,7 @@ Graphs are written under:
         anker_value_<...>/
             min_cells_<...>/
                 (voronoi) fussy_limit_<...>/radius_<...>/<train|test>/graphs/
-                (random)  random_sampling/radius_<...>/<train|test>/graphs/
+                (bucket)  bucket_sampling/radius_<...>/<train|test>/graphs/
 
 Each graph is created by `data_utils.create_graph_and_save(...)`.
 This script mainly handles:
@@ -212,7 +212,7 @@ def main() -> None:
         "--segmentation",
         type=str,
         default="voronoi",
-        choices=["random", "voronoi"],
+        choices=["bucket", "voronoi"],
         help="How to partition cells into subgraphs.",
     )
 
@@ -250,7 +250,11 @@ def main() -> None:
         default=None,
         help="If set, cap the total number of graphs created (useful for tests).",
     )
-
+    parser.add_argument(
+        "--testing_mode",
+        default=False,
+        help="if in testing_mode all steps should be done without a previous run thus no graphs etc should already exist.",
+    )
     args = parser.parse_args()
 
     # Convert "truthy"/"falsy" inputs into real booleans for downstream code.
@@ -261,6 +265,7 @@ def main() -> None:
     args.reduce_population = data_utils.bool_passer(args.reduce_population)
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
     args.skip_existing = data_utils.bool_passer(args.skip_existing)
+    args.testing_mode = data_utils.bool_passer(args.testing_mode)
 
     if args.verbose:
         print(args)
@@ -312,7 +317,7 @@ def main() -> None:
     ].reset_index(drop=True)
 
     # Identify unique tissue/sample IDs to iterate over.
-    sample_ids = data_sample[requirements["measument_sample_name"]].unique()
+    sample_ids = data_sample[requirements["measurement_sample_name"]].unique()
     if args.reverse_sampling:
         sample_ids = sample_ids[::-1]
 
@@ -322,7 +327,7 @@ def main() -> None:
     for sub_sample in tqdm(sample_ids, desc="Samples"):
         # Subset the dataframe to this tissue/sample.
         single_sample = data_sample[
-            data_sample[requirements["measument_sample_name"]] == sub_sample
+            data_sample[requirements["measurement_sample_name"]] == sub_sample
         ]
 
         # Iterate over anchor selection strengths (fraction or absolute).
@@ -358,12 +363,12 @@ def main() -> None:
                         # Select anchor cells.
                         # - "%" means fraction of cells
                         # - "absolut" means a fixed number
-                        if requirements["anker_cell_selction_type"] == "%":
+                        if requirements["anker_cell_selection_type"] == "%":
                             anchors = single_sample.sample(
                                 n=int(len(single_sample) * anker_value)
                             )
 
-                        elif requirements["anker_cell_selction_type"] == "absolut":
+                        elif requirements["anker_cell_selection_type"] == "absolut":
                             if requirements["multiple_labels_per_subSample"]:
                                 # If multiple labels exist per tissue, sample anchors per label.
                                 samples_per_tissue = anker_value // len(
@@ -387,8 +392,8 @@ def main() -> None:
 
                         else:
                             raise ValueError(
-                                "Unknown requirements['anker_cell_selction_type'] "
-                                f"={requirements['anker_cell_selction_type']!r}"
+                                "Unknown requirements['anker_cell_selection_type'] "
+                                f"={requirements['anker_cell_selection_type']!r}"
                             )
 
                         # Compute Voronoi regions with fuzzy boundary constraints.
@@ -462,6 +467,7 @@ def main() -> None:
                                 randomise_edges=args.randomise_edges,
                                 percent_number_cells=args.percent_number_cells,
                                 segmentation=args.segmentation,
+                                testing_mode=args.testing_mode,
                             )
 
                             # Parallel execution over region ids.
@@ -477,7 +483,7 @@ def main() -> None:
                 # ---------------------------------------------------------
                 # Random segmentation mode
                 # ---------------------------------------------------------
-                elif args.segmentation == "random":
+                elif args.segmentation == "bucket":
                     # In random mode, we create a list of sub-dataframes ("chunks").
                     # Each chunk becomes one graph (selected via chunk index).
                     if requirements["multiple_labels_per_subSample"]:
@@ -520,7 +526,7 @@ def main() -> None:
 
                     subsection_id = np.arange(0, len(sample_collection))
 
-                    # No Voronoi regions in random mode.
+                    # No Voronoi regions in bucket mode.
                     voroni_id_fussy = None
 
                     for radius_distance in requirements["radius_distance_all"]:
@@ -528,7 +534,7 @@ def main() -> None:
                             requirements["path_to_data_set"]
                             / f"anker_value_{anker_value}".replace(".", "_")
                             / f"min_cells_{requirements['minimum_number_cells']}"
-                            / "random_sampling"
+                            / "bucket_sampling"
                             / f"radius_{radius_distance}"
                         )
                         save_path_folder_graphs = (
@@ -538,7 +544,7 @@ def main() -> None:
 
                         if args.verbose:
                             print(
-                                "Random config:",
+                                "bucket config:",
                                 dict(
                                     anker_value=anker_value,
                                     radius_neibourhood=radius_distance,
@@ -567,6 +573,7 @@ def main() -> None:
                             randomise_edges=args.randomise_edges,
                             percent_number_cells=args.percent_number_cells,
                             segmentation=args.segmentation,
+                            testing_mode=args.testing_mode,
                         )
 
                         with mp.Pool(n_workers) as pool:

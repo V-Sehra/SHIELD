@@ -65,7 +65,7 @@ class graph_dataset(Dataset):
                 print("Creating file name list:")
 
             csv_file = pd.read_csv(requirements_dict["path_raw_data"])
-            image_ids = csv_file[requirements_dict["measument_sample_name"]][
+            image_ids = csv_file[requirements_dict["measurement_sample_name"]][
                 csv_file[requirements_dict["validation_split_column"]].isin(fold_ids)
             ].unique()
 
@@ -264,7 +264,7 @@ class fixed_dataset(Dataset):
             print("Creating file name list:")
 
             csv_file = pd.read_csv(requirements_dict["path_raw_data"])
-            image_ids = csv_file[requirements_dict["measument_sample_name"]][
+            image_ids = csv_file[requirements_dict["measurement_sample_name"]][
                 csv_file[requirements_dict["validation_split_column"]].isin(fold_ids)
             ].unique()
 

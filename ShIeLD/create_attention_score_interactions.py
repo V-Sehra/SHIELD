@@ -125,8 +125,8 @@ def main():
     # -----------------------------
     # Resolve path to graphs for best configuration
     # -----------------------------
-    # Folder structure differs between Voronoi-like fussy_limit vs random sampling.
-    if best_config_dict["fussy_limit"] != "random_sampling":
+    # Folder structure differs between Voronoi-like fussy_limit vs bucket sampling.
+    if best_config_dict["fussy_limit"] != "bucket_sampling":
         path_to_graphs = Path(
             requirements["path_to_data_set"]
             / f"anker_value_{best_config_dict['anker_value']}".replace(".", "_")
@@ -177,7 +177,7 @@ def main():
         num_of_feat=int(requirements["input_layer"]),
         layer_1=requirements["layer_1"],
         layer_final=requirements["output_layer"],
-        dp=best_config_dict["droupout_rate"],
+        dp=best_config_dict["dropout_rate"],
         self_att=False,
         attr_bool=requirements["attr_bool"],
         norm_type=requirements["comment_norm"],

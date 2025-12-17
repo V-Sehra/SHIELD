@@ -54,7 +54,7 @@ class ShIeLD(nn.Module):
 
         # if needed the edges can be varied by the selection of edge_type
         self.noisy_edge = noisy_edge
-        if self.noisy_edge != False:
+        if self.noisy_edge != False:  # noqa: E712
             if self.noisy_edge != "sameCon" and self.noisy_edge != "percent":
                 raise ValueError(
                     f"Noisy edge type {self.noisy_edge} not supported. "
@@ -129,7 +129,7 @@ class ShIeLD(nn.Module):
             else:
                 x = data_list[idx].x.float()  # Convert node features to float
 
-            if self.noisy_edge == False:
+            if self.noisy_edge == False:  # noqa: E712
                 edge_index = data_list[
                     idx
                 ].edge_index_plate.long()  # Convert edge indices to long tensor
