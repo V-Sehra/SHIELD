@@ -646,7 +646,7 @@ def attention_artifacts_dir(hypersearch_artifacts_dir, artifacts_root) -> Path:
                 str(patched_req),
                 "--best_config_dict_path",
                 str(best_cfg),
-                "--recalculate_cTc_Scroes",
+                "--recalculate_cTc_Scores",
                 "True",
                 "--cellTypeColumnName",
                 "cell_type",

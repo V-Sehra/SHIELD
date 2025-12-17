@@ -74,7 +74,7 @@ def main():
     parser.add_argument("-config_dict", "--best_config_dict_path", required=True)
 
     # If True, force recomputation of interaction dict even if cached file exists.
-    parser.add_argument("-recalc", "--recalculate_cTc_Scroes", default=False)
+    parser.add_argument("-recalc", "--recalculate_cTc_Scores", default=False)
 
     # Choose which split to run on (affects fold IDs + graph root).
     parser.add_argument("-dat_type", "--data_set_type", default="test")
@@ -101,7 +101,7 @@ def main():
         )
 
     # Normalize bool-like input (string -> bool).
-    args.recalculate_cTc_Scroes = data_utils.bool_passer(args.recalculate_cTc_Scroes)
+    args.recalculate_cTc_Scores = data_utils.bool_passer(args.recalculate_cTc_Scores)
 
     # Print parsed args only if verbose.
     if args.verbose:
@@ -195,11 +195,11 @@ def main():
         / f"cT_t_cT_interactions_dict_{args.data_set_type}.pt"
     )
 
-    if args.recalculate_cTc_Scroes or (not interaction_cache_path.exists()):
+    if args.recalculate_cTc_Scores or (not interaction_cache_path.exists()):
         if args.verbose:
             print(
                 "Computing cell-to-cell interaction dict (recalculate="
-                f"{args.recalculate_cTc_Scroes}, cache_exists={interaction_cache_path.exists()})"
+                f"{args.recalculate_cTc_Scores}, cache_exists={interaction_cache_path.exists()})"
             )
 
         cell_to_cell_interaction_dict = (
@@ -252,7 +252,7 @@ def main():
             save_path_boxplots = Path(
                 requirements["path_to_interaction_plots"]
                 / f"{args.data_set_type}"
-                / "boxplots"
+                / "BoxPlots"
                 / f"{observed_tissue}"
                 / f"Top_{number_interactions}"
             )
@@ -273,7 +273,7 @@ def main():
             save_path_interaction = Path(
                 requirements["path_to_interaction_plots"]
                 / f"{args.data_set_type}"
-                / "occurance_vs_IS"
+                / "occurrence_vs_IS"
                 / f"{observed_tissue}"
                 / f"Top_{number_interactions}"
             )
