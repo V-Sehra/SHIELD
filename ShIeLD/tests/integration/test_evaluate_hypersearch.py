@@ -16,7 +16,6 @@ def test_evaluate_hypersearch_smoke(hypersearch_artifacts_dir):
     model_dir = hypersearch_artifacts_dir / "model"
     assert model_dir.exists(), f"Missing model dir: {model_dir}"
 
-    # Your conftest writes best_config.pt here
     best_cfg = model_dir / "best_config.pt"
     assert best_cfg.exists() and best_cfg.stat().st_size > 0, (
         f"Missing/empty: {best_cfg}"

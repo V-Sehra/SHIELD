@@ -708,19 +708,23 @@ def plot_cell_cell_interaction_boxplots(
         plot_path = save_path.with_name(
             save_path.stem + ("_log" if log_y else "") + save_path.suffix
         )
-        log_p_matrix.to_csv(plot_path.with_name(plot_path.stem + "_p_values.csv"))
-        log_FDR_matrix.to_csv(plot_path.with_name(plot_path.stem + "_FDR_values.csv"))
+
         plt.savefig(plot_path, dpi=250)
+        plt.close(fig)
+
+        fdr_plots_dir = plot_path.parent / "FDR_per_row"
+        fdr_plots_dir.mkdir(parents=True, exist_ok=True)
+
+        log_p_matrix.to_csv(fdr_plots_dir / f"{plot_path.stem}_p_values.csv")
+        log_FDR_matrix.to_csv(fdr_plots_dir / f"{plot_path.stem}_FDR_values.csv")
 
         plot_top_k_log_p_values_per_row(
-            log_pval_matrix_path=plot_path.with_name(
-                plot_path.stem + "_FDR_values.csv"
-            ),
+            log_pval_matrix_path=fdr_plots_dir / f"{plot_path.stem}_FDR_values.csv",
             k=interaction_limit,
             font_size=12,
             figsize=(8, 6),
             rename_labels=True,
-            save_path=plot_path.with_name(plot_path.stem + "_FDR_values_per_row.png"),
+            save_path=fdr_plots_dir / (plot_path.stem + "_FDR_values_per_row"),
         )
     else:
         plt.show()
@@ -875,6 +879,7 @@ def plot_pct_vs_mean(
             fig.savefig(
                 save_dir / f"pct_vs_mean_{safe_cell}.png", dpi=150, bbox_inches="tight"
             )
+        plt.close(fig)
 
 
 def plot_top_k_log_p_values_per_row(

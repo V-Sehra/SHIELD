@@ -21,7 +21,5 @@ def test_train_model_smoke(training_artifacts_dir, artifacts_root):
     assert req_path.exists() and req_path.stat().st_size > 0, (
         f"Missing/empty: {req_path}"
     )
-
-    # Optional sanity: make sure it's a dict
     req = pickle.load(open(req_path, "rb"))
     assert isinstance(req, dict)
