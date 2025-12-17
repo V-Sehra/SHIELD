@@ -61,14 +61,14 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
     Returns:
     - dict: The best configuration dictionary.
     """
-    if "sampleing" in requirements_dict.keys():
-        if requirements_dict["sampleing"] == "random":
+    if "sampling" in requirements_dict.keys():
+        if requirements_dict["sampling"] == "random":
             requirements_dict["fussy_limit"] = "random_sampling"
 
     must_have_columns = [
         "layer_1",
         "input_layer",
-        "droupout_rate",
+        "dropout_rate",
         "output_layer",
         "comment_norm",
         "attr_bool",
@@ -84,11 +84,17 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
 
     # Create a dictionary with the best configuration
     missing_keys = [key for key in must_have_columns if key not in best_config_dict]
-    for key in missing_keys:
-        if type(requirements_dict[key]) is list:
-            best_config_dict[key] = requirements_dict[key][0]
+    all_keys_req = np.array(list(requirements_dict.keys()))
+    for missing in missing_keys:
+        mask = np.char.find(all_keys_req, missing) >= 0
+        if len(all_keys_req[mask]) > 1:
+            raise ValueError("there are multiple keys to be assigned")
+        matching_keys = all_keys_req[mask].item()
+
+        if type(requirements_dict[matching_keys]) is list:
+            best_config_dict[missing] = requirements_dict[matching_keys][0]
         else:
-            best_config_dict[key] = requirements_dict[key]
+            best_config_dict[missing] = requirements_dict[matching_keys]
     best_config_dict["output_layer"] = requirements_dict["output_layer"]
 
     return best_config_dict

@@ -177,7 +177,7 @@ def main():
         num_of_feat=int(requirements["input_layer"]),
         layer_1=requirements["layer_1"],
         layer_final=requirements["output_layer"],
-        dp=best_config_dict["droupout_rate"],
+        dp=best_config_dict["dropout_rate"],
         self_att=False,
         attr_bool=requirements["attr_bool"],
         norm_type=requirements["comment_norm"],

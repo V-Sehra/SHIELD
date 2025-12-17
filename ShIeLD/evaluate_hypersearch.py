@@ -300,7 +300,7 @@ def main():
                 num_of_feat=int(best_config_dict["input_layer"]),
                 layer_1=best_config_dict["layer_1"],
                 layer_final=best_config_dict["output_layer"],
-                dp=best_config_dict["droupout_rate"],
+                dp=best_config_dict["dropout_rate"],
                 self_att=False,
                 attr_bool=best_config_dict["attr_bool"],
                 norm_type=best_config_dict["comment_norm"],

@@ -20,7 +20,7 @@ Core responsibilities
    - radius_distance (requirements["radius_distance_all"])
    - anker_number / anchor value (requirements["anker_value_all"])
    - fussy_limit (Voronoi only; requirements["fussy_limit_all"], or a random sentinel)
-   - dropout rates (requirements["droupout_rate"])
+   - dropout rates (requirements["dropout_rate"])
    - repeated training runs (args.number_of_training_repeats)
    - a chosen split_number used as validation fold (args.split_number)
 
@@ -174,12 +174,12 @@ def main():
     # -----------------------------
     # If there were no Voronoi regions constructed, iterating fussy_limit makes no sense.
     # The folder structure differs depending on sampling strategy.
-    if "sampleing" in requirements.keys():
-        if requirements["sampleing"] == "random":
+    if "sampling" in requirements.keys():
+        if requirements["sampling"] == "random":
             # Random sampling: there is no true fussy_limit dimension; use a sentinel.
             fussy_vector = ["randomSampling"]
             fussy_folder_name = "random_sampling"
-        elif requirements["sampleing"] == "voronoi":
+        elif requirements["sampling"] == "voronoi":
             # Voronoi sampling: fussy_limit is a real meta-parameter.
             fussy_folder_name = True
             fussy_vector = requirements["fussy_limit_all"]
@@ -200,7 +200,7 @@ def main():
         "anker_value",
         "radius_distance",
         "fussy_limit",
-        "droupout_rate",
+        "dropout_rate",
         "comment",
         "comment_norm",
         "model_no",
@@ -302,10 +302,10 @@ def main():
             print("started training:")
         for dp, num in tqdm(
             product(
-                requirements["droupout_rate"],
+                requirements["dropout_rate"],
                 range(int(args.number_of_training_repeats)),
             ),
-            total=len(requirements["droupout_rate"])
+            total=len(requirements["dropout_rate"])
             * int(args.number_of_training_repeats),
         ):
             # Values that uniquely define this run (used for deduping via CSV).

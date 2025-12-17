@@ -70,7 +70,7 @@ def get_train_results_csv(
             "anker_value",  # Percentage of anchor cells used
             "radius_distance",  # Radius defining the neighborhood
             "fussy_limit",  # Threshold for fuzzy logic application
-            "droupout_rate",  # Dropout rate
+            "dropout_rate",  # Dropout rate
             "comment",  # General comments
             "comment_norm",  # Normalized comments
             "model_no",  # Model number

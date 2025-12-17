@@ -29,7 +29,7 @@ Inputs
     Must include (at minimum) keys used in this script, e.g.
     - path_raw_data: str/path to CSV
     - path_to_data_set: output base folder
-    - measument_sample_name: column name identifying tissues/ROIs/samples
+    - measurement_sample_name: column name identifying tissues/ROIs/samples
     - validation_split_column: column name defining fold assignment
     - number_validation_splits: list/iterable of train folds
     - test_set_fold_number: list/iterable of test folds
@@ -312,7 +312,7 @@ def main() -> None:
     ].reset_index(drop=True)
 
     # Identify unique tissue/sample IDs to iterate over.
-    sample_ids = data_sample[requirements["measument_sample_name"]].unique()
+    sample_ids = data_sample[requirements["measurement_sample_name"]].unique()
     if args.reverse_sampling:
         sample_ids = sample_ids[::-1]
 
@@ -322,7 +322,7 @@ def main() -> None:
     for sub_sample in tqdm(sample_ids, desc="Samples"):
         # Subset the dataframe to this tissue/sample.
         single_sample = data_sample[
-            data_sample[requirements["measument_sample_name"]] == sub_sample
+            data_sample[requirements["measurement_sample_name"]] == sub_sample
         ]
 
         # Iterate over anchor selection strengths (fraction or absolute).

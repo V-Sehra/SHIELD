@@ -66,9 +66,9 @@ All of the following keys need to be the column names within the raw data file:
     Identifier(s) for the held-out test fold(s).
     Therefore, if 5-fold cross-validation is used, this should be [5].
 
-- ``measument_sample_name`` (str)
+- ``measurement_sample_name`` (str)
     Name of the sample identifier column. **Note:** spelled exactly as
-    ``measument_sample_name``.
+    ``measurement_sample_name``.
     Sample can be a patient ID, biopsy ID, or other grouping variable.
 
 - ``X_col_name`` (str)
@@ -79,10 +79,10 @@ All of the following keys need to be the column names within the raw data file:
 
 The Following key defines model architecture:
 
-- ``sampleing`` (list[float|int] or config-like)
+- ``sampling`` (list[float|int] or config-like)
     Sampling definition for sub-samples/tiles (kept as provided; validated as list
     of numbers if applicable). **Note:** the key name is spelled *exactly* as
-    ``sampleing``.
+    ``sampling``.
 - ``output_layer`` (int)
     Size of the model’s output layer (e.g., number of classes).
 
@@ -115,7 +115,7 @@ If any of the following are omitted, the test injects defaults from
   - ``layer_1`` (int): hidden layer width for the SHIELD baseline/ablation models
   - ``comment_norm`` (str)
   - ``databased_norm`` (str|None)
-  - ``droupout_rate`` (list[number] or float): dropout range/value (**key name intentionally ``droupout_rate``**)
+  - ``dropout_rate`` (list[number] or float): dropout range/value
   - ``augmentation_number`` (int): number of augmentations
   - ``attr_bool`` (bool): whether to compute attribution/interaction maps
 
@@ -127,11 +127,11 @@ Type rules enforced by the tests
   ``layer_1``, ``output_layer``, ``augmentation_number`` must be integer types.
 - **Strings**: ``label_column``, ``anker_cell_selction_type``,
   ``validation_split_column``, ``X_col_name``, ``Y_col_name``,
-  ``measument_sample_name`` must be strings.
+  ``measurement_sample_name`` must be strings.
 - **List[str]**: ``cell_type_names``, ``markers``, ``eval_columns``,
   ``col_of_interest``, ``col_of_variables``.
 - **List[number]**: ``radius_distance_all``, ``anker_value_all``,
-  ``droupout_rate``, ``number_validation_splits``, ``test_set_fold_number``.
+  ``dropout_rate``, ``number_validation_splits``, ``test_set_fold_number``.
 - **Booleans**: ``filter_cells``, ``multiple_labels_per_subSample``, ``attr_bool``.
 - **Conditional**: if ``filter_cells`` is ``True``, both
   ``filter_column`` (list) and ``filter_value`` (int|float|bool) must be present.
@@ -142,7 +142,7 @@ Required keys in the *best_config* object
 hyperparameter setting:
 
 - **Integers**: ``layer_1``, ``input_layer``, ``output_layer``, ``version``
-- **Floats**: ``droupout_rate`` (note the intentional spelling)
+- **Floats**: ``dropout_rate`` (note the intentional spelling)
 - **Booleans**: ``attr_bool``
 - **Numbers (float or int)**: ``anker_value``, ``radius_distance``
 
@@ -151,8 +151,8 @@ trained SHIELD variant and reproduce the reported performance/interaction maps.
 
 Notes & pitfalls
 ----------------
-- Several key names preserve historical spellings (e.g., ``droupout_rate``,
-  ``sampleing``, ``measument_sample_name``). The tests expect these **exact**
+- Several key names preserve historical spellings (e.g., ``dropout_rate``,
+  ``sampling``, ``measurement_sample_name``). The tests expect these **exact**
   strings to avoid breaking existing experiment artifacts.
 - Paths can be provided as strings or ``Path`` objects; they are not resolved
   here, only type-checked.
@@ -167,14 +167,14 @@ Minimal examples
         "path_raw_data": "/data/IMC/raw.parquet",
         "cell_type_names": ["T cells", "B cells", "Macrophages"],
         "markers": ["CD3", "CD8", "CD68"],
-        "sampleing": [0.5],  # kept as provided; validated if numeric
+        "sampling": [0.5],  # kept as provided; validated if numeric
         "label_column": "response_label",
         "label_dict": {"R": 1, "NR": 0},
         "eval_columns": ["f1", "bacc", "auc"],
         "validation_split_column": "cv_fold",
         "number_validation_splits": [0,1,2,3,4],
         "test_set_fold_number": [4],
-        "measument_sample_name": "sample_id",
+        "measurement_sample_name": "sample_id",
         "X_col_name": "x",
         "Y_col_name": "y",
         "output_layer": 2,
@@ -185,7 +185,7 @@ Minimal examples
     best_config = {
         "layer_1": 32,
         "input_layer": 24,
-        "droupout_rate": 0.3,
+        "dropout_rate": 0.3,
         "output_layer": 2,
         "attr_bool": False,
         "anker_value": 200,
@@ -201,14 +201,14 @@ must_have_keys = set(
         "path_raw_data",
         "cell_type_names",
         "markers",
-        "sampleing",
+        "sampling",
         "label_column",
         "label_dict",
         "eval_columns",
         "validation_split_column",
         "number_validation_splits",
         "test_set_fold_number",
-        "measument_sample_name",
+        "measurement_sample_name",
         "X_col_name",
         "Y_col_name",
         "output_layer",
@@ -223,13 +223,13 @@ default_dict = {
     "col_of_interest": [
         "anker_value",
         "radius_distance",
-        "droupout_rate",
+        "dropout_rate",
         "comment",
         "comment_norm",
         "model_no",
         "split_number",
     ],
-    "col_of_variables": ["droupout_rate", "anker_value", "radius_distance"],
+    "col_of_variables": ["dropout_rate", "anker_value", "radius_distance"],
     "minimum_number_cells": 25,
     "radius_distance_all": [250, 530],
     "anker_value_all": [200, 500],
@@ -240,7 +240,7 @@ default_dict = {
     "layer_1": 23,
     "comment_norm": "no_norm",
     "databased_norm": None,
-    "droupout_rate": [0.2, 0.8],
+    "dropout_rate": [0.2, 0.8],
     "attr_bool": False,
     "augmentation_number": 5,
     "voro_neighbours": 50,
@@ -308,7 +308,7 @@ def validate_all_keys_in_req(req_file, verbose=True):
         "validation_split_column",
         "X_col_name",
         "Y_col_name",
-        "measument_sample_name",
+        "measurement_sample_name",
     ]
     for item in all_strings:
         if not isinstance(requirements[item], str):
@@ -332,7 +332,7 @@ def validate_all_keys_in_req(req_file, verbose=True):
     all_lists_numbers = [
         "radius_distance_all",
         "anker_value_all",
-        "droupout_rate",
+        "dropout_rate",
         "number_validation_splits",
         "test_set_fold_number",
     ]
@@ -393,7 +393,7 @@ def validate_best_config(config_file):
         [
             "layer_1",
             "input_layer",
-            "droupout_rate",
+            "dropout_rate",
             "output_layer",
             "attr_bool",
             "anker_value",
@@ -417,7 +417,7 @@ def validate_best_config(config_file):
             raise AssertionError(f"Item {item} is not an integer.")
 
     # float:
-    all_floats = ["droupout_rate"]
+    all_floats = ["dropout_rate"]
     for item in all_floats:
         if not isinstance(best_config_dict[item], (float, np.floating)):
             raise AssertionError(f"Item {item} is not a float.")

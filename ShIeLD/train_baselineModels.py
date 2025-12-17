@@ -65,11 +65,11 @@ if args.comment is not False:
 
 print(args, flush=True)
 
-if "sampleing" in requirements.keys():
-    if requirements["sampleing"] == "random":
+if "sampling" in requirements.keys():
+    if requirements["sampling"] == "random":
         fussy_vector = ["randomSampling"]
         fussy_folder_name = "random_sampling"
-    elif requirements["sampleing"] == "voronoi":
+    elif requirements["sampling"] == "voronoi":
         fussy_folder_name = True
         fussy_vector = ["fussy_limit_all"]
 else:
@@ -86,7 +86,7 @@ best_model_specs = {
 model_specs = {
     "layer_1": 23,
     "input_layer": 23,
-    "droupout_rate": 0.8,
+    "dropout_rate": 0.8,
     "final_layer": 3,
     "attr_bool": False,
     "output_layer": 3,
@@ -99,8 +99,8 @@ fussy_limit = best_model_specs["fussy_limit"]
 
 minimum_number_cells = 25
 
-if "sampleing" in requirements.keys():
-    if requirements["sampleing"] == "random":
+if "sampling" in requirements.keys():
+    if requirements["sampling"] == "random":
         path_to_graphs = Path(
             requirements["path_to_data_set"]
             / f"anker_value_{anker_number}".replace(".", "_")
@@ -108,7 +108,7 @@ if "sampleing" in requirements.keys():
             / "random_sampling"
             / f"radius_{radius_distance}"
         )
-    elif requirements["sampleing"] == "voronoi":
+    elif requirements["sampling"] == "voronoi":
         path_to_graphs = Path(
             requirements["path_to_data_set"]
             / f"anker_value_{anker_number}".replace(".", "_")
@@ -173,7 +173,7 @@ for repeat in range(requirements["augmentation_number"]):
         num_of_feat=int(model_specs["input_layer"]),
         layer_1=model_specs["layer_1"],
         layer_final=model_specs["output_layer"],
-        dp=model_specs["droupout_rate"],
+        dp=model_specs["dropout_rate"],
         self_att=False,
         attr_bool=model_specs["attr_bool"],
         norm_type=model_specs["comment_norm"],
