@@ -66,20 +66,20 @@ if args.comment is not False:
 print(args, flush=True)
 
 if "sampling" in requirements.keys():
-    if requirements["sampling"] == "random":
-        fussy_vector = ["randomSampling"]
-        fussy_folder_name = "random_sampling"
+    if requirements["sampling"] == "bucket":
+        # fussy_vector = ["bucketSampling"]
+        fussy_folder_name = "bucket_sampling"
     elif requirements["sampling"] == "voronoi":
         fussy_folder_name = True
-        fussy_vector = ["fussy_limit_all"]
+        # fussy_vector = ["fussy_limit_all"]
 else:
-    fussy_vector = ["fussy_limit_all"]
+    # fussy_vector = ["fussy_limit_all"]
     fussy_folder_name = True
 
 best_model_specs = {
     "number_of_anker_cells": 500,
     "radius_neibourhood": 530,
-    "fussy_limit": "random_sampling",
+    "fussy_limit": "bucket_sampling",
     "fussy_reference_beak": "True",
 }
 
@@ -100,12 +100,12 @@ fussy_limit = best_model_specs["fussy_limit"]
 minimum_number_cells = 25
 
 if "sampling" in requirements.keys():
-    if requirements["sampling"] == "random":
+    if requirements["sampling"] == "bucket":
         path_to_graphs = Path(
             requirements["path_to_data_set"]
             / f"anker_value_{anker_number}".replace(".", "_")
             / f"min_cells_{requirements['minimum_number_cells']}"
-            / "random_sampling"
+            / "bucket_sampling"
             / f"radius_{radius_distance}"
         )
     elif requirements["sampling"] == "voronoi":
@@ -131,7 +131,7 @@ data_loader_train = DataListLoader(
         path_to_graphs=path_to_graphs,
         fold_ids=requirements["number_validation_splits"],
         requirements_dict=requirements,
-        graph_file_names=f"train_set_file_names.pkl",
+        graph_file_names="train_set_file_names.pkl",
     ),
     batch_size=requirements["batch_size"],
     shuffle=True,
@@ -145,7 +145,7 @@ data_loader_test = DataListLoader(
         path_to_graphs=path_to_graphs,
         fold_ids=requirements["test_set_fold_number"],
         requirements_dict=requirements,
-        graph_file_names=f"test_set_file_names.pkl",
+        graph_file_names="test_set_file_names.pkl",
     ),
     batch_size=requirements["batch_size"],
     shuffle=True,

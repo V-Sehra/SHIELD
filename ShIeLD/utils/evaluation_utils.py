@@ -62,8 +62,8 @@ def get_best_config_dict(hyper_search_results, requirements_dict):
     - dict: The best configuration dictionary.
     """
     if "sampling" in requirements_dict.keys():
-        if requirements_dict["sampling"] == "random":
-            requirements_dict["fussy_limit"] = "random_sampling"
+        if requirements_dict["sampling"] == "bucket":
+            requirements_dict["fussy_limit"] = "bucket_sampling"
 
     must_have_columns = [
         "layer_1",

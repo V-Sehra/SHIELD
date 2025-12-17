@@ -264,7 +264,7 @@ def graph_artifacts_dir(request, artifacts_root) -> Path:
     _safe_tqdm(create_graphs)
 
     # Generate graphs for both segmentation strategies and both train/test splits.
-    for segmentation in ["voronoi", "random"]:
+    for segmentation in ["voronoi", "bucket"]:
         for data_type in ["train", "test"]:
             # Simulate CLI invocation by setting sys.argv.
             sys.argv = [

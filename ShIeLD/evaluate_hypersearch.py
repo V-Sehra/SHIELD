@@ -23,7 +23,7 @@ the script:
 - Loads the best config dict from `--best_config_dict_path` if present, else
   extracts it from `hyper_search_results` via
   `evaluation_utils.get_best_config_dict(...)` and stores it to disk.
-- Constructs the path to the corresponding graph folder (Voronoi vs random)
+- Constructs the path to the corresponding graph folder (Voronoi vs Bucket)
   using best_config_dict fields (anker_value, fussy_limit, radius_distance).
 - Loads the full training set (all validation splits) and the test set
   (requirements["test_set_fold_number"]) using `graph_dataset` and `DataListLoader`.
@@ -231,8 +231,8 @@ def main():
             print(best_config_dict)
 
         # Determine graph folder path for this configuration.
-        # Voronoi-style folder uses fussy_limit_<...>, random uses the fussy_limit string directly.
-        if best_config_dict["fussy_limit"] != "random_sampling":
+        # Voronoi-style folder uses fussy_limit_<...>, bucket uses the fussy_limit string directly.
+        if best_config_dict["fussy_limit"] != "bucket_sampling":
             path_to_graphs = Path(
                 requirements["path_to_data_set"]
                 / f"anker_value_{best_config_dict['anker_value']}".replace(".", "_")

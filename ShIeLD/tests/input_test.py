@@ -79,10 +79,8 @@ All of the following keys need to be the column names within the raw data file:
 
 The Following key defines model architecture:
 
-- ``sampling`` (list[float|int] or config-like)
-    Sampling definition for sub-samples/tiles (kept as provided; validated as list
-    of numbers if applicable). **Note:** the key name is spelled *exactly* as
-    ``sampling``.
+- ``sampling`` (str or config-like)
+    Sampling definition for sub-samples/tiles bucket or voronoi). 
 - ``output_layer`` (int)
     Size of the model’s output layer (e.g., number of classes).
 
@@ -105,7 +103,7 @@ If any of the following are omitted, the test injects defaults from
   - ``minimum_number_cells`` (int): minimum cells per (sub)sample (graph)
   - ``radius_distance_all`` (list[number]): candidate neighborhood radii
   - ``anker_value_all`` (list[number]): candidate anchor distances
-  - ``anker_cell_selction_type`` (str): either ``"%"`` or ``"absolut"`` (exact spelling)
+  - ``anker_cell_selection_type`` (str): either ``"%"`` or ``"absolut"`` 
   - ``multiple_labels_per_subSample`` (bool): allow multi-label subsamples
   - ``voro_neighbours`` (int): Voronoi-based neighbor cap (if used)
 
@@ -125,7 +123,7 @@ Type rules enforced by the tests
   ``pathlib.Path``.
 - **Integers**: ``minimum_number_cells``, ``batch_size``, ``input_layer``,
   ``layer_1``, ``output_layer``, ``augmentation_number`` must be integer types.
-- **Strings**: ``label_column``, ``anker_cell_selction_type``,
+- **Strings**: ``label_column``, ``anker_cell_selection_type``,
   ``validation_split_column``, ``X_col_name``, ``Y_col_name``,
   ``measurement_sample_name`` must be strings.
 - **List[str]**: ``cell_type_names``, ``markers``, ``eval_columns``,
@@ -152,8 +150,7 @@ trained SHIELD variant and reproduce the reported performance/interaction maps.
 Notes & pitfalls
 ----------------
 - Several key names preserve historical spellings (e.g., ``dropout_rate``,
-  ``sampling``, ``measurement_sample_name``). The tests expect these **exact**
-  strings to avoid breaking existing experiment artifacts.
+  ``sampling``, ``measurement_sample_name``). 
 - Paths can be provided as strings or ``Path`` objects; they are not resolved
   here, only type-checked.
 - Lists that represent folds/splits (``number_validation_splits``,
@@ -167,7 +164,7 @@ Minimal examples
         "path_raw_data": "/data/IMC/raw.parquet",
         "cell_type_names": ["T cells", "B cells", "Macrophages"],
         "markers": ["CD3", "CD8", "CD68"],
-        "sampling": [0.5],  # kept as provided; validated if numeric
+        "sampling": ['voronoi'],  # kept as provided; validated if numeric
         "label_column": "response_label",
         "label_dict": {"R": 1, "NR": 0},
         "eval_columns": ["f1", "bacc", "auc"],
@@ -233,7 +230,7 @@ default_dict = {
     "minimum_number_cells": 25,
     "radius_distance_all": [250, 530],
     "anker_value_all": [200, 500],
-    "anker_cell_selction_type": "absolut",  # either % or absolut
+    "anker_cell_selection_type": "absolut",  # either % or absolut
     "multiple_labels_per_subSample": True,
     "batch_size": 150,
     "learning_rate": 1e-2,
@@ -304,7 +301,7 @@ def validate_all_keys_in_req(req_file, verbose=True):
     # label_column
     all_strings = [
         "label_column",
-        "anker_cell_selction_type",
+        "anker_cell_selection_type",
         "validation_split_column",
         "X_col_name",
         "Y_col_name",
