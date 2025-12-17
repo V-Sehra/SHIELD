@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse
 
 from torch_geometric.loader import DataListLoader
-
+import multiprocess as mp
 from utils import train_utils, model_utils, data_utils
 from utils.data_class import graph_dataset
 from model import ShIeLD
@@ -125,6 +125,7 @@ else:
         / f"radius_{radius_distance}"
     )
 
+
 data_loader_train = DataListLoader(
     graph_dataset(
         root=str(path_to_graphs / "train" / "graphs"),
@@ -135,7 +136,7 @@ data_loader_train = DataListLoader(
     ),
     batch_size=requirements["batch_size"],
     shuffle=True,
-    num_workers=8,
+    num_workers=data_utils.get_number_cpuWorkers(),
     prefetch_factor=50,
 )
 
@@ -149,7 +150,7 @@ data_loader_test = DataListLoader(
     ),
     batch_size=requirements["batch_size"],
     shuffle=True,
-    num_workers=8,
+    num_workers=data_utils.get_number_cpuWorkers(),
     prefetch_factor=50,
 )
 
