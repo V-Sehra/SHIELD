@@ -661,6 +661,10 @@ def plot_cell_cell_interaction_boxplots(
                 _, p_adj, _, _ = multipletests(
                     [x[2] for x in p_val_scores], method="fdr_bh"
                 )
+
+                
+                offset = 1e-10
+                p_adj = np.maximum(p_adj, offset) # Avoid any Runtime errors
                 adjusted_log10 = np.log10(p_adj)
 
                 for dst_cell_idx, dst_name in enumerate(names):
