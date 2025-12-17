@@ -538,7 +538,7 @@ def main() -> None:
 
                         if args.verbose:
                             print(
-                                "Random config:",
+                                "bucket config:",
                                 dict(
                                     anker_value=anker_value,
                                     radius_neibourhood=radius_distance,

@@ -235,10 +235,10 @@ def create_graph_and_save(
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
-    elif segmentation.lower() == "random":
+    elif segmentation.lower() == "bucket":
         if not isinstance(whole_data, list):
             raise ValueError(
-                "if segmentation is random then the provided whole set must be a list of DataFrames"
+                "if segmentation is bucket then the provided whole set must be a list of DataFrames"
             )
 
         graph_data = whole_data[vornoi_id].copy()
