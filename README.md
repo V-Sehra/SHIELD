@@ -1,7 +1,8 @@
 # SHIELD: **S**patially-en**H**anced Immun**E** **L**andscape **D**ecoding  
 *Weakly supervised graph attention networks for interpretable cell-cell interaction analysis*
 
-![only_Colobar_Shield](https://github.com/user-attachments/assets/5ab67491-ad27-47ff-9403-eee232af499c)
+<img width="1575" height="1487" alt="only_Colobar_Shield" src="https://github.com/user-attachments/assets/77e42ea4-3756-4a01-b539-ec203d9c9984" />
+
 
 
 **SHIELD** is a framework that leverages *Graph Attention Networks (GATs)* to infer and interpret disease-associated cell-cell interactions from spatial omics data. It highlights which immune interactions are most predictive of disease outcomes, by summarizing attention scores at the cell-phenotype level — enabling biologically meaningful insights.
