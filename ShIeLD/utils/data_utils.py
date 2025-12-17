@@ -15,9 +15,21 @@ from torch_geometric.data import Data
 import random as rnd
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
+import multiprocessing as mp
 
 from typing import Optional, List, Union
 from pathlib import Path, PosixPath
+
+
+def get_number_cpuWorkers():
+    # DataListLoader Does not support more then 8 workers, thus either how many are available but max 8
+    try:
+        cpu_workers = mp.cpu_count()
+    except NotImplementedError:
+        cpu_workers = 1
+
+    num_workers = min(cpu_workers, 8)
+    return num_workers
 
 
 def get_random_edges(

@@ -77,7 +77,7 @@ import pickle
 from pathlib import Path
 import torch
 import pandas as pd
-
+import multiprocessing as mp
 from tqdm import tqdm
 
 from torch_geometric.loader import DataListLoader
@@ -261,6 +261,8 @@ def main():
         # Data loaders (train + validation)
         # -----------------------------
         # DataListLoader loads batches as lists of PyG Data objects (useful for DataParallel).
+        #
+
         data_loader_train = DataListLoader(
             graph_dataset(
                 root=str(path_to_graphs / "train" / "graphs"),
@@ -274,7 +276,7 @@ def main():
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
-            num_workers=8,
+            num_workers=data_utils.get_number_cpuWorkers(),
             prefetch_factor=50,
         )
 
@@ -291,7 +293,7 @@ def main():
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
-            num_workers=8,
+            num_workers=data_utils.get_number_cpuWorkers(),
             prefetch_factor=50,
         )
 

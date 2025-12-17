@@ -263,7 +263,7 @@ def main():
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
-            num_workers=8,
+            num_workers=data_utils.get_number_cpuWorkers(),
             prefetch_factor=50,
         )
 
@@ -278,7 +278,7 @@ def main():
             ),
             batch_size=requirements["batch_size"],
             shuffle=True,
-            num_workers=8,
+            num_workers=data_utils.get_number_cpuWorkers(),
             prefetch_factor=50,
         )
 
