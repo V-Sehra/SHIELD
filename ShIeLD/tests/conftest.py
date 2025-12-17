@@ -25,7 +25,7 @@
 import pickle
 import shutil
 import sys
-from pathlib import Path
+from pathlib import Path, PosixPath
 import tempfile
 import pytest
 
@@ -33,7 +33,7 @@ import pytest
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
-def _find_repo_root(start: Path) -> Path:
+def _find_repo_root(start: PosixPath) -> PosixPath:
     """
     Heuristically locate the *outer* repo root by walking upwards.
 
@@ -141,7 +141,7 @@ def _no_gui_plots():
 
 
 @pytest.fixture(scope="session")
-def artifacts_root(tmp_path_factory, request) -> Path:
+def artifacts_root(tmp_path_factory, request):
     """
     Per-session artifact directory.
 
@@ -289,6 +289,8 @@ def graph_artifacts_dir(request, artifacts_root) -> Path:
                 "False",
                 "--max_graphs",
                 "3",
+                "--testing_mode",
+                "True",
             ]
             create_graphs.main()
 

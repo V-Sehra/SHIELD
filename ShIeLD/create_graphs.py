@@ -250,7 +250,11 @@ def main() -> None:
         default=None,
         help="If set, cap the total number of graphs created (useful for tests).",
     )
-
+    parser.add_argument(
+        "--testing_mode",
+        default=False,
+        help="if in testing_mode all steps should be done without a previous run thus no graphs etc should already exist.",
+    )
     args = parser.parse_args()
 
     # Convert "truthy"/"falsy" inputs into real booleans for downstream code.
@@ -261,6 +265,7 @@ def main() -> None:
     args.reduce_population = data_utils.bool_passer(args.reduce_population)
     args.reverse_sampling = data_utils.bool_passer(args.reverse_sampling)
     args.skip_existing = data_utils.bool_passer(args.skip_existing)
+    args.testing_mode = data_utils.bool_passer(args.testing_mode)
 
     if args.verbose:
         print(args)
@@ -462,6 +467,7 @@ def main() -> None:
                                 randomise_edges=args.randomise_edges,
                                 percent_number_cells=args.percent_number_cells,
                                 segmentation=args.segmentation,
+                                testing_mode=args.testing_mode,
                             )
 
                             # Parallel execution over region ids.
@@ -567,6 +573,7 @@ def main() -> None:
                             randomise_edges=args.randomise_edges,
                             percent_number_cells=args.percent_number_cells,
                             segmentation=args.segmentation,
+                            testing_mode=args.testing_mode,
                         )
 
                         with mp.Pool(n_workers) as pool:

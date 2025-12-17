@@ -199,6 +199,7 @@ def create_graph_and_save(
     randomise_edges: bool = False,
     percent_number_cells: float = 0.1,
     segmentation: str = "voronoi",
+    testing_mode: bool = False,
 ):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
@@ -218,6 +219,7 @@ def create_graph_and_save(
                               if even only 50/50, if True or prob then the true dist
         randomise_edges (bool): are you interested in randomsied edges for baselining
         segmentation:str = 'voronoi'
+        testing_mode:bool = if in testing_mode all steps should be done without a previous run thus no graphs etc should already exist.
 
     Returns:
         None
@@ -252,6 +254,11 @@ def create_graph_and_save(
         if Path(f"{save_path_folder}", file_name).exists():
             print(f"Skipping existing file: {file_name}")
             return
+    if testing_mode:
+        if Path(f"{save_path_folder}", file_name).exists():
+            raise KeyError(
+                f"There should be no overlap in testing mode but  file:{file_name} already exists!!!!"
+            )
 
     # Convert gene expression features into a tensor
     node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()

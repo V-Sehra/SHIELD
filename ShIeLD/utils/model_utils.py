@@ -117,7 +117,7 @@ def prediction_step(
     output = torch.vstack(prediction)
 
     # Extract ground truth labels and move them to the same device as output
-    if noise_yLabel == False or noise_yLabel == True:
+    if noise_yLabel == False or noise_yLabel == True:  # noqa: E712
         y = torch.tensor([sample.y for sample in batch_sample]).to(output.device)
     else:
         if noise_yLabel != "even" and noise_yLabel != "prob":
@@ -128,9 +128,9 @@ def prediction_step(
         y = []
         for sample in batch_sample:
             if f"y_noise_{noise_yLabel}" in sample:
-                y.append(sample[f"y_noise_{noise_yLabel}"])
+                y.append(sample["y_noise_{noise_yLabel}"])
             else:
-                y.append(sample[f"y"])
+                y.append(sample["y"])
         y = torch.tensor(y).long().to(output.device)
     # Retrieve sample IDs if per_patient is True
     if per_patient:
@@ -422,7 +422,7 @@ class simple_1l_GNN(nn.Module):
         for idx in range(sample_number):
             x = data_list[idx].x.float()  # Convert node features to float
 
-            if self.noisy_edge == False:
+            if self.noisy_edge == False:  # noqa: E712
                 edge_index = data_list[
                     idx
                 ].edge_index_plate.long()  # Convert edge indices to long tensor

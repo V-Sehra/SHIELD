@@ -145,7 +145,7 @@ def initialize_loss(
             try:
                 g = torch.load(Path(path) / files)
                 class_weights[g["y"]] += 1
-            except:
+            except:  # noqa: E722
                 print(
                     "skipping file: ",
                     files,
@@ -174,7 +174,7 @@ def initialize_loss(
                     class_weights[g[f"y_noise_{noise_yLabel}"]] += 1
                 else:
                     class_weights[g["y"]] += 1
-            except:
+            except:  # noqa: E722
                 print(
                     "skipping file: ",
                     files,
