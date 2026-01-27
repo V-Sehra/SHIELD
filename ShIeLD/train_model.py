@@ -251,7 +251,7 @@ def main():
         if requirements["databased_norm"] is not None:
             databased_norm = requirements["databased_norm"]
             file_name_data_norm = (
-                f"train_set_validation_split_{split_number}_standadizer.pkl"
+                f"train_set_validation_split_{split_number}_standardizer.pkl"
             )
         else:
             databased_norm = None
