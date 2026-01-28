@@ -269,7 +269,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=train_folds,
                 requirements_dict=requirements,
-                graph_file_names=f"train_set_validation_split_{split_number}_file_names.pkl",
+                graph_file_names=f"train_set_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl",
                 normalize=databased_norm,
                 normalizer_filename=file_name_data_norm,
                 verbose=args.verbose,
@@ -286,7 +286,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=[split_number],
                 requirements_dict=requirements,
-                graph_file_names=f"validation_validation_split_{split_number}_file_names.pkl",
+                graph_file_names=f"validation_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl",
                 normalize=databased_norm,
                 normalizer_filename=file_name_data_norm,
                 verbose=args.verbose,
@@ -337,7 +337,7 @@ def main():
                     path_to_graphs / "train" / "graphs"
                     if args.noise_yLabel is not False
                     else path_to_graphs
-                    / f"train_set_validation_split_{split_number}_file_names.pkl"
+                    / f"train_set_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl"
                 )
 
                 loss_fkt = train_utils.initialize_loss(
