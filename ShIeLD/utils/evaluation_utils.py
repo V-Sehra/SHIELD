@@ -292,7 +292,7 @@ def get_hypersearch_results(
         else:
             if verbose:
                 print(
-                    f"will not report evaluation of {column} as the HyperSearch only invertigated one value {model_grouped[column].unique()}"
+                    f"will not report evaluation of {column} as the HyperSearch only investigated one value {model_grouped[column].unique()}"
                 )
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
