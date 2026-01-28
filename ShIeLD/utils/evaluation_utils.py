@@ -296,17 +296,20 @@ def get_hypersearch_results(
                 )
 
     # Second-level grouping: Compute the mean accuracy and count unique splits per col_of_variables
-    hyper_grouped = (
-        model_grouped.groupby(col_of_variables)
-        .agg(
-            total_acc_balanced_mean=(
-                "total_acc_balanced_mean",
-                "mean",
-            ),  # Mean across models in col_of_variables
-            count=("split_number", "nunique"),  # Count unique data splits used
+    if len(col_of_variables) > 0:
+        hyper_grouped = (
+            model_grouped.groupby(col_of_variables)
+            .agg(
+                total_acc_balanced_mean=(
+                    "total_acc_balanced_mean",
+                    "mean",
+                ),  # Mean across models in col_of_variables
+                count=("split_number", "nunique"),  # Count unique data splits used
+            )
+            .reset_index()
         )
-        .reset_index()
-    )
+    else:
+        hyper_grouped = model_grouped.copy()
 
     return hyper_grouped
 
@@ -560,7 +563,7 @@ def create_parameter_influence_plots(
     data_filtered = df[df["hyperparameter"] == observed_variable]
 
     # Create a boxplot showing the distribution of accuracy scores for different hyperparameter values
-    data_filtered = data_filtered.fillna(0)
+    data_filtered = data_filtered.fillna(0).infer_objects(copy=False)
     sns.boxplot(x="value", y="total_acc_balanced_mean", data=data_filtered)
 
     # Set plot title and axis labels
