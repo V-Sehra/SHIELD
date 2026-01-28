@@ -392,16 +392,24 @@ def fill_missing_row_and_col_withNaN(
     missing_rows = cell_types_names[~np.isin(cell_types_names, data_frame.index)]
 
     # Concatenate the DataFrame with a new DataFrame that contains the missing rows filled with NaN values
-    data_frame = pd.concat(
-        [
-            data_frame,
-            pd.DataFrame(
-                np.full((len(missing_rows), data_frame.shape[1]), np.nan),
-                columns=data_frame.columns,
-                index=cell_types_names[~np.isin(cell_types_names, data_frame.index)],
-            ),
-        ]
-    )
+    missing_index = cell_types_names[~np.isin(cell_types_names, data_frame.index)]
+
+    if len(missing_index) > 0:
+        missing_df = pd.DataFrame(
+            {col: pd.Series(np.nan, index=missing_index, dtype=data_frame[col].dtype)
+            for col in data_frame.columns}
+        )
+        data_frame = pd.concat([data_frame, missing_df])
+    # data_frame = pd.concat(
+    #     [
+    #         data_frame,
+    #         pd.DataFrame(
+    #             np.full((len(missing_rows), data_frame.shape[1]), np.nan),
+    #             columns=data_frame.columns,
+    #             index=cell_types_names[~np.isin(cell_types_names, data_frame.index)],
+    #         ),
+    #     ]
+    # )
 
     # Sort the DataFrame by index and columns
     data_frame = data_frame.sort_index()[sorted(data_frame.columns)]
