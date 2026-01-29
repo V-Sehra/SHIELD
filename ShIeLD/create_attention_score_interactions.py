@@ -166,7 +166,7 @@ def main():
         ),
         batch_size=requirements["batch_size"],
         shuffle=True,
-        num_workers= 0,  #data_utils.get_number_cpuWorkers(),
+        num_workers= 0,
         prefetch_factor=None,
     )
 
