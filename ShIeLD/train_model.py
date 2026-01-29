@@ -92,8 +92,7 @@ from .model import ShIeLD
 
 
 # Configure torch multiprocessing.
-# - "fork" is often faster on Linux but can be fragile with CUDA contexts;
-#   this is the current choice in your script.
+# - "fork" is often faster on Linux but can be fragile with CUDA contexts
 torch.multiprocessing.set_start_method("fork", force=True)
 
 # Use filesystem-based tensor sharing to avoid shared-memory limits on large runs.
@@ -269,7 +268,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=train_folds,
                 requirements_dict=requirements,
-                graph_file_names=f"train_set_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl",
+                graph_file_names=f"train_set_validation_split_{split_number}_file_names.pkl",
                 normalize=databased_norm,
                 normalizer_filename=file_name_data_norm,
                 verbose=args.verbose,
@@ -286,7 +285,7 @@ def main():
                 path_to_graphs=path_to_graphs,
                 fold_ids=[split_number],
                 requirements_dict=requirements,
-                graph_file_names=f"validation_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl",
+                graph_file_names=f"validation_validation_split_{split_number}_file_names.pkl",
                 normalize=databased_norm,
                 normalizer_filename=file_name_data_norm,
                 verbose=args.verbose,
@@ -332,12 +331,11 @@ def main():
                 # Loss function initialization
                 # -----------------------------------------
                 # NOTE: loss_init_path depends on whether noise_yLabel is enabled.
-                # The conditional expression here is exactly as in your script.
                 loss_init_path = (
                     path_to_graphs / "train" / "graphs"
                     if args.noise_yLabel is not False
                     else path_to_graphs
-                    / f"train_set_validation_split_{split_number}_file_names_no_schwann_no_muscular.pkl"
+                    / f"train_set_validation_split_{split_number}_file_names.pkl"
                 )
 
                 loss_fkt = train_utils.initialize_loss(
