@@ -309,10 +309,8 @@ def main() -> None:
         # Make sure col is in the dataset.          
         for col in requirements["filter_cells"]:
             if col not in input_data.columns:
-                raise Warning(
-                    f"Column '{col}' specified in 'filter_cells' not found in the dataset. \n\
-                      Continuing without filtering this cell type."
-                )
+                print(f"Warning: Column '{col}' specified in 'filter_cells' not found in the dataset. \n\
+                      Continuing without filtering this cell type.")
             else:
                 input_data = input_data[
                     input_data[requirements['cell_type_column']] != col
