@@ -240,6 +240,7 @@ default_dict = {
     "attr_bool": False,
     "augmentation_number": 5,
     "voro_neighbours": 50,
+    "filter_cells": None,
 }
 
 
