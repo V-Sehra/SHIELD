@@ -306,15 +306,7 @@ def main() -> None:
 
     # Optional cell filtering (e.g., restrict to certain ROI/quality flags).
     if requirements["filter_cells"] is not None:
-        
-        # Check if its a list/tuple that is not empty
-        if not isinstance(requirements["filter_cells"], (list, tuple)) or len(
-            requirements["filter_cells"]
-        ) == 0:
-            raise ValueError(
-                "'filter_cells' in requirements must be a non-empty list or tuple."
-            )
-            
+        # Make sure col is in the dataset.          
         for col in requirements["filter_cells"]:
             if col not in input_data.columns:
                 raise ValueError(

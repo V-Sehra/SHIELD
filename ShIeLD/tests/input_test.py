@@ -130,9 +130,8 @@ Type rules enforced by the tests
   ``col_of_interest``, ``col_of_variables``.
 - **List[number]**: ``radius_distance_all``, ``anker_value_all``,
   ``dropout_rate``, ``number_validation_splits``, ``test_set_fold_number``.
-- **Booleans**: ``filter_cells``, ``multiple_labels_per_subSample``, ``attr_bool``.
-- **Conditional**: if ``filter_cells`` is ``True``, both
-  ``filter_column`` (list) and ``filter_value`` (int|float|bool) must be present.
+- **Booleans**: ``multiple_labels_per_subSample``, ``attr_bool``.
+- **Conditional**: if ``filter_cells`` is ``not None``, must be a list of strings.
 
 Required keys in the *best_config* object
 -----------------------------------------
@@ -341,27 +340,22 @@ def validate_all_keys_in_req(req_file, verbose=True):
         ):
             raise AssertionError(f"Item {list_float} is not a list of floats.")
 
-    # boolians:
-    all_bools = ["filter_cells", "multiple_labels_per_subSample", "attr_bool"]
+    # booleans:
+    all_bools = ["multiple_labels_per_subSample", "attr_bool"]
     for item in all_bools:
         if not isinstance(requirements[item], bool):
             raise AssertionError(f"Item {item} is not a bool.")
 
     # optional keys:
-    if requirements["filter_cells"]:
-        if not {"filter_column", "filter_value"}.issubset(key_set):
-            raise AssertionError(
-                "If filter_cells is True, filter_column and filter_value must be present."
+    if requirements["filter_cells"] is not None:
+        
+        # Check if its a list/tuple that is not empty
+        if not isinstance(requirements["filter_cells"], (list, tuple)) or len(
+            requirements["filter_cells"]
+        ) == 0:
+            raise ValueError(
+                "'filter_cells' in requirements must be a non-empty list or tuple."
             )
-
-        if not isinstance(requirements["filter_column"], list):
-            raise AssertionError(
-                "filter_column should be a list containing the column to filter by."
-            )
-        if not isinstance(
-            requirements["filter_value"], (int, float, bool, np.integer, np.floating)
-        ):
-            raise AssertionError("filter_value should be an int, float or bool.")
 
     return requirements
 
