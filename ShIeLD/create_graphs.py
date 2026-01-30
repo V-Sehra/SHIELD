@@ -43,9 +43,8 @@ Inputs
     - label_dict: dict (class labels)
     - label_column: str
     Optionally:
-    - filter_cells: bool
-    - filter_column: list/tuple with at least one column name
-    - filter_value: value to keep
+    - filter_cells: list/tuple with at least one column name
+    - cell_type_column: str specifying which col to use for filtering
     - downSampeling: float (ratio for downsampling)
 
 - raw CSV:
@@ -306,10 +305,26 @@ def main() -> None:
     input_data = pd.read_csv(requirements["path_raw_data"])
 
     # Optional cell filtering (e.g., restrict to certain ROI/quality flags).
-    if requirements["filter_cells"] is not False:  # noqa: E712
-        input_data = input_data[
-            input_data[requirements["filter_column"][0]] == requirements["filter_value"]
-        ]
+    if requirements["filter_cells"] is not None:
+        
+        # Check if its a list/tuple that is not empty
+        if not isinstance(requirements["filter_cells"], (list, tuple)) or len(
+            requirements["filter_cells"]
+        ) == 0:
+            raise ValueError(
+                "'filter_cells' in requirements must be a non-empty list or tuple."
+            )
+            
+        for col in requirements["filter_cells"]:
+            if col not in input_data.columns:
+                raise ValueError(
+                    f"Column '{col}' specified in 'filter_cells' not found in the dataset."
+                )
+            else:
+                input_data = input_data[
+                    input_data[requirements['cell_type_column']] != col
+                ]
+                print(f'Removing cell type {col} from dataset, remaining cells: {input_data.shape[0]}')
 
     # Select only rows belonging to the chosen folds.
     data_sample = input_data.loc[
