@@ -306,9 +306,10 @@ def main() -> None:
 
     # Optional cell filtering (e.g., restrict to certain ROI/quality flags).
     if requirements["filter_cells"] is not None:
+        cell_col = requirements['cell_type_column']
         # Make sure col is in the dataset.          
         for col in requirements["filter_cells"]:
-            if col not in input_data.columns:
+            if col not in np.unique(input_data[cell_col].values):
                 print(f"Warning: Column '{col}' specified in 'filter_cells' not found in the dataset. \n\
                       Continuing without filtering this cell type.")
             else:
