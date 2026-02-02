@@ -125,7 +125,7 @@ Type rules enforced by the tests
   ``layer_1``, ``output_layer``, ``augmentation_number`` must be integer types.
 - **Strings**: ``label_column``, ``anker_cell_selection_type``,
   ``validation_split_column``, ``X_col_name``, ``Y_col_name``,
-  ``measurement_sample_name`` must be strings.
+  ``measurement_sample_name``, ``cell_type_column`` must be strings.
 - **List[str]**: ``cell_type_names``, ``markers``, ``eval_columns``,
   ``col_of_interest``, ``col_of_variables``.
 - **List[number]**: ``radius_distance_all``, ``anker_value_all``,
@@ -349,6 +349,17 @@ def validate_all_keys_in_req(req_file, verbose=True):
 
     # optional keys:
     if requirements["filter_cells"] is not None:
+        
+        # Check cell type column also given
+        try:
+            cell_type_column = requirements["cell_type_column"]
+        except KeyError:
+            raise KeyError(
+                "'cell_type_column' must be provided in requirements when 'filter_cells' is used."
+            )
+        
+        if not isinstance(cell_type_column, str):
+            raise AssertionError("'cell_type_column' must be a string.")
         
         # Check if its a list/tuple that is not empty
         if not isinstance(requirements["filter_cells"], (list, tuple)) or len(
