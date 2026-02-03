@@ -426,7 +426,7 @@ def fill_missing_row_and_col_withNaN(
     return data_frame
 
 
-def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
+def get_edge_index(mat: pd.DataFrame, dist_bool: bool = True, radius: float = 265):
     """
     Computes the edge index for a graph based on spatial proximity using Nearest Neighbors.
 
@@ -482,17 +482,15 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     return np.array([edge_src[mask], edge_dest[mask]])
 
 
-def get_edge_index_fast(mat: np.array, dist_bool: bool = True, radius: float = 265):
+def get_edge_index_fast(mat: pd.DataFrame, dist_bool: bool = True, radius: float = 265):
     
     # Convert to numpy
     if hasattr(mat, "values"):
         mat = mat.values
         
-        
     tree = cKDTree(mat)
     
     # query_pairs returns a set of (i, j) tuples where dist < radius
-    # This is MUCH more memory efficient than radius_neighbors
     pairs = tree.query_pairs(r=radius, output_type='ndarray')
     
     if len(pairs) == 0:
@@ -500,8 +498,7 @@ def get_edge_index_fast(mat: np.array, dist_bool: bool = True, radius: float = 2
         edge_index = np.empty((2, 0), dtype=np.int64)
         return (edge_index, np.array([])) if dist_bool else edge_index
     
-    # query_pairs only returns (i, j) where i < j. 
-    # We need to add (j, i) to make the graph undirected for PyG.
+    # comptible w PyG
     edge_index = np.concatenate([pairs, pairs[:, [1, 0]]], axis=0).T
     
     if dist_bool:
