@@ -197,7 +197,7 @@ def compute_connection_matrix(src, dst, phenotype_names, absolute_bool):
 
 
 def create_graph_and_save(
-    vornoi_id: int,
+    voronoi_id: int,
     radius_neibourhood: float,
     whole_data: pd.DataFrame,
     voronoi_list: List,
@@ -217,7 +217,7 @@ def create_graph_and_save(
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
     Args:
-        vornoi_id (int): ID of the Voronoi region.
+        voronoi_id (int): ID of the Voronoi region.
         radius_neibourhood (float): Radius for neighborhood search.
         whole_data (DataFrame): The entire dataset.
         voronoi_list (list): List of Voronoi cell indices.
@@ -248,19 +248,19 @@ def create_graph_and_save(
     # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
-        graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
+        graph_data = whole_data.iloc[voronoi_list[voronoi_id]].copy()
     elif segmentation.lower() == "bucket":
         if not isinstance(whole_data, list):
             raise ValueError(
                 "if segmentation is bucket then the provided whole set must be a list of DataFrames"
             )
 
-        graph_data = whole_data[vornoi_id].copy()
+        graph_data = whole_data[voronoi_id].copy()
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
 
-    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{vornoi_id}.pt"
+    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{voronoi_id}.pt"
 
     if skip_existing:
         if Path(f"{save_path_folder}", file_name).exists():
