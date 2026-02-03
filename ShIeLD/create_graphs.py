@@ -102,36 +102,47 @@ from .tests import input_test
 from .utils import data_utils
 
 
-def safe_wrapper(func, arg):
-    """
-    Multiprocessing safety wrapper.
+# Helper functions for multiprocessing - must be in same script ---------------------
+# Multiprocessing variables
+_GLOBAL_SINGLE_SAMPLE = None
+_GLOBAL_VORONOI = None
+_GLOBAL_SAMPLE_COLLECTION = None
+_GLOBAL_REQUIREMENTS = None
 
-    Why this exists:
-    - In `Pool.imap_unordered`, an exception inside a worker can terminate the
-      pool and stop the entire pipeline.
-    - For large runs, it's often preferable to *log and skip* failed items.
+# Worker initialisation
+def init_worker(single_sample, voronoi_list, sample_collection, requirements):
+    global _GLOBAL_SINGLE_SAMPLE
+    global _GLOBAL_VORONOI
+    global _GLOBAL_SAMPLE_COLLECTION
+    global _GLOBAL_REQUIREMENTS
 
-    Parameters
-    ----------
-    func:
-        A single-argument callable that performs the actual unit of work.
-        (In this script: a partially-bound `create_graph_and_save`.)
-    arg:
-        The work item identifier (e.g., a Voronoi region id or chunk id).
-
-    Returns
-    -------
-    Any | None
-        Returns whatever `func(arg)` returns, or `None` if an exception occurred.
-    """
-    try:
-        return func(arg)
-    except Exception:
-        import traceback
-
-        print("ERROR in worker for arg:", arg)
-        traceback.print_exc()
-        return None
+    _GLOBAL_SINGLE_SAMPLE = single_sample
+    _GLOBAL_VORONOI = voronoi_list
+    _GLOBAL_SAMPLE_COLLECTION = sample_collection
+    _GLOBAL_REQUIREMENTS = requirements
+    
+# Single worker create_graph function for voronoi
+def worker_create_graph(region_id, *, save_path_folder, radius_distance,
+                        sub_sample, repeat_id, skip_existing,
+                        noisy_labeling, node_prob, randomise_edges,
+                        percent_number_cells, segmentation, testing_mode):
+    return data_utils.create_graph_and_save(
+        whole_data=_GLOBAL_SINGLE_SAMPLE,
+        voronoi_list=_GLOBAL_VORONOI,
+        requiremets_dict=_GLOBAL_REQUIREMENTS,
+        voronoi_id=region_id,
+        save_path_folder=save_path_folder,
+        radius_neibourhood=radius_distance,
+        sub_sample=sub_sample,
+        repeat_id=repeat_id,
+        skip_existing=skip_existing,
+        noisy_labeling=noisy_labeling,
+        node_prob=node_prob,
+        randomise_edges=randomise_edges,
+        percent_number_cells=percent_number_cells,
+        segmentation=segmentation,
+        testing_mode=testing_mode,
+    )
 
 
 def main() -> None:
@@ -424,9 +435,9 @@ def main() -> None:
                             )
 
                         # Region indices (one graph per region id).
-                        vornoi_id = np.arange(0, len(voroni_id_fussy))
+                        voronoi_id = np.arange(0, len(voroni_id_fussy))
                         if args.max_graphs is not None:
-                            vornoi_id = vornoi_id[: int(args.max_graphs)]
+                            voronoi_id = voronoi_id[: int(args.max_graphs)]
 
                         for radius_distance in requirements["radius_distance_all"]:
                             # Construct the output directory layout deterministically
@@ -453,39 +464,57 @@ def main() -> None:
                                         fussy_limit=fussy_limit,
                                         sample=sub_sample,
                                         augment_id=augment_id,
-                                        n_regions=len(vornoi_id),
+                                        n_regions=len(voronoi_id),
                                         out=str(save_path_folder_graphs),
                                     ),
                                 )
 
                             # Bind all fixed parameters once; the pool only gets region ids.
-                            run_saving_routine = functools.partial(
-                                data_utils.create_graph_and_save,
-                                whole_data=single_sample,
-                                save_path_folder=save_path_folder_graphs,
-                                radius_neibourhood=radius_distance,
-                                requiremets_dict=requirements,
-                                voronoi_list=voroni_id_fussy,
-                                sub_sample=sub_sample,
-                                repeat_id=augment_id,
-                                skip_existing=args.skip_existing,
-                                noisy_labeling=args.noisy_labeling,
-                                node_prob=args.node_prob,
-                                randomise_edges=args.randomise_edges,
-                                percent_number_cells=args.percent_number_cells,
-                                segmentation=args.segmentation,
-                                testing_mode=args.testing_mode,
-                            )
+                            # run_saving_routine = functools.partial(
+                            #     data_utils.create_graph_and_save,
+                            #     whole_data=single_sample,
+                            #     save_path_folder=save_path_folder_graphs,
+                            #     radius_neibourhood=radius_distance,
+                            #     requiremets_dict=requirements,
+                            #     voronoi_list=voroni_id_fussy,
+                            #     sub_sample=sub_sample,
+                            #     repeat_id=augment_id,
+                            #     skip_existing=args.skip_existing,
+                            #     noisy_labeling=args.noisy_labeling,
+                            #     node_prob=args.node_prob,
+                            #     randomise_edges=args.randomise_edges,
+                            #     percent_number_cells=args.percent_number_cells,
+                            #     segmentation=args.segmentation,
+                            #     testing_mode=args.testing_mode,
+                            # )
 
                             # Parallel execution over region ids.
-                            with mp.Pool(n_workers) as pool:
-                                for _ in pool.imap_unordered(
-                                    functools.partial(safe_wrapper, run_saving_routine),
-                                    vornoi_id,
-                                    chunksize=1,
-                                ):
-                                    # The work is done inside the worker; we just drain the iterator.
-                                    pass
+                            with mp.Pool(
+                                    n_workers,
+                                    initializer=init_worker,
+                                    initargs=(single_sample, voroni_id_fussy, None, requirements),
+                                    maxtasksperchild=1,
+                                ) as pool:
+
+                                    for _ in pool.imap_unordered(
+                                        functools.partial(
+                                            worker_create_graph,
+                                            save_path_folder=save_path_folder_graphs,
+                                            radius_distance=radius_distance,
+                                            sub_sample=sub_sample,
+                                            repeat_id=augment_id,
+                                            skip_existing=args.skip_existing,
+                                            noisy_labeling=args.noisy_labeling,
+                                            node_prob=args.node_prob,
+                                            randomise_edges=args.randomise_edges,
+                                            percent_number_cells=args.percent_number_cells,
+                                            segmentation=args.segmentation,
+                                            testing_mode=args.testing_mode,
+                                        ),
+                                        voronoi_id,
+                                        chunksize=10,
+                                    ):
+                                        pass
 
                 # ---------------------------------------------------------
                 # Random segmentation mode
@@ -565,31 +594,58 @@ def main() -> None:
                         # Bind all fixed parameters once; the pool only gets chunk ids.
                         # Here `whole_data` is a list of dataframes; the worker selects
                         # the chunk based on the provided id.
-                        run_saving_routine = functools.partial(
-                            data_utils.create_graph_and_save,
-                            whole_data=sample_collection,
-                            save_path_folder=save_path_folder_graphs,
-                            radius_neibourhood=radius_distance,
-                            requiremets_dict=requirements,
-                            voronoi_list=voroni_id_fussy,
-                            sub_sample=sub_sample,
-                            repeat_id=augment_id,
-                            skip_existing=args.skip_existing,
-                            noisy_labeling=args.noisy_labeling,
-                            node_prob=args.node_prob,
-                            randomise_edges=args.randomise_edges,
-                            percent_number_cells=args.percent_number_cells,
-                            segmentation=args.segmentation,
-                            testing_mode=args.testing_mode,
-                        )
+                        # run_saving_routine = functools.partial(
+                        #     data_utils.create_graph_and_save,
+                        #     whole_data=sample_collection,
+                        #     save_path_folder=save_path_folder_graphs,
+                        #     radius_neibourhood=radius_distance,
+                        #     requiremets_dict=requirements,
+                        #     voronoi_list=voroni_id_fussy,
+                        #     sub_sample=sub_sample,
+                        #     repeat_id=augment_id,
+                        #     skip_existing=args.skip_existing,
+                        #     noisy_labeling=args.noisy_labeling,
+                        #     node_prob=args.node_prob,
+                        #     randomise_edges=args.randomise_edges,
+                        #     percent_number_cells=args.percent_number_cells,
+                        #     segmentation=args.segmentation,
+                        #     testing_mode=args.testing_mode,
+                        # )
 
-                        with mp.Pool(n_workers) as pool:
-                            for _ in pool.imap_unordered(
-                                functools.partial(safe_wrapper, run_saving_routine),
-                                subsection_id,
-                                chunksize=1,
-                            ):
-                                pass
+                        # with mp.Pool(n_workers) as pool:
+                        #     for _ in pool.imap_unordered(
+                        #         functools.partial(safe_wrapper, run_saving_routine),
+                        #         subsection_id,
+                        #         chunksize=1,
+                        #     ):
+                        #         pass
+                            
+                        with mp.Pool(
+                                n_workers,
+                                initializer=init_worker,
+                                initargs=(sample_collection, None, None, requirements),
+                                maxtasksperchild=1,
+                            ) as pool:
+
+                                for _ in pool.imap_unordered(
+                                    functools.partial(
+                                        worker_create_graph,
+                                        save_path_folder=save_path_folder_graphs,
+                                        radius_distance=radius_distance,
+                                        sub_sample=sub_sample,
+                                        repeat_id=augment_id,
+                                        skip_existing=args.skip_existing,
+                                        noisy_labeling=args.noisy_labeling,
+                                        node_prob=args.node_prob,
+                                        randomise_edges=args.randomise_edges,
+                                        percent_number_cells=args.percent_number_cells,
+                                        segmentation=args.segmentation,
+                                        testing_mode=args.testing_mode,
+                                    ),
+                                    subsection_id,
+                                    chunksize=10,
+                                ):
+                                    pass
 
 
 # Ensure the script runs only when executed directly.
