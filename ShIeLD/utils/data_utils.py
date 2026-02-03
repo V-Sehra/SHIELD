@@ -12,6 +12,7 @@ import numpy as np
 import os
 import torch
 from torch_geometric.data import Data
+import torch.nn.functional as F
 import random as rnd
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
@@ -248,14 +249,14 @@ def create_graph_and_save(
     # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
-        graph_data = whole_data.iloc[voronoi_list[voronoi_id]].copy()
+        graph_data = whole_data.iloc[voronoi_list[voronoi_id]]    #.copy()
     elif segmentation.lower() == "bucket":
         if not isinstance(whole_data, list):
             raise ValueError(
                 "if segmentation is bucket then the provided whole set must be a list of DataFrames"
             )
 
-        graph_data = whole_data[voronoi_id].copy()
+        graph_data = whole_data[voronoi_id]   #.copy()
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
@@ -273,7 +274,9 @@ def create_graph_and_save(
             )
 
     # Convert gene expression features into a tensor
-    node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
+    node_np = graph_data[gene_col_name].to_numpy()
+    node_data = torch.from_numpy(node_np).float()
+    #node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
 
     # Extract spatial coordinates (X, Y)
     coord = graph_data[[requiremets_dict["X_col_name"], requiremets_dict["Y_col_name"]]]
@@ -282,15 +285,20 @@ def create_graph_and_save(
     edge_mat = get_edge_index(mat=coord, dist_bool=True, radius=radius_neibourhood)
 
     # Compute cosine similarity between connected nodes
-    plate_cosine_sim = cosine(
-        node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
-    ).cpu()
+    # plate_cosine_sim = cosine(
+    #     node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
+    # ).cpu()
+    
+    # Using .index_select is sometimes more memory-stable than fancy indexing
+    u = node_data.index_select(0, torch.from_numpy(edge_mat[0][0]).long())
+    v = node_data.index_select(0, torch.from_numpy(edge_mat[0][1]).long())
+    plate_cosine_sim = F.cosine_similarity(u, v)
 
     # Create a PyTorch Geometric data object
     data = Data(
         x=node_data,
-        edge_index_plate=torch.tensor(edge_mat[0]).long(),
-        plate_euc=torch.tensor(1 / edge_mat[1]),  # Inverse of Euclidean distance
+        edge_index_plate=torch.from_numpy(edge_mat[0]).long(),
+        plate_euc=torch.from_numpy(1 / edge_mat[1]).float(),  # Inverse of Euclidean distance
         plate_cosine_sim=plate_cosine_sim,
         fold_id=graph_data[requiremets_dict["validation_split_column"]].unique(),
         orginal_cord=torch.tensor(coord.to_numpy()),
@@ -299,6 +307,7 @@ def create_graph_and_save(
         sub_sample=sub_sample,
         y=torch.tensor(tissue_dict[count_tissue_type.idxmax()]).flatten(),
     ).cpu()
+    
 
     if noisy_labeling and (len(count_tissue_type) > 1):
         if node_prob == False or node_prob == "even":  # noqa: E712
@@ -330,10 +339,10 @@ def create_graph_and_save(
         data.edge_index_plate_sameCon = torch.tensor(edge_mat_same_connectivity).long()
         data.edge_index_plate_percent = torch.tensor(edge_mat_random_percentage).long()
 
-    # Save the processed graph data
+    # Clean and save the processed graph data
+    del node_data, u, v, plate_cosine_sim
     torch.save(data, Path(f"{save_path_folder}", file_name))
-
-    return
+    del data
 
 
 def reducePopulation(
