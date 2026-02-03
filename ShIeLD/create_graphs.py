@@ -85,8 +85,14 @@ Notes
   changed.
 - The script tries to be robust: one failed graph does not stop the whole run.
 """
-
 from __future__ import annotations
+
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import argparse
 import functools
@@ -97,52 +103,33 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from .tests import input_test
 from .utils import data_utils
 
-
-# Helper functions for multiprocessing - must be in same script ---------------------
-# Multiprocessing variables
-_GLOBAL_SINGLE_SAMPLE = None
-_GLOBAL_VORONOI = None
-_GLOBAL_SAMPLE_COLLECTION = None
-_GLOBAL_REQUIREMENTS = None
-
-# Worker initialisation
-def init_worker(single_sample, voronoi_list, sample_collection, requirements):
-    global _GLOBAL_SINGLE_SAMPLE
-    global _GLOBAL_VORONOI
-    global _GLOBAL_SAMPLE_COLLECTION
-    global _GLOBAL_REQUIREMENTS
-
-    _GLOBAL_SINGLE_SAMPLE = single_sample
-    _GLOBAL_VORONOI = voronoi_list
-    _GLOBAL_SAMPLE_COLLECTION = sample_collection
-    _GLOBAL_REQUIREMENTS = requirements
-    
-# Single worker create_graph function for voronoi
-def worker_create_graph(region_id, *, save_path_folder, radius_distance,
-                        sub_sample, repeat_id, skip_existing,
-                        noisy_labeling, node_prob, randomise_edges,
-                        percent_number_cells, segmentation, testing_mode):
-    return data_utils.create_graph_and_save(
-        whole_data=_GLOBAL_SINGLE_SAMPLE,
-        voronoi_list=_GLOBAL_VORONOI,
-        requiremets_dict=_GLOBAL_REQUIREMENTS,
-        voronoi_id=region_id,
-        save_path_folder=save_path_folder,
-        radius_neibourhood=radius_distance,
-        sub_sample=sub_sample,
-        repeat_id=repeat_id,
-        skip_existing=skip_existing,
-        noisy_labeling=noisy_labeling,
-        node_prob=node_prob,
-        randomise_edges=randomise_edges,
-        percent_number_cells=percent_number_cells,
-        segmentation=segmentation,
-        testing_mode=testing_mode,
-    )
+# Helper function
+def get_tasks(args, requirements, single_sample, voronoi_ids, voroni_id_fussy, 
+              radius_distance, save_path_folder, sub_sample, augment_id):
+    """Generator to yield tasks one by one, saving parent memory."""
+    for v_id in voronoi_ids:
+        yield delayed(data_utils.create_graph_and_save)(
+            whole_data=single_sample,
+            voronoi_list=voroni_id_fussy,
+            requiremets_dict=requirements,
+            voronoi_id=v_id,
+            save_path_folder=save_path_folder,
+            radius_neibourhood=radius_distance,
+            sub_sample=sub_sample,
+            repeat_id=augment_id,
+            skip_existing=args.skip_existing,
+            noisy_labeling=args.noisy_labeling,
+            node_prob=args.node_prob,
+            randomise_edges=args.randomise_edges,
+            percent_number_cells=args.percent_number_cells,
+            segmentation=args.segmentation,
+            testing_mode=args.testing_mode,
+        )
 
 
 def main() -> None:
@@ -342,114 +329,224 @@ def main() -> None:
     # -----------------------------
     # Main iteration loops
     # -----------------------------
-    for sub_sample in tqdm(sample_ids, desc="Samples"):
-        # Subset the dataframe to this tissue/sample.
-        single_sample = data_sample[
-            data_sample[requirements["measurement_sample_name"]] == sub_sample
-        ]
+    # mmap_mode='r' ensures large DataFrames are shared via memory mapping rather than copies
+    with Parallel(n_jobs=n_workers, backend="loky", mmap_mode='r') as parallel:
+        
+        for sub_sample in tqdm(sample_ids, desc="Samples"):
+            # Subset the dataframe to this tissue/sample.
+            single_sample = data_sample[
+                data_sample[requirements["measurement_sample_name"]] == sub_sample
+            ]
 
-        # Iterate over anchor selection strengths (fraction or absolute).
-        for anker_value in requirements["anker_value_all"]:
-            # Optional: downsample a given cell type in this sample.
-            if args.reduce_population is not False:
-                if args.column_celltype_name not in single_sample.columns:
-                    raise ValueError(
-                        f"Column '{args.column_celltype_name}' not found in the dataset."
-                    )
-                if "downSampeling" not in requirements:
-                    raise ValueError(
-                        "Downsampling ratio 'downSampeling' not specified in requirements."
-                    )
-
-                downsample_ratio = requirements["downSampeling"]
-
-                # NOTE: reducePopulation is expected to return a new dataframe.
-                single_sample = data_utils.reducePopulation(
-                    df=single_sample,
-                    columnName=args.column_celltype_name,
-                    cellTypeName=args.reduce_population,
-                    downsampleRatio=downsample_ratio,
-                )
-
-            # Repeat with augmentation seeds/variants.
-            for augment_id in range(requirements["augmentation_number"]):
-                # ---------------------------------------------------------
-                # Voronoi segmentation mode
-                # ---------------------------------------------------------
-                if args.segmentation == "voronoi":
-                    for fussy_limit in requirements["fussy_limit_all"]:
-                        # Select anchor cells.
-                        # - "%" means fraction of cells
-                        # - "absolut" means a fixed number
-                        if requirements["anker_cell_selection_type"] == "%":
-                            anchors = single_sample.sample(
-                                n=int(len(single_sample) * anker_value)
-                            )
-
-                        elif requirements["anker_cell_selection_type"] == "absolut":
-                            if requirements["multiple_labels_per_subSample"]:
-                                # If multiple labels exist per tissue, sample anchors per label.
-                                samples_per_tissue = anker_value // len(
-                                    requirements["label_dict"].keys()
-                                )
-                                anchors = pd.DataFrame()
-                                for label_dict_key in requirements["label_dict"].keys():
-                                    anchors = pd.concat(
-                                        [
-                                            anchors,
-                                            single_sample[
-                                                single_sample[
-                                                    requirements["label_column"]
-                                                ]
-                                                == label_dict_key
-                                            ].sample(n=samples_per_tissue),
-                                        ]
-                                    )
-                            else:
-                                anchors = single_sample.sample(n=int(anker_value))
-
-                        else:
-                            raise ValueError(
-                                "Unknown requirements['anker_cell_selection_type'] "
-                                f"={requirements['anker_cell_selection_type']!r}"
-                            )
-
-                        # Compute Voronoi regions with fuzzy boundary constraints.
-                        voroni_id_fussy = data_utils.get_voronoi_id(
-                            data_set=single_sample,
-                            anker_cell=anchors,
-                            requiremets_dict=requirements,
-                            fussy_limit=fussy_limit,
+            # Iterate over anchor selection strengths (fraction or absolute).
+            for anker_value in requirements["anker_value_all"]:
+                # Optional: downsample a given cell type in this sample.
+                if args.reduce_population is not False:
+                    if args.column_celltype_name not in single_sample.columns:
+                        raise ValueError(
+                            f"Column '{args.column_celltype_name}' not found in the dataset."
+                        )
+                    if "downSampeling" not in requirements:
+                        raise ValueError(
+                            "Downsampling ratio 'downSampeling' not specified in requirements."
                         )
 
-                        # Basic QC: drop regions that are too small and recompute.
-                        number_cells = np.array([len(arr) for arr in voroni_id_fussy])
-                        if any(number_cells < requirements["minimum_number_cells"]):
+                    downsample_ratio = requirements["downSampeling"]
+
+                    # NOTE: reducePopulation is expected to return a new dataframe.
+                    single_sample = data_utils.reducePopulation(
+                        df=single_sample,
+                        columnName=args.column_celltype_name,
+                        cellTypeName=args.reduce_population,
+                        downsampleRatio=downsample_ratio,
+                    )
+
+                # Repeat with augmentation seeds/variants.
+                for augment_id in range(requirements["augmentation_number"]):
+                    # ---------------------------------------------------------
+                    # Voronoi segmentation mode
+                    # ---------------------------------------------------------
+                    tasks = []
+                    if args.segmentation == "voronoi":
+                        for fussy_limit in requirements["fussy_limit_all"]:
+                            # Select anchor cells.
+                            # - "%" means fraction of cells
+                            # - "absolut" means a fixed number
+                            if requirements["anker_cell_selection_type"] == "%":
+                                anchors = single_sample.sample(
+                                    n=int(len(single_sample) * anker_value)
+                                )
+
+                            elif requirements["anker_cell_selection_type"] == "absolut":
+                                if requirements["multiple_labels_per_subSample"]:
+                                    # If multiple labels exist per tissue, sample anchors per label.
+                                    samples_per_tissue = anker_value // len(
+                                        requirements["label_dict"].keys()
+                                    )
+                                    anchors = pd.DataFrame()
+                                    for label_dict_key in requirements["label_dict"].keys():
+                                        anchors = pd.concat(
+                                            [
+                                                anchors,
+                                                single_sample[
+                                                    single_sample[
+                                                        requirements["label_column"]
+                                                    ]
+                                                    == label_dict_key
+                                                ].sample(n=samples_per_tissue),
+                                            ]
+                                        )
+                                else:
+                                    anchors = single_sample.sample(n=int(anker_value))
+
+                            else:
+                                raise ValueError(
+                                    "Unknown requirements['anker_cell_selection_type'] "
+                                    f"={requirements['anker_cell_selection_type']!r}"
+                                )
+
+                            # Compute Voronoi regions with fuzzy boundary constraints.
                             voroni_id_fussy = data_utils.get_voronoi_id(
                                 data_set=single_sample,
-                                anker_cell=anchors[
-                                    number_cells > requirements["minimum_number_cells"]
-                                ],
+                                anker_cell=anchors,
                                 requiremets_dict=requirements,
                                 fussy_limit=fussy_limit,
                             )
 
-                        # Region indices (one graph per region id).
-                        voronoi_id = np.arange(0, len(voroni_id_fussy))
-                        if args.max_graphs is not None:
-                            voronoi_id = voronoi_id[: int(args.max_graphs)]
+                            # Basic QC: drop regions that are too small and recompute.
+                            number_cells = np.array([len(arr) for arr in voroni_id_fussy])
+                            if any(number_cells < requirements["minimum_number_cells"]):
+                                voroni_id_fussy = data_utils.get_voronoi_id(
+                                    data_set=single_sample,
+                                    anker_cell=anchors[
+                                        number_cells > requirements["minimum_number_cells"]
+                                    ],
+                                    requiremets_dict=requirements,
+                                    fussy_limit=fussy_limit,
+                                )
+
+                            # Region indices (one graph per region id).
+                            voronoi_id = np.arange(0, len(voroni_id_fussy))
+                            if args.max_graphs is not None:
+                                voronoi_id = voronoi_id[: int(args.max_graphs)]
+
+                            for radius_distance in requirements["radius_distance_all"]:
+                                # Construct the output directory layout deterministically
+                                # from the meta-parameters.
+                                save_path = Path(
+                                    requirements["path_to_data_set"]
+                                    / f"anker_value_{anker_value}".replace(".", "_")
+                                    / f"min_cells_{requirements['minimum_number_cells']}"
+                                    / f"fussy_limit_{fussy_limit}".replace(".", "_")
+                                    / f"radius_{radius_distance}"
+                                )
+
+                                save_path_folder_graphs = (
+                                    save_path / f"{args.data_set_type}" / "graphs"
+                                )
+                                save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
+
+                                if args.verbose:
+                                    print(
+                                        "Voronoi config:",
+                                        dict(
+                                            anker_value=anker_value,
+                                            radius_neibourhood=radius_distance,
+                                            fussy_limit=fussy_limit,
+                                            sample=sub_sample,
+                                            augment_id=augment_id,
+                                            n_regions=len(voronoi_id),
+                                            out=str(save_path_folder_graphs),
+                                        ),
+                                    )
+                                    
+                                # Joblib delayed
+                                # for v_id in voronoi_id:
+                                #     tasks.append(delayed(data_utils.create_graph_and_save)(
+                                #         whole_data=single_sample,
+                                #         voronoi_list=voroni_id_fussy,
+                                #         requiremets_dict=requirements,
+                                #         voronoi_id=v_id,
+                                #         save_path_folder=save_path_folder_graphs,
+                                #         radius_neibourhood=radius_distance,
+                                #         sub_sample=sub_sample,
+                                #         repeat_id=augment_id,
+                                #         skip_existing=args.skip_existing,
+                                #         noisy_labeling=args.noisy_labeling,
+                                #         node_prob=args.node_prob,
+                                #         randomise_edges=args.randomise_edges,
+                                #         percent_number_cells=args.percent_number_cells,
+                                #         segmentation=args.segmentation,
+                                #         testing_mode=args.testing_mode,
+                                #     ))
+                                    
+                                tasks = get_tasks(
+                                    args, requirements, single_sample, voronoi_id, 
+                                    voroni_id_fussy, radius_distance, save_path_folder_graphs, 
+                                    sub_sample, augment_id
+                                )
+                                
+                                progress_bar = tqdm(tasks, total=len(voronoi_id), desc="Generating Graphs", leave=False)
+                                
+                                parallel(progress_bar)
+
+                    # ---------------------------------------------------------
+                    # Random segmentation mode
+                    # ---------------------------------------------------------
+                    elif args.segmentation == "bucket":
+                        # In random mode, we create a list of sub-dataframes ("chunks").
+                        # Each chunk becomes one graph (selected via chunk index).
+                        if requirements["multiple_labels_per_subSample"]:
+                            # Split per label to avoid label imbalance in chunks.
+                            if args.max_graphs is not None:
+                                samples_per_tissue = int(args.max_graphs)
+                            else:
+                                samples_per_tissue = anker_value // len(
+                                    requirements["label_dict"].keys()
+                                )
+
+                            sample_collection = []
+                            for label_dict_key in requirements["label_dict"].keys():
+                                shuffled = (
+                                    single_sample[
+                                        single_sample[requirements["label_column"]]
+                                        == label_dict_key
+                                    ]
+                                    .sample(frac=1)
+                                    .reset_index(drop=True)
+                                )
+                                sample_collection.extend(
+                                    np.array_split(shuffled, samples_per_tissue)
+                                )
+                        else:
+                            # If no per-label sampling is needed, just shuffle and split.
+                            if args.max_graphs is not None:
+                                n_chunks = int(args.max_graphs)
+                            else:
+                                # NOTE: original logic uses int(len * anker_value) as chunk count.
+                                # This can be small if anker_value is small; ensure at least 1 chunk.
+                                n_chunks = max(1, int(len(single_sample) * anker_value))
+
+                            sample_collection = np.array_split(
+                                single_sample.sample(frac=1, random_state=42).reset_index(
+                                    drop=True
+                                ),
+                                n_chunks,
+                            )
+
+                        subsection_id = np.arange(0, len(sample_collection))
+
+                        # No Voronoi regions in bucket mode.
+                        voroni_id_fussy = None
 
                         for radius_distance in requirements["radius_distance_all"]:
-                            # Construct the output directory layout deterministically
-                            # from the meta-parameters.
                             save_path = Path(
                                 requirements["path_to_data_set"]
                                 / f"anker_value_{anker_value}".replace(".", "_")
                                 / f"min_cells_{requirements['minimum_number_cells']}"
-                                / f"fussy_limit_{fussy_limit}".replace(".", "_")
+                                / "bucket_sampling"
                                 / f"radius_{radius_distance}"
                             )
-
                             save_path_folder_graphs = (
                                 save_path / f"{args.data_set_type}" / "graphs"
                             )
@@ -457,195 +554,55 @@ def main() -> None:
 
                             if args.verbose:
                                 print(
-                                    "Voronoi config:",
+                                    "bucket config:",
                                     dict(
                                         anker_value=anker_value,
                                         radius_neibourhood=radius_distance,
-                                        fussy_limit=fussy_limit,
                                         sample=sub_sample,
                                         augment_id=augment_id,
-                                        n_regions=len(voronoi_id),
+                                        n_chunks=len(subsection_id),
                                         out=str(save_path_folder_graphs),
                                     ),
                                 )
-
-                            # Bind all fixed parameters once; the pool only gets region ids.
-                            # run_saving_routine = functools.partial(
-                            #     data_utils.create_graph_and_save,
-                            #     whole_data=single_sample,
-                            #     save_path_folder=save_path_folder_graphs,
-                            #     radius_neibourhood=radius_distance,
-                            #     requiremets_dict=requirements,
-                            #     voronoi_list=voroni_id_fussy,
-                            #     sub_sample=sub_sample,
-                            #     repeat_id=augment_id,
-                            #     skip_existing=args.skip_existing,
-                            #     noisy_labeling=args.noisy_labeling,
-                            #     node_prob=args.node_prob,
-                            #     randomise_edges=args.randomise_edges,
-                            #     percent_number_cells=args.percent_number_cells,
-                            #     segmentation=args.segmentation,
-                            #     testing_mode=args.testing_mode,
-                            # )
-
-                            # Parallel execution over region ids.
-                            with mp.Pool(
-                                    n_workers,
-                                    initializer=init_worker,
-                                    initargs=(single_sample, voroni_id_fussy, None, requirements),
-                                    maxtasksperchild=1,
-                                ) as pool:
-
-                                    for _ in pool.imap_unordered(
-                                        functools.partial(
-                                            worker_create_graph,
-                                            save_path_folder=save_path_folder_graphs,
-                                            radius_distance=radius_distance,
-                                            sub_sample=sub_sample,
-                                            repeat_id=augment_id,
-                                            skip_existing=args.skip_existing,
-                                            noisy_labeling=args.noisy_labeling,
-                                            node_prob=args.node_prob,
-                                            randomise_edges=args.randomise_edges,
-                                            percent_number_cells=args.percent_number_cells,
-                                            segmentation=args.segmentation,
-                                            testing_mode=args.testing_mode,
-                                        ),
-                                        voronoi_id,
-                                        chunksize=10,
-                                    ):
-                                        pass
-
-                # ---------------------------------------------------------
-                # Random segmentation mode
-                # ---------------------------------------------------------
-                elif args.segmentation == "bucket":
-                    # In random mode, we create a list of sub-dataframes ("chunks").
-                    # Each chunk becomes one graph (selected via chunk index).
-                    if requirements["multiple_labels_per_subSample"]:
-                        # Split per label to avoid label imbalance in chunks.
-                        if args.max_graphs is not None:
-                            samples_per_tissue = int(args.max_graphs)
-                        else:
-                            samples_per_tissue = anker_value // len(
-                                requirements["label_dict"].keys()
-                            )
-
-                        sample_collection = []
-                        for label_dict_key in requirements["label_dict"].keys():
-                            shuffled = (
-                                single_sample[
-                                    single_sample[requirements["label_column"]]
-                                    == label_dict_key
-                                ]
-                                .sample(frac=1)
-                                .reset_index(drop=True)
-                            )
-                            sample_collection.extend(
-                                np.array_split(shuffled, samples_per_tissue)
-                            )
-                    else:
-                        # If no per-label sampling is needed, just shuffle and split.
-                        if args.max_graphs is not None:
-                            n_chunks = int(args.max_graphs)
-                        else:
-                            # NOTE: original logic uses int(len * anker_value) as chunk count.
-                            # This can be small if anker_value is small; ensure at least 1 chunk.
-                            n_chunks = max(1, int(len(single_sample) * anker_value))
-
-                        sample_collection = np.array_split(
-                            single_sample.sample(frac=1, random_state=42).reset_index(
-                                drop=True
-                            ),
-                            n_chunks,
-                        )
-
-                    subsection_id = np.arange(0, len(sample_collection))
-
-                    # No Voronoi regions in bucket mode.
-                    voroni_id_fussy = None
-
-                    for radius_distance in requirements["radius_distance_all"]:
-                        save_path = Path(
-                            requirements["path_to_data_set"]
-                            / f"anker_value_{anker_value}".replace(".", "_")
-                            / f"min_cells_{requirements['minimum_number_cells']}"
-                            / "bucket_sampling"
-                            / f"radius_{radius_distance}"
-                        )
-                        save_path_folder_graphs = (
-                            save_path / f"{args.data_set_type}" / "graphs"
-                        )
-                        save_path_folder_graphs.mkdir(parents=True, exist_ok=True)
-
-                        if args.verbose:
-                            print(
-                                "bucket config:",
-                                dict(
-                                    anker_value=anker_value,
-                                    radius_neibourhood=radius_distance,
-                                    sample=sub_sample,
-                                    augment_id=augment_id,
-                                    n_chunks=len(subsection_id),
-                                    out=str(save_path_folder_graphs),
-                                ),
-                            )
-
-                        # Bind all fixed parameters once; the pool only gets chunk ids.
-                        # Here `whole_data` is a list of dataframes; the worker selects
-                        # the chunk based on the provided id.
-                        # run_saving_routine = functools.partial(
-                        #     data_utils.create_graph_and_save,
-                        #     whole_data=sample_collection,
-                        #     save_path_folder=save_path_folder_graphs,
-                        #     radius_neibourhood=radius_distance,
-                        #     requiremets_dict=requirements,
-                        #     voronoi_list=voroni_id_fussy,
-                        #     sub_sample=sub_sample,
-                        #     repeat_id=augment_id,
-                        #     skip_existing=args.skip_existing,
-                        #     noisy_labeling=args.noisy_labeling,
-                        #     node_prob=args.node_prob,
-                        #     randomise_edges=args.randomise_edges,
-                        #     percent_number_cells=args.percent_number_cells,
-                        #     segmentation=args.segmentation,
-                        #     testing_mode=args.testing_mode,
-                        # )
-
-                        # with mp.Pool(n_workers) as pool:
-                        #     for _ in pool.imap_unordered(
-                        #         functools.partial(safe_wrapper, run_saving_routine),
-                        #         subsection_id,
-                        #         chunksize=1,
-                        #     ):
-                        #         pass
                             
-                        with mp.Pool(
-                                n_workers,
-                                initializer=init_worker,
-                                initargs=(sample_collection, None, None, requirements),
-                                maxtasksperchild=1,
-                            ) as pool:
+                            # Joblib version
+                            # for s_id in subsection_id:
+                            #         tasks.append(delayed(data_utils.create_graph_and_save)(
+                            #             whole_data=sample_collection,
+                            #             voronoi_list=None,
+                            #             requiremets_dict=requirements,
+                            #             voronoi_id=s_id,
+                            #             save_path_folder=save_path_folder_graphs,
+                            #             radius_neibourhood=radius_distance,
+                            #             sub_sample=sub_sample,
+                            #             repeat_id=augment_id,
+                            #             skip_existing=args.skip_existing,
+                            #             noisy_labeling=args.noisy_labeling,
+                            #             node_prob=args.node_prob,
+                            #             randomise_edges=args.randomise_edges,
+                            #             percent_number_cells=args.percent_number_cells,
+                            #             segmentation=args.segmentation,
+                            #             testing_mode=args.testing_mode,
+                            #         ))
+                                    
+                            tasks = get_tasks(
+                                    args, requirements, sample_collection, subsection_id, 
+                                    None, radius_distance, save_path_folder_graphs, 
+                                    sub_sample, augment_id
+                                )
+                            
+                            progress_bar = tqdm(tasks, total=len(subsection_id), desc="Generating Graphs", leave=False)
+                                
+                            parallel(progress_bar)
 
-                                for _ in pool.imap_unordered(
-                                    functools.partial(
-                                        worker_create_graph,
-                                        save_path_folder=save_path_folder_graphs,
-                                        radius_distance=radius_distance,
-                                        sub_sample=sub_sample,
-                                        repeat_id=augment_id,
-                                        skip_existing=args.skip_existing,
-                                        noisy_labeling=args.noisy_labeling,
-                                        node_prob=args.node_prob,
-                                        randomise_edges=args.randomise_edges,
-                                        percent_number_cells=args.percent_number_cells,
-                                        segmentation=args.segmentation,
-                                        testing_mode=args.testing_mode,
-                                    ),
-                                    subsection_id,
-                                    chunksize=10,
-                                ):
-                                    pass
+                            
+                    # Batch execute all tasks for this sample/augmentation
+                    # if tasks:
+                    #     if args.verbose:
+                    #         print(f"Executing {len(tasks)} graph generations in parallel...")
+                        
+                    #     # Progress bar tracks completion of individual graphs
+                    #     parallel(tqdm(tasks, desc="Generating Graphs", leave=False))
 
 
 # Ensure the script runs only when executed directly.
