@@ -244,9 +244,8 @@ def create_graph_and_save(
     # Column names for gene expression features.
     gene_col_name = requiremets_dict["markers"]
 
-    cosine = torch.nn.CosineSimilarity(dim=1)
+    #cosine = torch.nn.CosineSimilarity(dim=1)
 
-    # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
         graph_data = whole_data.iloc[voronoi_list[voronoi_id]]    #.copy()
