@@ -282,7 +282,7 @@ def create_graph_and_save(
     coord = graph_data[[requiremets_dict["X_col_name"], requiremets_dict["Y_col_name"]]]
 
     # Compute the edge index using a utility function
-    edge_mat = get_edge_index(mat=coord, dist_bool=True, radius=radius_neibourhood)
+    edge_mat = get_edge_index_fast(mat=coord, dist_bool=True, radius=radius_neibourhood)
 
     # Compute cosine similarity between connected nodes
     # plate_cosine_sim = cosine(
@@ -450,32 +450,56 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     total_number_connections = [len(connections) for connections in neighours_per_cell]
 
     # Create the source node indices based on the number of connections each node has
-    edge_src = np.concatenate(
-        [
-            np.repeat(idx, total_number_connections[idx])
-            for idx in range(len(total_number_connections))
-        ]
-    )
+    # edge_src = np.concatenate(
+    #     [
+    #         np.repeat(idx, total_number_connections[idx])
+    #         for idx in range(len(total_number_connections))
+    #     ]
+    # )
 
     # Flatten the neighbor indices to get the destination nodes
     edge_dest = np.concatenate(neighours_per_cell)
 
     # Flatten the distances array
     distances = np.concatenate(neigh_distance)
+    
+    counts = np.array([len(x) for x in neighours_per_cell])
+    edge_src = np.repeat(np.arange(len(counts)), counts)
 
     # Identify and remove self-loops (where source and destination are the same)
-    remove_self_node = distances == 0
-    edge_src = np.delete(edge_src, remove_self_node)
-    edge_dest = np.delete(edge_dest, remove_self_node)
+    # remove_self_node = distances == 0
+    # edge_src = np.delete(edge_src, remove_self_node)
+    # edge_dest = np.delete(edge_dest, remove_self_node)
 
-    # Construct the edge index array
-    edge = np.array([edge_src, edge_dest])
+    # # Construct the edge index array
+    # edge = np.array([edge_src, edge_dest])
 
     # Return edge indices with or without distances based on dist_bool
+    mask = distances > 1e-8
+    
     if dist_bool:
-        return edge, np.delete(distances, remove_self_node)
-    else:
-        return edge
+        return np.array([edge_src[mask], edge_dest[mask]]), distances[mask]
+    return np.array([edge_src[mask], edge_dest[mask]])
+
+
+def get_edge_index_fast(mat: np.array, dist_bool: bool = True, radius: float = 265):
+    tree = cKDTree(mat)
+    
+    # query_pairs returns a set of (i, j) tuples where dist < radius
+    # This is MUCH more memory efficient than radius_neighbors
+    pairs = tree.query_pairs(r=radius, output_type='ndarray')
+    
+    # query_pairs only returns (i, j) where i < j. 
+    # We need to add (j, i) to make the graph undirected for PyG.
+    edge_index = np.concatenate([pairs, pairs[:, [1, 0]]], axis=0).T
+    
+    if dist_bool:
+        # We only calculate distances for the edges that actually exist
+        diff = mat[edge_index[0]] - mat[edge_index[1]]
+        distances = np.linalg.norm(diff, axis=1)
+        return edge_index, distances
+        
+    return edge_index
 
 
 def get_median_with_threshold(
