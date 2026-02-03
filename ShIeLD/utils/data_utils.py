@@ -483,11 +483,22 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
 
 
 def get_edge_index_fast(mat: np.array, dist_bool: bool = True, radius: float = 265):
+    
+    # Convert to numpy
+    if hasattr(mat, "values"):
+        mat = mat.values
+        
+        
     tree = cKDTree(mat)
     
     # query_pairs returns a set of (i, j) tuples where dist < radius
     # This is MUCH more memory efficient than radius_neighbors
     pairs = tree.query_pairs(r=radius, output_type='ndarray')
+    
+    if len(pairs) == 0:
+        # Handle cases with no neighbors to avoid empty array errors
+        edge_index = np.empty((2, 0), dtype=np.int64)
+        return (edge_index, np.array([])) if dist_bool else edge_index
     
     # query_pairs only returns (i, j) where i < j. 
     # We need to add (j, i) to make the graph undirected for PyG.
