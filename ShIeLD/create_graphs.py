@@ -461,34 +461,13 @@ def main() -> None:
                                         ),
                                     )
                                     
-                                # Joblib delayed
-                                # for v_id in voronoi_id:
-                                #     tasks.append(delayed(data_utils.create_graph_and_save)(
-                                #         whole_data=single_sample,
-                                #         voronoi_list=voroni_id_fussy,
-                                #         requiremets_dict=requirements,
-                                #         voronoi_id=v_id,
-                                #         save_path_folder=save_path_folder_graphs,
-                                #         radius_neibourhood=radius_distance,
-                                #         sub_sample=sub_sample,
-                                #         repeat_id=augment_id,
-                                #         skip_existing=args.skip_existing,
-                                #         noisy_labeling=args.noisy_labeling,
-                                #         node_prob=args.node_prob,
-                                #         randomise_edges=args.randomise_edges,
-                                #         percent_number_cells=args.percent_number_cells,
-                                #         segmentation=args.segmentation,
-                                #         testing_mode=args.testing_mode,
-                                #     ))
-                                    
                                 tasks = get_tasks(
                                     args, requirements, single_sample, voronoi_id, 
                                     voroni_id_fussy, radius_distance, save_path_folder_graphs, 
                                     sub_sample, augment_id
                                 )
                                 
-                                progress_bar = tqdm(tasks, total=len(voronoi_id), desc="Generating Graphs", leave=False)
-                                
+                                progress_bar = tqdm(tasks, total=len(voronoi_id), desc="Generating Graphs", leave=False) 
                                 parallel(progress_bar)
 
                     # ---------------------------------------------------------
@@ -565,26 +544,6 @@ def main() -> None:
                                         out=str(save_path_folder_graphs),
                                     ),
                                 )
-                            
-                            # Joblib version
-                            # for s_id in subsection_id:
-                            #         tasks.append(delayed(data_utils.create_graph_and_save)(
-                            #             whole_data=sample_collection,
-                            #             voronoi_list=None,
-                            #             requiremets_dict=requirements,
-                            #             voronoi_id=s_id,
-                            #             save_path_folder=save_path_folder_graphs,
-                            #             radius_neibourhood=radius_distance,
-                            #             sub_sample=sub_sample,
-                            #             repeat_id=augment_id,
-                            #             skip_existing=args.skip_existing,
-                            #             noisy_labeling=args.noisy_labeling,
-                            #             node_prob=args.node_prob,
-                            #             randomise_edges=args.randomise_edges,
-                            #             percent_number_cells=args.percent_number_cells,
-                            #             segmentation=args.segmentation,
-                            #             testing_mode=args.testing_mode,
-                            #         ))
                                     
                             tasks = get_tasks(
                                     args, requirements, sample_collection, subsection_id, 
@@ -592,18 +551,8 @@ def main() -> None:
                                     sub_sample, augment_id
                                 )
                             
-                            progress_bar = tqdm(tasks, total=len(subsection_id), desc="Generating Graphs", leave=False)
-                                
+                            progress_bar = tqdm(tasks, total=len(subsection_id), desc="Generating Graphs", leave=False)     
                             parallel(progress_bar)
-
-                            
-                    # Batch execute all tasks for this sample/augmentation
-                    # if tasks:
-                    #     if args.verbose:
-                    #         print(f"Executing {len(tasks)} graph generations in parallel...")
-                        
-                    #     # Progress bar tracks completion of individual graphs
-                    #     parallel(tqdm(tasks, desc="Generating Graphs", leave=False))
 
 
 # Ensure the script runs only when executed directly.
