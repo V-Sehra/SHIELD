@@ -279,6 +279,7 @@ def main() -> None:
 
     # Keep at least 1 worker; subtracting 2 leaves headroom for OS/UI.
     n_workers = max(1, mp.cpu_count() - 2)
+    n_workers = 2 # TODO - rm once done
 
     # -----------------------------
     # Load requirements + dataset
