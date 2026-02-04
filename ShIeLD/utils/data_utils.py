@@ -275,8 +275,7 @@ def create_graph_and_save(
     # Convert gene expression features into a tensor
     node_np = graph_data[gene_col_name].to_numpy()
     node_data = torch.from_numpy(node_np).float()
-    #node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
-
+    
     # Extract spatial coordinates (X, Y)
     coord = graph_data[[requiremets_dict["X_col_name"], requiremets_dict["Y_col_name"]]]
 
@@ -288,7 +287,7 @@ def create_graph_and_save(
     #     node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
     # ).cpu()
     
-    # Using .index_select is sometimes more memory-stable than fancy indexing
+    # Calc cosine
     u = node_data.index_select(0, torch.from_numpy(edge_mat[0][0]).long())
     v = node_data.index_select(0, torch.from_numpy(edge_mat[0][1]).long())
     plate_cosine_sim = F.cosine_similarity(u, v)
