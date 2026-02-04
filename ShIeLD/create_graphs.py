@@ -241,6 +241,12 @@ def main() -> None:
         default=False,
         help="if in testing_mode all steps should be done without a previous run thus no graphs etc should already exist.",
     )
+    parser.add_argument(
+        "--n_workers",
+        default=None,
+        help="Number of workers to use. Defaults to max CPU cores - 2. "
+        "It is recommended to use fewer workers if the input dataset is very large",
+    )
     args = parser.parse_args()
 
     # Convert "truthy"/"falsy" inputs into real booleans for downstream code.
@@ -267,8 +273,10 @@ def main() -> None:
         pass
 
     # Keep at least 1 worker; subtracting 2 leaves headroom for OS/UI.
-    n_workers = max(1, mp.cpu_count() - 2)
-    n_workers = 2 # TODO - rm once done
+    if args.n_workers is None:
+        n_workers = max(1, mp.cpu_count() - 2)
+    else:
+        n_workers = args.n_workers
 
     # -----------------------------
     # Load requirements + dataset
