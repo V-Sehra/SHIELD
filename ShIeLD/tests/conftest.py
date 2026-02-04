@@ -273,8 +273,6 @@ def graph_artifacts_dir(request, artifacts_root) -> Path:
                 str(patched_req_path),
                 "--data_set_type",
                 data_type,
-                "--segmentation",
-                segmentation,
                 "--column_celltype_name",
                 "cell_type",
                 "--noisy_labeling",
