@@ -94,10 +94,7 @@ from .model import ShIeLD
 # Configure torch multiprocessing.
 # - "fork" is often faster on Linux but can be fragile with CUDA contexts
 torch.multiprocessing.set_start_method("fork", force=True)
-
-# Use filesystem-based tensor sharing to avoid shared-memory limits on large runs.
 torch.multiprocessing.set_sharing_strategy("file_system")
-
 
 # Select compute device (GPU if available).
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

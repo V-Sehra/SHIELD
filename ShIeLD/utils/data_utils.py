@@ -12,6 +12,7 @@ import numpy as np
 import os
 import torch
 from torch_geometric.data import Data
+import torch.nn.functional as F
 import random as rnd
 from scipy.spatial import cKDTree
 from sklearn.neighbors import NearestNeighbors
@@ -197,7 +198,7 @@ def compute_connection_matrix(src, dst, phenotype_names, absolute_bool):
 
 
 def create_graph_and_save(
-    vornoi_id: int,
+    voronoi_id: int,
     radius_neibourhood: float,
     whole_data: pd.DataFrame,
     voronoi_list: List,
@@ -210,14 +211,13 @@ def create_graph_and_save(
     node_prob: Union[str, bool] = False,
     randomise_edges: bool = False,
     percent_number_cells: float = 0.1,
-    segmentation: str = "voronoi",
     testing_mode: bool = False,
 ):
     """
     Creates a graph from spatial data and saves it as a PyTorch geometric Data object.
 
     Args:
-        vornoi_id (int): ID of the Voronoi region.
+        voronoi_id (int): ID of the Voronoi region.
         radius_neibourhood (float): Radius for neighborhood search.
         whole_data (DataFrame): The entire dataset.
         voronoi_list (list): List of Voronoi cell indices.
@@ -236,31 +236,33 @@ def create_graph_and_save(
     Returns:
         None
     """
-
+    # Choice of labels used to evaluate
     tissue_dict = requiremets_dict["label_dict"]
     # List of evaluation column names.
     eval_col_name = requiremets_dict["eval_columns"]
     # Column names for gene expression features.
     gene_col_name = requiremets_dict["markers"]
+    # Choice of segmentation
+    segmentation = requiremets_dict["sampling"]
+    
 
-    cosine = torch.nn.CosineSimilarity(dim=1)
+    #cosine = torch.nn.CosineSimilarity(dim=1)
 
-    # Extract data for the current Voronoi region
     # Extract data for the current Voronoi region
     if segmentation.lower() == "voronoi":
-        graph_data = whole_data.iloc[voronoi_list[vornoi_id]].copy()
+        graph_data = whole_data.iloc[voronoi_list[voronoi_id]]    #.copy()
     elif segmentation.lower() == "bucket":
         if not isinstance(whole_data, list):
             raise ValueError(
                 "if segmentation is bucket then the provided whole set must be a list of DataFrames"
             )
 
-        graph_data = whole_data[vornoi_id].copy()
+        graph_data = whole_data[voronoi_id]   #.copy()
 
     # Determine the most frequent tissue type in this region
     count_tissue_type = graph_data[requiremets_dict["label_column"]].value_counts()
 
-    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{vornoi_id}.pt"
+    file_name = f"graph_subSample_{sub_sample}_{count_tissue_type.idxmax()}_RepNo{repeat_id}_VoroID{voronoi_id}.pt"
 
     if skip_existing:
         if Path(f"{save_path_folder}", file_name).exists():
@@ -273,24 +275,30 @@ def create_graph_and_save(
             )
 
     # Convert gene expression features into a tensor
-    node_data = torch.tensor(graph_data[gene_col_name].to_numpy()).float()
-
+    node_np = graph_data[gene_col_name].to_numpy()
+    node_data = torch.from_numpy(node_np).float()
+    
     # Extract spatial coordinates (X, Y)
     coord = graph_data[[requiremets_dict["X_col_name"], requiremets_dict["Y_col_name"]]]
 
     # Compute the edge index using a utility function
-    edge_mat = get_edge_index(mat=coord, dist_bool=True, radius=radius_neibourhood)
+    edge_mat = get_edge_index_fast(mat=coord, dist_bool=True, radius=radius_neibourhood)
 
     # Compute cosine similarity between connected nodes
-    plate_cosine_sim = cosine(
-        node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
-    ).cpu()
+    # plate_cosine_sim = cosine(
+    #     node_data[edge_mat[0][0]], node_data[edge_mat[0][1]]
+    # ).cpu()
+    
+    # Calc cosine
+    u = node_data.index_select(0, torch.from_numpy(edge_mat[0][0]).long())
+    v = node_data.index_select(0, torch.from_numpy(edge_mat[0][1]).long())
+    plate_cosine_sim = F.cosine_similarity(u, v)
 
     # Create a PyTorch Geometric data object
     data = Data(
         x=node_data,
-        edge_index_plate=torch.tensor(edge_mat[0]).long(),
-        plate_euc=torch.tensor(1 / edge_mat[1]),  # Inverse of Euclidean distance
+        edge_index_plate=torch.from_numpy(edge_mat[0]).long(),
+        plate_euc=torch.from_numpy(1 / edge_mat[1]).float(),  # Inverse of Euclidean distance
         plate_cosine_sim=plate_cosine_sim,
         fold_id=graph_data[requiremets_dict["validation_split_column"]].unique(),
         orginal_cord=torch.tensor(coord.to_numpy()),
@@ -299,6 +307,7 @@ def create_graph_and_save(
         sub_sample=sub_sample,
         y=torch.tensor(tissue_dict[count_tissue_type.idxmax()]).flatten(),
     ).cpu()
+    
 
     if noisy_labeling and (len(count_tissue_type) > 1):
         if node_prob == False or node_prob == "even":  # noqa: E712
@@ -330,10 +339,10 @@ def create_graph_and_save(
         data.edge_index_plate_sameCon = torch.tensor(edge_mat_same_connectivity).long()
         data.edge_index_plate_percent = torch.tensor(edge_mat_random_percentage).long()
 
-    # Save the processed graph data
+    # Clean and save the processed graph data
+    del node_data, u, v, plate_cosine_sim
     torch.save(data, Path(f"{save_path_folder}", file_name))
-
-    return
+    del data
 
 
 def reducePopulation(
@@ -417,7 +426,7 @@ def fill_missing_row_and_col_withNaN(
     return data_frame
 
 
-def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
+def get_edge_index(mat: pd.DataFrame, dist_bool: bool = True, radius: float = 265):
     """
     Computes the edge index for a graph based on spatial proximity using Nearest Neighbors.
 
@@ -441,32 +450,64 @@ def get_edge_index(mat: np.array, dist_bool: bool = True, radius: float = 265):
     total_number_connections = [len(connections) for connections in neighours_per_cell]
 
     # Create the source node indices based on the number of connections each node has
-    edge_src = np.concatenate(
-        [
-            np.repeat(idx, total_number_connections[idx])
-            for idx in range(len(total_number_connections))
-        ]
-    )
+    # edge_src = np.concatenate(
+    #     [
+    #         np.repeat(idx, total_number_connections[idx])
+    #         for idx in range(len(total_number_connections))
+    #     ]
+    # )
 
     # Flatten the neighbor indices to get the destination nodes
     edge_dest = np.concatenate(neighours_per_cell)
 
     # Flatten the distances array
     distances = np.concatenate(neigh_distance)
+    
+    counts = np.array([len(x) for x in neighours_per_cell])
+    edge_src = np.repeat(np.arange(len(counts)), counts)
 
     # Identify and remove self-loops (where source and destination are the same)
-    remove_self_node = distances == 0
-    edge_src = np.delete(edge_src, remove_self_node)
-    edge_dest = np.delete(edge_dest, remove_self_node)
+    # remove_self_node = distances == 0
+    # edge_src = np.delete(edge_src, remove_self_node)
+    # edge_dest = np.delete(edge_dest, remove_self_node)
 
-    # Construct the edge index array
-    edge = np.array([edge_src, edge_dest])
+    # # Construct the edge index array
+    # edge = np.array([edge_src, edge_dest])
 
     # Return edge indices with or without distances based on dist_bool
+    mask = distances > 1e-8
+    
     if dist_bool:
-        return edge, np.delete(distances, remove_self_node)
-    else:
-        return edge
+        return np.array([edge_src[mask], edge_dest[mask]]), distances[mask]
+    return np.array([edge_src[mask], edge_dest[mask]])
+
+
+def get_edge_index_fast(mat: pd.DataFrame, dist_bool: bool = True, radius: float = 265):
+    
+    # Convert to numpy
+    if hasattr(mat, "values"):
+        mat = mat.values
+        
+    tree = cKDTree(mat)
+    
+    # query_pairs returns a set of (i, j) tuples where dist < radius
+    pairs = tree.query_pairs(r=radius, output_type='ndarray')
+    
+    if len(pairs) == 0:
+        # Handle cases with no neighbors to avoid empty array errors
+        edge_index = np.empty((2, 0), dtype=np.int64)
+        return (edge_index, np.array([])) if dist_bool else edge_index
+    
+    # comptible w PyG
+    edge_index = np.concatenate([pairs, pairs[:, [1, 0]]], axis=0).T
+    
+    if dist_bool:
+        # We only calculate distances for the edges that actually exist
+        diff = mat[edge_index[0]] - mat[edge_index[1]]
+        distances = np.linalg.norm(diff, axis=1)
+        return edge_index, distances
+        
+    return edge_index
 
 
 def get_median_with_threshold(
