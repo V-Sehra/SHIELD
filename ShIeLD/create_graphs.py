@@ -127,7 +127,6 @@ def get_tasks(args, requirements, single_sample, voronoi_ids, voroni_id_fussy,
             node_prob=args.node_prob,
             randomise_edges=args.randomise_edges,
             percent_number_cells=args.percent_number_cells,
-            segmentation=args.segmentation,
             testing_mode=args.testing_mode,
         )
 
@@ -159,7 +158,6 @@ def main() -> None:
     parser.add_argument(
         "-req_path",
         "--requirements_file_path",
-        default=Path.cwd() / "examples" / "CRC" / "requirements.pt",
         help="Path to pickled requirements dict used to drive graph generation.",
     )
     parser.add_argument(
@@ -202,15 +200,6 @@ def main() -> None:
         type=float,
         default=0.1,
         help="Edge perturbation strength / percent of cells (forwarded).",
-    )
-
-    parser.add_argument(
-        "-segmentation",
-        "--segmentation",
-        type=str,
-        default="voronoi",
-        choices=["bucket", "voronoi"],
-        help="How to partition cells into subgraphs.",
     )
 
     # Optional downsampling
@@ -302,6 +291,10 @@ def main() -> None:
 
     # Load raw table of cells.
     input_data = pd.read_csv(requirements["path_raw_data"])
+    
+    # Set segmentation
+    segmentation = requirements["sampling"]
+    print(f'Using the {segmentation} segmentation method.')
 
     # Optional cell filtering (e.g., restrict to certain ROI/quality flags).
     if requirements["filter_cells"] is not None:
@@ -367,8 +360,7 @@ def main() -> None:
                     # ---------------------------------------------------------
                     # Voronoi segmentation mode
                     # ---------------------------------------------------------
-                    tasks = []
-                    if args.segmentation == "voronoi":
+                    if segmentation == "voronoi":
                         for fussy_limit in requirements["fussy_limit_all"]:
                             # Select anchor cells.
                             # - "%" means fraction of cells
@@ -473,7 +465,7 @@ def main() -> None:
                     # ---------------------------------------------------------
                     # Random segmentation mode
                     # ---------------------------------------------------------
-                    elif args.segmentation == "bucket":
+                    elif segmentation == "bucket":
                         # In random mode, we create a list of sub-dataframes ("chunks").
                         # Each chunk becomes one graph (selected via chunk index).
                         if requirements["multiple_labels_per_subSample"]:

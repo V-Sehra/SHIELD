@@ -211,7 +211,6 @@ def create_graph_and_save(
     node_prob: Union[str, bool] = False,
     randomise_edges: bool = False,
     percent_number_cells: float = 0.1,
-    segmentation: str = "voronoi",
     testing_mode: bool = False,
 ):
     """
@@ -237,12 +236,15 @@ def create_graph_and_save(
     Returns:
         None
     """
-
+    # Choice of labels used to evaluate
     tissue_dict = requiremets_dict["label_dict"]
     # List of evaluation column names.
     eval_col_name = requiremets_dict["eval_columns"]
     # Column names for gene expression features.
     gene_col_name = requiremets_dict["markers"]
+    # Choice of segmentation
+    segmentation = requiremets_dict["sampling"]
+    
 
     #cosine = torch.nn.CosineSimilarity(dim=1)
 

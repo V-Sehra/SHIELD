@@ -310,6 +310,11 @@ def validate_all_keys_in_req(req_file, verbose=True):
     for item in all_strings:
         if not isinstance(requirements[item], str):
             raise AssertionError(f"Item {item} is not a string.")
+        
+    # String with limited choices
+    segmentation_options = ['voronoi', 'bucket']
+    if not requirements['sampling'] in segmentation_options:
+        raise AssertionError("Invalid segmentation method. Choose between 'voronoi' or 'bucket'.")
 
     # list of strings:
     all_lists_str = [
