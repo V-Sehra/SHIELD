@@ -237,22 +237,37 @@ def graph_artifacts_dir(request, artifacts_root) -> Path:
     if out_root.exists() and list(out_root.rglob("*.pt")):
         return out_root
 
-    # requirements file lives in: repo_root/ShIeLD/tests/data/requirements.pt
-    base_req = repo_root / "ShIeLD" / "tests" / "data" / "requirements.pt"
-    if not base_req.exists():
-        raise FileNotFoundError(f"Missing requirements.pt at: {base_req}")
+    # requirements files lives in: repo_root/ShIeLD/tests/data/requirements.pt
+    base_req_voronoi = repo_root / "ShIeLD" / "tests" / "data" / "requirements_voronoi.pt"
+    if not base_req_voronoi.exists():
+        raise FileNotFoundError(f"Missing voronoi requirements.pt at: {base_req_voronoi}")
+    
+    base_req_bucket = repo_root / "ShIeLD" / "tests" / "data" / "requirements_bucket.pt"
+    if not base_req_bucket.exists():
+        raise FileNotFoundError(f"Missing bucket requirements.pt at: {base_req_bucket}")
 
     out_root.mkdir(parents=True, exist_ok=True)
 
     # Patch requirements so graphs are written into the session artifact directory,
     # not into whatever default path the project uses.
-    req = pickle.load(open(base_req, "rb"))
-    req["path_to_data_set"] = out_root  # critical: write into cached artifact folder
+    
+    # Vornoi
+    req_voronoi = pickle.load(open(base_req_voronoi, "rb"))
+    req_voronoi["path_to_data_set"] = out_root  # critical: write into cached artifact folder
 
-    patched_req_path = cache_dir / "requirements_test.pkl"
+    patched_req_path_voronoi = cache_dir / "requirements_test_voronoi.pkl"
     cache_dir.mkdir(parents=True, exist_ok=True)
-    with open(patched_req_path, "wb") as f:
-        pickle.dump(req, f)
+    with open(patched_req_path_voronoi, "wb") as f:
+        pickle.dump(req_voronoi, f)
+        
+    # Bucket
+    req_bucket = pickle.load(open(base_req_bucket, "rb"))
+    req_bucket["path_to_data_set"] = out_root  # critical: write into cached artifact folder
+
+    patched_req_path_bucket = cache_dir / "requirements_test_bucket.pkl"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with open(patched_req_path_bucket, "wb") as f:
+        pickle.dump(req_bucket, f)
 
     # Run create_graphs in a CI-safe way.
     from ShIeLD import create_graphs
@@ -264,7 +279,7 @@ def graph_artifacts_dir(request, artifacts_root) -> Path:
     _safe_tqdm(create_graphs)
 
     # Generate graphs for both segmentation strategies and both train/test splits.
-    for segmentation in ["voronoi", "bucket"]:
+    for patched_req_path in [patched_req_path_voronoi, patched_req_path_bucket]:
         for data_type in ["train", "test"]:
             # Simulate CLI invocation by setting sys.argv.
             sys.argv = [
