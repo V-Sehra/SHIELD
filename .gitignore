@@ -10,13 +10,14 @@ __pycache__/
 # Images
 *.png
 
-# unnessesary files/ Train test files:
+# unnecessary files/ Train test files:
 *.csv
 *.pkl
-*.pt
 
 # but keep the small test dataset for the test suite
 !examples/dummy_example/shield_test.csv
+!tests/data/requirements_bucket.pt
+!tests/data/requirements_voronoi.pt
 
 # C extensions
 *.so
