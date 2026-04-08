@@ -98,7 +98,7 @@ To calculate cell-to-cell interaction scores using the trained model:
  ## 📖 Citation
 
 If you use SHIELD in your research, please cite our paper:
-DOI: 10.5281/zenodo.19471074
+
 
 Citation: TBA (pre accept as Cell Patterns)
 
