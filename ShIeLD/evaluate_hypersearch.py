@@ -231,8 +231,7 @@ def main():
             print(best_config_dict)
 
         # Determine graph folder path for this configuration.
-        # Voronoi-style folder uses fussy_limit_<...>, bucket uses the fussy_limit string directly.
-        if best_config_dict["fussy_limit"] != "bucket_sampling":
+        if requirements["sampling"] != "bucket":
             path_to_graphs = Path(
                 requirements["path_to_data_set"]
                 / f"anker_value_{best_config_dict['anker_value']}".replace(".", "_")
@@ -245,7 +244,7 @@ def main():
                 requirements["path_to_data_set"]
                 / f"anker_value_{best_config_dict['anker_value']}".replace(".", "_")
                 / f"min_cells_{requirements['minimum_number_cells']}"
-                / f"{best_config_dict['fussy_limit']}"
+                / f"bucket_sampling"
                 / f"radius_{best_config_dict['radius_distance']}"
             )
 
